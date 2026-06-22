@@ -1,0 +1,643 @@
+# Planning prototipi - WebApp Scacchi
+
+> Documento di planning operativo per lo sviluppo incrementale della webapp.
+> Fonti di contesto: `preanalisi-progetto.md` (obiettivo, stack, versioni, vincoli) e `CLAUDE.md` (contesto operativo e collaborazione).
+> Questo documento **non** ridefinisce stack o versioni: li dà per acquisiti e li usa come base.
+
+---
+
+## 1. Strategia generale
+
+La strategia è costruire la webapp per **prototipi incrementali, piccoli e verificabili**, ciascuno funzionante in locale e validabile a mano in pochi minuti.
+
+Principi guida:
+
+- **Sviluppo locale prima di tutto.** H2 in memoria + Angular dev server. Nessun deploy, nessuna autenticazione, nessun servizio esterno nei primi prototipi.
+- **Due workstream paralleli + uno di integrazione.** Backend e frontend avanzano in parallelo grazie a contratti API concordati in anticipo (sezione 6). Il frontend non aspetta il backend: parte con mock e li sostituisce quando l'endpoint reale è pronto.
+- **Integrazione progressiva.** Ogni prototipo ha un momento esplicito in cui il mock frontend viene sostituito dalla chiamata reale.
+- **Validazione manuale a ogni step.** Ogni prototipo si chiude solo quando un test manuale concreto passa.
+- **Rinvio consapevole.** Spaced repetition, reportistica, import PGN robusto, Supabase (DB e Auth) e Docker sono progettati *come direzione* ma non implementati finché il nucleo "allena una variante" non funziona.
+- **No over-engineering.** Niente astrazioni premature, niente layer inutili. Si introduce complessità solo quando un prototipo la richiede.
+
+Logica di fondo: arrivare presto al loop minimo *"ho una variante → la visualizzo → la alleno → l'app mi dice se la mossa è giusta → completo la variante"*. Tutto il resto è successivo.
+
+---
+
+## 2. Roadmap per prototipi
+
+Sequenza ordinata. Ogni prototipo è un passo piccolo che abilita il successivo.
+
+| # | Prototipo | Obiettivo sintetico | Valore prodotto |
+|---|-----------|---------------------|-----------------|
+| 0 | **Scaffolding & hello-world** | Backend e frontend partono e si parlano | Fondamenta verificabili (CORS, ping) |
+| 1 | **Scacchiera renderizzata** | Mostrare una scacchiera e muovere i pezzi (solo legalità) | UI scacchistica funzionante, nessuna logica di variante |
+| 2 | **Variante hardcoded visualizzata** | Backend espone 1 variante, frontend la mostra | Prima variante reale che attraversa lo stack |
+| 3 | **Training loop (PRIMO MVP)** | Allenare la variante: verifica mossa giusta/sbagliata, completa la linea | Loop di allenamento completo end-to-end |
+| 4 | **Persistenza varianti (CRUD)** | Creare/elencare/cancellare varianti su H2 | Varianti non più hardcoded, gestione dati reale |
+| 5 | **Inserimento variante mossa-per-mossa** | Creare una variante muovendo sulla scacchiera | Input manuale delle aperture |
+| 6 | **Import PGN base** | Creare una variante da una stringa PGN | Secondo metodo di input previsto dal progetto |
+| 7+ | **Funzionalità avanzate** | Spaced repetition, statistiche, multi-utente | Rinviate: vedi sezioni 7 e 8 |
+
+**Dettaglio per prototipo:**
+
+### Prototipo 0 - Scaffolding & hello-world
+- **Obiettivo:** avere i due progetti che compilano, partono e comunicano.
+- **Valore:** elimina subito i rischi infrastrutturali (porte, CORS, build).
+- **Provabile:** `GET /api/ping` risponde `pong`; la home Angular mostra il risultato del ping.
+- **Dipendenze:** nessuna.
+- **Escluso:** qualsiasi logica scacchistica.
+
+### Prototipo 1 - Scacchiera renderizzata
+- **Obiettivo:** integrare una libreria scacchiera nel frontend e muovere pezzi legalmente.
+- **Valore:** la parte UI più rischiosa è risolta presto.
+- **Provabile:** trascino un pedone, la mossa illegale viene rifiutata.
+- **Dipendenze:** P0 (solo per avere il progetto Angular pronto).
+- **Escluso:** comunicazione col backend, concetto di "variante".
+
+### Prototipo 2 - Variante hardcoded visualizzata
+- **Obiettivo:** il backend serve una variante fissa; il frontend la carica e la mostra (es. lista mosse + scacchiera alla posizione iniziale).
+- **Valore:** primo dato che attraversa tutto lo stack tramite il contratto API reale.
+- **Provabile:** apro la pagina, vedo nome variante e sequenza mosse arrivate da `GET /api/variants/1`.
+- **Dipendenze:** P0 (stack), P1 (scacchiera).
+- **Escluso:** persistenza, training, creazione.
+
+### Prototipo 3 - Training loop (PRIMO MVP)
+- **Obiettivo:** avviare una sessione di allenamento sulla variante e verificare ogni mossa contro la linea attesa.
+- **Valore:** il cuore dell'app. Loop completo.
+- **Provabile:** avvio training, muovo; se la mossa coincide con la linea attesa avanza, altrimenti segnala errore; al termine la variante è "completata".
+- **Dipendenze:** P2.
+- **Escluso:** persistenza dei risultati, spaced repetition, statistiche.
+
+### Prototipo 4 - Persistenza varianti (CRUD)
+- **Obiettivo:** spostare le varianti da hardcoded a H2 con CRUD minimo.
+- **Valore:** dati reali e gestibili.
+- **Provabile:** creo una variante via API/UI, la rileggo dalla lista, la cancello.
+- **Dipendenze:** P2 (contratto variante già definito).
+- **Escluso:** validazione legale lato backend avanzata, import PGN.
+
+### Prototipo 5 - Inserimento variante mossa-per-mossa
+- **Obiettivo:** costruire una variante muovendo sulla scacchiera e salvandola.
+- **Valore:** primo metodo di input previsto dal progetto.
+- **Provabile:** entro in "nuova variante", gioco 1.e4 e5 2.Cf3..., salvo, la ritrovo nella lista e la posso allenare.
+- **Dipendenze:** P1 (scacchiera), P4 (persistenza).
+- **Escluso:** import PGN, editing avanzato (sotto-varianti/alberi).
+
+### Prototipo 6 - Import PGN base
+- **Obiettivo:** creare una variante incollando una stringa PGN di una singola linea principale.
+- **Valore:** secondo metodo di input.
+- **Provabile:** incollo un PGN semplice, l'app crea la variante allenabile.
+- **Dipendenze:** P4 (persistenza), P5 (modello mosse consolidato).
+- **Escluso:** PGN con varianti annidate, commenti, NAG, header complessi.
+
+### Prototipo 7+ - Avanzate (solo direzione)
+Spaced repetition, statistiche/report, multi-utente con Supabase Auth, migrazione a Supabase PostgreSQL, Docker. Pianificati nelle sezioni 7-8, **non** nei prototipi attivi.
+
+---
+
+## 3. Planning dettagliato di ogni prototipo
+
+### Prototipo 0 - Scaffolding & hello-world
+
+#### Obiettivo
+Due progetti separati (backend Spring Boot, frontend Angular) che partono in locale e comunicano via HTTP, con CORS configurato per l'ambiente di sviluppo.
+
+#### Risultato funzionante atteso
+Backend su `http://localhost:8080`, frontend su `http://localhost:4200`. La home Angular chiama `GET /api/ping` e mostra `pong`.
+
+#### Backend workstream
+- Progetto Spring Boot (Java 21, Spring Boot 4.1.0) generato via start.spring.io o Maven archetype. Dipendenze: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `h2`.
+- `PingController` con `GET /api/ping` → `{ "status": "pong" }`.
+- Configurazione CORS dev per `http://localhost:4200`.
+- H2 in memoria configurata in `application.yml` (anche se non ancora usata), console H2 abilitata.
+- Nessuna entità ancora.
+
+#### Frontend workstream
+- Progetto Angular 22.x generato con **CLI locale al progetto** (via `npx @angular/cli new ...`), nessuna CLI globale.
+- Servizio `ApiService` con metodo `ping()`.
+- Componente home che mostra l'esito del ping.
+- Configurazione `proxy.conf.json` o base URL ambiente per puntare a `:8080`.
+
+#### Integration workstream
+- Contratto: `GET /api/ping` → `{ status: string }`.
+- Verifica CORS reale (no mock): la chiamata parte dal browser, non da curl.
+
+#### Validazione del prototipo
+1. Avvio backend (`mvn spring-boot:run`), verifico log "Started".
+2. Apro `http://localhost:8080/api/ping` → vedo `pong`.
+3. Avvio frontend (`npm start`), apro `http://localhost:4200`.
+4. La pagina mostra `pong` (nessun errore CORS in console).
+5. Apro la console H2 e verifico la connessione al DB in memoria.
+
+#### Criteri di completamento
+Entrambi i progetti partono con un comando, il ping passa dal browser senza errori CORS, i repository sono in git.
+
+#### Cosa non fare ancora
+Nessuna entità, nessuna scacchiera, nessuna libreria scacchi, nessun layout/UX curato.
+
+---
+
+### Prototipo 1 - Scacchiera renderizzata
+
+#### Obiettivo
+Integrare nel frontend una libreria scacchiera + un motore di regole, e permettere mosse legali sulla posizione iniziale.
+
+#### Risultato funzionante atteso
+Una scacchiera interattiva: i pezzi si muovono via drag/click, le mosse illegali sono rifiutate, lo stato (FEN) è leggibile.
+
+#### Backend workstream
+- **Nessuna attività obbligatoria.** Il prototipo è puramente frontend. (Workstream backend libero di avanzare su P2 in parallelo: vedi note dipendenze.)
+
+#### Frontend workstream
+- Scelta e integrazione libreria scacchiera per il rendering (decisione: sezione 8, rischio R1).
+- Integrazione `chess.js` (o equivalente) come motore di regole/legalità.
+- Componente `ChessboardComponent` riusabile: input posizione (FEN), output evento `moveMade` (mossa in formato SAN + FEN risultante).
+- Stato locale minimo dentro il componente (istanza del motore di gioco).
+
+#### Integration workstream
+- Nessuna integrazione col backend. Si **definisce però** il formato mossa che useremo ovunque (decisione: sezione 8, rischio R2): scelta consigliata **SAN** per leggibilità + FEN per la posizione.
+
+#### Validazione del prototipo
+1. Apro la pagina scacchiera.
+2. Muovo e2-e4: accettata.
+3. Provo una mossa illegale (es. Re1-e3): rifiutata.
+4. Verifico che il componente emetta SAN corretto (`e4`) e FEN aggiornata.
+
+#### Criteri di completamento
+La scacchiera renderizza, accetta solo mosse legali ed emette mossa SAN + FEN. Componente isolato e riusabile.
+
+#### Cosa non fare ancora
+Nessun collegamento alle varianti, nessun training, nessuna persistenza, niente promozione/scelta pezzo elaborata oltre il default a Donna (se la libreria lo gestisce di default va bene).
+
+---
+
+### Prototipo 2 - Variante hardcoded visualizzata
+
+#### Obiettivo
+Il backend espone una variante fissa; il frontend la carica e la mostra usando il contratto API definitivo.
+
+#### Risultato funzionante atteso
+Pagina che mostra nome variante e lista mosse, con scacchiera alla posizione iniziale, dati provenienti da `GET /api/variants/{id}`.
+
+#### Backend workstream
+- DTO `VariantDto` (vedi sezione 6): `id`, `name`, `moves[]` (lista SAN), campi predisposti `color`, `startingFen` (default posizione iniziale).
+- `VariantController` con `GET /api/variants` (lista) e `GET /api/variants/{id}` (dettaglio).
+- `VariantService` che restituisce **1 variante hardcoded** (es. Italiana: e4 e5 Cf3 Cc6 Ac4).
+- Nessun repository/DB ancora (dati in memoria nel service).
+
+#### Frontend workstream
+- Modello TypeScript `Variant` allineato a `VariantDto`.
+- `VariantService` Angular con `getVariants()` e `getVariant(id)`.
+- Pagina/lista varianti + pagina dettaglio che usa `ChessboardComponent` (da P1) in sola visualizzazione.
+- Mock iniziale opzionale: il frontend può partire con un JSON mock identico al DTO, **da sostituire** con la chiamata reale entro fine prototipo.
+
+#### Integration workstream
+- Endpoint coinvolti: `GET /api/variants`, `GET /api/variants/{id}`.
+- DTO scambiato: `VariantDto`.
+- Mock → reale: si parte dal mock JSON, si sostituisce con `HttpClient` quando il controller risponde.
+
+#### Validazione del prototipo
+1. Avvio backend, chiamo `GET /api/variants/1` (browser/curl) → JSON corretto.
+2. Avvio frontend, apro lista → vedo la variante.
+3. Apro dettaglio → vedo nome + mosse + scacchiera iniziale.
+4. Verifico in Network tab che i dati arrivino dal backend, non dal mock.
+
+#### Criteri di completamento
+La variante hardcoded attraversa tutto lo stack e si vede nel frontend tramite il contratto reale.
+
+#### Cosa non fare ancora
+Niente persistenza, niente training, niente creazione/modifica varianti.
+
+---
+
+### Prototipo 3 - Training loop (PRIMO MVP)
+
+#### Obiettivo
+Allenare la variante: l'app propone di giocare la linea, valida ogni mossa contro quella attesa, segnala errore/correttezza e riconosce il completamento.
+
+#### Risultato funzionante atteso
+L'utente avvia il training, gioca le mosse; mossa corretta → avanza (ed eventualmente l'app risponde con la mossa avversaria automatica); mossa sbagliata → feedback di errore senza avanzare; fine linea → "variante completata".
+
+#### Backend workstream
+Due opzioni, **scelta consigliata: validazione lato frontend** per il MVP (più semplice, la linea attesa è già nota al client). Backend opzionale:
+- (Consigliato MVP) Nessuna nuova logica backend: la linea attesa è nel `VariantDto` già scaricato, il frontend confronta.
+- (Alternativa, se si vuole logica server) `POST /api/variants/{id}/training/check` con `{ moveIndex, move }` → `{ correct, expectedMove?, finished }`. Da rimandare se non necessario.
+
+#### Frontend workstream
+- `TrainingComponent` che gestisce lo stato della sessione: indice mossa corrente, lista attesa, esito.
+- Logica di confronto mossa giocata (SAN da `ChessboardComponent`) vs mossa attesa.
+- Risposta automatica della mossa avversaria quando la mossa dell'utente è corretta (training "dal lato del bianco" o del nero).
+- Feedback UI: evidenzia mossa giusta/sbagliata, contatore progresso, stato "completata".
+- Gestione stato minima: stato di sessione tenuto nel componente/servizio, **niente persistenza**.
+
+#### Integration workstream
+- Se validazione lato frontend: nessun nuovo endpoint, si riusa `GET /api/variants/{id}`.
+- Predisposizione: il contratto `training/check` è documentato (sezione 6) ma implementato solo se serve.
+- Quando in futuro si vorrà tracciare i risultati, si aggiungerà `POST /api/training-sessions` (rinviato).
+
+#### Validazione del prototipo
+1. Apro la variante, premo "Allena".
+2. Gioco la prima mossa corretta → avanza, l'app risponde con la mossa avversaria.
+3. Gioco una mossa sbagliata → feedback di errore, non avanza.
+4. Completo tutta la linea → messaggio "variante completata".
+5. Riavvio il training → riparte da capo.
+
+#### Criteri di completamento
+Il loop completo "avvia → muovi → verifica → completa" funziona in locale end-to-end. **Questo chiude il primo MVP (sezione 4).**
+
+#### Cosa non fare ancora
+Niente salvataggio risultati, niente spaced repetition, niente statistiche, niente gestione di linee multiple/alberi.
+
+---
+
+### Prototipo 4 - Persistenza varianti (CRUD)
+
+#### Obiettivo
+Spostare le varianti da hardcoded a H2 con CRUD minimo, mantenendo invariato il contratto API verso il frontend.
+
+#### Risultato funzionante atteso
+Creazione, elenco, lettura e cancellazione di varianti persistite in H2; il frontend continua a funzionare senza modifiche al contratto.
+
+#### Backend workstream
+- Entità JPA `Variant` (vedi sezione 7, modello MVP): `id`, `name`, `color`, `moves` (serializzate come JSON/stringa o entità `Move` figlia — decisione sezione 8, rischio R2).
+- `VariantRepository` (Spring Data JPA).
+- `VariantService` rifattorizzato per usare il repository al posto del dato hardcoded.
+- `VariantController`: aggiunti `POST /api/variants` e `DELETE /api/variants/{id}`.
+- Seed iniziale: caricare 1-2 varianti di default all'avvio (data initializer) così la lista non è mai vuota.
+- Validazioni minime: `name` non vuoto, `moves` non vuota.
+
+#### Frontend workstream
+- `VariantService` Angular: aggiunti `createVariant()` e `deleteVariant()`.
+- UI lista: pulsante elimina + (semplice) form/azione di creazione di test (anche solo JSON per ora; l'editor visuale arriva in P5).
+- Nessun cambio ai modelli TS (il DTO resta lo stesso).
+
+#### Integration workstream
+- Endpoint: `GET/POST /api/variants`, `GET/DELETE /api/variants/{id}`.
+- DTO invariato (`VariantDto`); per la creazione si introduce `CreateVariantRequest` (vedi sezione 6).
+- Il mock non serve più: tutto reale.
+
+#### Validazione del prototipo
+1. Avvio backend → seed presente, `GET /api/variants` mostra le varianti di default.
+2. `POST /api/variants` con una nuova variante → 201 + id.
+3. Riavvio frontend → la nuova variante compare nella lista.
+4. Apro la console H2 → vedo la riga nella tabella.
+5. `DELETE` della variante → sparisce dalla lista.
+6. Il training (P3) funziona su una variante caricata da DB.
+
+#### Criteri di completamento
+Le varianti vivono in H2, il CRUD funziona, il training gira su dati persistiti, il contratto verso il frontend è invariato.
+
+#### Cosa non fare ancora
+Niente Supabase, niente migrazioni Flyway (rimandabili), niente import PGN, niente editor visuale completo.
+
+---
+
+### Prototipo 5 - Inserimento variante mossa-per-mossa
+
+#### Obiettivo
+Creare una nuova variante muovendo i pezzi sulla scacchiera e salvandola su H2.
+
+#### Risultato funzionante atteso
+Modalità "nuova variante": l'utente gioca una sequenza legale, dà un nome, sceglie il colore, salva; la variante diventa subito allenabile.
+
+#### Backend workstream
+- Nessuna nuova entità (riusa P4). Eventuale rafforzamento validazioni: sequenza mosse non vuota, nome univoco (opzionale).
+- (Opzionale, rimandabile) Validazione legalità lato server della sequenza ricevuta — di default ci si fida del frontend nel MVP.
+
+#### Frontend workstream
+- `VariantEditorComponent`: usa `ChessboardComponent` in modalità "registrazione", accumula le mosse SAN man mano che vengono giocate.
+- Controlli: undo ultima mossa, reset, campo nome, scelta colore di allenamento.
+- `VariantService.createVariant()` (da P4) per salvare.
+- Stato locale: lista mosse in costruzione.
+
+#### Integration workstream
+- Endpoint: `POST /api/variants` con `CreateVariantRequest` (name, color, moves[]).
+- Nessun mock: integrazione diretta sul CRUD di P4.
+
+#### Validazione del prototipo
+1. Entro in "Nuova variante".
+2. Gioco 1.e4 e5 2.Cf3 Cc6 3.Ac4, uso undo per correggere una mossa.
+3. Inserisco nome "Italiana base", colore bianco, salvo.
+4. La variante compare in lista.
+5. La apro e la alleno (P3) con successo.
+
+#### Criteri di completamento
+Si può creare una variante interamente dalla scacchiera e allenarla subito, dati persistiti.
+
+#### Cosa non fare ancora
+Niente import PGN, niente alberi/sotto-varianti, niente editing di una variante esistente (solo creazione).
+
+---
+
+### Prototipo 6 - Import PGN base
+
+#### Obiettivo
+Creare una variante incollando una stringa PGN di una singola linea principale.
+
+#### Risultato funzionante atteso
+Campo "incolla PGN" → parsing → variante allenabile salvata su H2.
+
+#### Backend workstream
+Due opzioni (decisione sezione 8, rischio R5):
+- (Consigliato) Parsing PGN **lato frontend** con la libreria già presente (`chess.js` carica PGN), poi invio della lista mosse SAN al solito `POST /api/variants`. Backend invariato.
+- (Alternativa) Endpoint `POST /api/variants/import-pgn` che fa il parsing server-side. Da preferire solo se si vuole logica condivisa; rimandabile.
+
+#### Frontend workstream
+- `PgnImportComponent`: textarea PGN, anteprima mosse parse-ate, nome (auto da header PGN se presente), salva.
+- Uso del motore di regole per validare/normalizzare il PGN in lista SAN.
+- Gestione errori: PGN non valido → messaggio chiaro.
+
+#### Integration workstream
+- Endpoint: `POST /api/variants` (riuso) con le mosse derivate dal PGN.
+- Predisposizione campo `sourcePgn` nel DTO/entità per conservare l'originale (utile in futuro).
+
+#### Validazione del prototipo
+1. Incollo un PGN semplice (sola linea principale).
+2. Vedo l'anteprima mosse corretta.
+3. Salvo → variante in lista.
+4. La alleno con successo.
+5. Incollo un PGN malformato → errore gestito, nessun crash.
+
+#### Criteri di completamento
+Una variante può nascere da PGN base ed essere allenata.
+
+#### Cosa non fare ancora
+Niente PGN con varianti annidate, commenti, NAG o multi-partita; niente import di file `.pgn`; niente alberi.
+
+---
+
+## 4. Primo MVP consigliato
+
+**Il primo MVP coincide con il Prototipo 3 (Training loop).**
+
+- **Funzionalità incluse:**
+  - Una (o poche) variante di apertura disponibile (hardcoded nel backend).
+  - Visualizzazione della variante (nome + mosse + scacchiera).
+  - Avvio sessione di allenamento.
+  - Inserimento mossa sulla scacchiera (drag/click) con sola legalità garantita.
+  - Verifica della mossa contro la linea attesa (giusta/sbagliata).
+  - Completamento della variante con feedback finale.
+- **Funzionalità escluse:** persistenza dei risultati, CRUD varianti, inserimento manuale, import PGN, spaced repetition, statistiche, autenticazione, Docker, Supabase.
+- **Dati usati:** 1 variante **hardcoded** nel `VariantService` backend (es. Italiana). Nessun DB necessario per il loop.
+- **Livello di persistenza:** **nessuno** per i risultati; la variante è in memoria lato backend. (H2 è già configurata da P0 ma non indispensabile per questo MVP.)
+- **Interazione utente:** apre la variante → "Allena" → muove i pezzi → riceve feedback → completa.
+- **Validazione manuale:** sequenza di test del Prototipo 3 (mossa giusta avanza, mossa sbagliata segnala, completamento riconosciuto).
+- **Perché è il miglior primo traguardo:** dimostra il **valore centrale dell'app** (allenare una variante con controllo automatico degli errori) attraversando tutto lo stack reale (backend → API → frontend → scacchiera), ma con il minimo di complessità: nessuna persistenza, nessun input complesso. Tutto ciò che viene dopo (CRUD, input manuale, PGN, ripetizione) è un'estensione di un nucleo già funzionante e validato.
+
+---
+
+## 5. Sequenza operativa dei task
+
+Task piccoli (~1 ora), assegnabili ad agenti AI. Legenda area: **BE** backend, **FE** frontend, **INT** integrazione, **DOC** documentazione, **REV** review.
+
+### Prototipo 0
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T0.1 | Scaffold backend Spring Boot | BE | Progetto base + H2 + CORS | preanalisi (versioni) | progetto che parte su :8080 | — | `mvn spring-boot:run` ok | con T0.2 |
+| T0.2 | Scaffold frontend Angular (CLI locale) | FE | Progetto base + proxy | preanalisi (versioni) | progetto che parte su :4200 | — | `npm start` ok | con T0.1 |
+| T0.3 | Endpoint `/api/ping` | BE | Ping di salute | T0.1 | controller + risposta | T0.1 | `pong` da browser | no |
+| T0.4 | Home con chiamata ping | FE | Verifica integrazione | T0.2 | ApiService + home | T0.2 | pagina mostra pong | no |
+| T0.5 | Verifica CORS end-to-end | INT | Confermare comunicazione | T0.3, T0.4 | ping dal browser ok | T0.3, T0.4 | no errori CORS | no |
+
+### Prototipo 1
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T1.1 | Decisione libreria scacchiera | REV/DOC | Scegliere rendering + regole | sezione 8 R1 | decisione scritta | T0.2 | decisione approvata | no |
+| T1.2 | `ChessboardComponent` rendering | FE | Mostrare scacchiera | T1.1 | componente | T1.1 | scacchiera visibile | no |
+| T1.3 | Integrazione motore regole (legalità) | FE | Mosse legali + SAN/FEN | T1.2 | mosse validate, eventi | T1.2 | illegale rifiutata | no |
+
+### Prototipo 2
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T2.1 | Definire `VariantDto` + contratto | INT/DOC | Concordare API | sezione 6 | DTO documentato | T0.5 | contratto approvato | con T1.* |
+| T2.2 | `VariantController` + service hardcoded | BE | Servire 1 variante | T2.1 | GET list/detail | T2.1 | JSON corretto | con T2.3 |
+| T2.3 | `VariantService` Angular + modello TS | FE | Consumare API | T2.1 | service + modello | T2.1 | mock funziona | con T2.2 |
+| T2.4 | Pagina lista + dettaglio variante | FE | Visualizzare | T2.3, T1.3 | pagine | T2.3, T1.3 | variante mostrata | no |
+| T2.5 | Sostituire mock con chiamata reale | INT | Integrazione reale | T2.2, T2.4 | dati da backend | T2.2, T2.4 | Network = backend | no |
+
+### Prototipo 3 (MVP)
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T3.1 | `TrainingComponent` stato sessione | FE | Gestire indice/esito | T2.5 | componente | T2.5 | sessione avviabile | no |
+| T3.2 | Logica confronto mossa attesa | FE | Validare mossa | T3.1, T1.3 | giusta/sbagliata | T3.1 | feedback corretto | no |
+| T3.3 | Risposta automatica avversario | FE | Avanzare linea | T3.2 | auto-move | T3.2 | linea avanza | no |
+| T3.4 | Feedback UI + completamento | FE | UX training | T3.3 | stati visivi | T3.3 | "completata" ok | no |
+| T3.5 | Validazione manuale MVP | REV | Confermare MVP | T3.4 | checklist passata | T3.4 | sezione 3 P3 | no |
+
+### Prototipo 4
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T4.1 | Entità + repository `Variant` | BE | Persistenza H2 | sezione 7 | entità/repo | T2.2 | salva/legge | no |
+| T4.2 | Refactor service su repository + seed | BE | Dati da DB | T4.1 | service DB + seed | T4.1 | seed visibile | no |
+| T4.3 | `POST`/`DELETE` varianti + `CreateVariantRequest` | BE | CRUD | T4.2, sezione 6 | endpoint | T4.2 | crea/elimina ok | con T4.4 |
+| T4.4 | UI crea/elimina (base) | FE | Gestione lista | T2.4 | azioni UI | T2.4 | lista aggiornata | con T4.3 |
+| T4.5 | Verifica CRUD end-to-end | INT | Integrazione | T4.3, T4.4 | flusso completo | T4.3, T4.4 | H2 + UI coerenti | no |
+
+### Prototipo 5
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T5.1 | `ChessboardComponent` modalità registrazione | FE | Accumulare mosse | T1.3 | modalità record | T1.3 | mosse raccolte | no |
+| T5.2 | `VariantEditorComponent` (nome/colore/undo/salva) | FE | Creare variante | T5.1, T4.3 | editor | T5.1, T4.3 | salvataggio ok | no |
+| T5.3 | Validazione manuale creazione+training | REV | Confermare flusso | T5.2 | checklist | T5.2 | sezione 3 P5 | no |
+
+### Prototipo 6
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T6.1 | Decisione parsing PGN (FE vs BE) | REV/DOC | Scegliere approccio | sezione 8 R5 | decisione | T5.3 | decisione approvata | no |
+| T6.2 | `PgnImportComponent` + parsing + anteprima | FE | Import PGN | T6.1 | componente | T6.1 | PGN→mosse ok | no |
+| T6.3 | Gestione errori PGN + campo `sourcePgn` | FE/BE | Robustezza | T6.2 | errori gestiti | T6.2 | malformato gestito | no |
+| T6.4 | Validazione manuale import | REV | Confermare flusso | T6.3 | checklist | T6.3 | sezione 3 P6 | no |
+
+**Task trasversali (ricorrenti):** `DOC.x` aggiornamento documentazione a fine prototipo; `REV.x` code review prima del merge. Non vanno svolti in parallelo con la modifica che revisionano.
+
+---
+
+## 6. Contratti iniziali frontend/backend
+
+Bozza pragmatica, dimensionata sui primi prototipi. Base URL: `/api`.
+
+### Endpoint REST principali
+| Metodo | Path | Scopo | Introdotto in |
+|--------|------|-------|---------------|
+| GET | `/api/ping` | Health/integrazione | P0 |
+| GET | `/api/variants` | Lista varianti | P2 |
+| GET | `/api/variants/{id}` | Dettaglio variante | P2 |
+| POST | `/api/variants` | Crea variante | P4 |
+| DELETE | `/api/variants/{id}` | Elimina variante | P4 |
+| POST | `/api/variants/{id}/training/check` | (Opzionale) validazione mossa server-side | P3 se necessario |
+| POST | `/api/variants/import-pgn` | (Opzionale) import PGN server-side | P6 se scelto BE |
+
+### DTO principali
+
+**`VariantDto`** (risposta)
+```
+id: number
+name: string
+color: "WHITE" | "BLACK"      // lato da allenare; predisposto
+moves: string[]                // mosse in SAN, es. ["e4","e5","Nf3","Nc6","Bc4"]
+startingFen: string            // default posizione iniziale; predisposto per future posizioni custom
+sourcePgn?: string             // predisposto, valorizzato dall'import PGN (P6)
+createdAt?: string             // predisposto per ordinamento/storico
+```
+
+**`CreateVariantRequest`** (richiesta, P4+)
+```
+name: string                   // obbligatorio, non vuoto
+color: "WHITE" | "BLACK"
+moves: string[]                // obbligatorio, non vuoto
+sourcePgn?: string             // opzionale (import PGN)
+```
+
+**`TrainingCheckRequest` / `TrainingCheckResponse`** (opzionali, solo se validazione server-side)
+```
+// request:  { moveIndex: number, move: string }
+// response: { correct: boolean, expectedMove?: string, finished: boolean }
+```
+
+### Responsabilità del backend
+- Esporre varianti (hardcoded → H2).
+- Persistere e validare i dati minimi (nome non vuoto, mosse non vuote).
+- (Opzionale) validare la legalità della sequenza e/o le mosse di training.
+- Mantenere stabile il contratto DTO mentre cambia l'implementazione interna.
+
+### Responsabilità del frontend
+- Rendering scacchiera e garanzia di legalità delle mosse (motore client).
+- Gestione dello stato della sessione di training.
+- Confronto mossa-attesa (nel MVP) e feedback UX.
+- Parsing PGN client-side (se si sceglie l'opzione FE).
+
+### Dati minimi scambiati
+Per il MVP basta `VariantDto` con `name` + `moves[]`. Tutto il resto (`color`, `startingFen`, `sourcePgn`, `createdAt`) è **predisposto** ma non bloccante.
+
+### Campi predisposti per evoluzioni future
+- `color`, `startingFen` → posizioni/lati custom.
+- `sourcePgn` → tracciabilità import.
+- `createdAt` → storico e ordinamento.
+- (Futuro) `userId` → multi-utente con Supabase Auth (vedi sezione 7).
+
+---
+
+## 7. Evoluzione del modello dati
+
+Modello **progressivo**: si aggiunge solo ciò che serve al prototipo corrente.
+
+### Modello minimo (Prototipo 1-3, MVP)
+Nessuna entità persistita. Variante in memoria:
+```
+Variant { id, name, moves: string[] }
+```
+
+### Modello MVP / persistenza (Prototipo 4-6)
+Entità `Variant` su H2:
+```
+Variant {
+  id: Long (PK)
+  name: String (not null)
+  color: enum WHITE/BLACK
+  moves: String[]  // serializzate (JSON in colonna text) oppure entità Move figlia
+  startingFen: String (default initial)
+  sourcePgn: String (nullable)
+  createdAt: timestamp
+}
+```
+> Decisione aperta (sezione 8, R2): `moves` come stringa JSON in un'unica colonna (più semplice) **vs** entità `Move` con `(variantId, ply, san)` (più normalizzato). Per i prototipi è consigliata la **stringa JSON**.
+
+### Modello per gestione completa aperture/varianti (post-MVP)
+- Possibile entità `Opening`/`Repertoire` che raggruppa più `Variant`.
+- Supporto a `startingFen` non standard.
+- Eventuale struttura ad albero per sotto-varianti (decisione importante, rimandata).
+
+### Dati futuri - storico allenamenti
+```
+TrainingSession { id, variantId, startedAt, completedAt, result, mistakesCount, userId? }
+TrainingMove   { id, sessionId, ply, expectedSan, playedSan, correct }
+```
+Non implementare finché il loop MVP non è stabile.
+
+### Dati futuri - spaced repetition
+Campi su `Variant` o tabella dedicata `ReviewSchedule`:
+```
+{ variantId, easeFactor, intervalDays, repetitions, nextReviewDate, lastReviewedAt }
+```
+Aggiungere solo quando si implementa la ripetizione (Prototipo 7+).
+
+### Dati futuri - reportistica
+Derivabili da `TrainingSession`/`TrainingMove` (aggregazioni). Nessuna tabella nuova necessaria all'inizio: prima si raccolgono i dati grezzi.
+
+### Predisposizione utente/autenticazione (futuro)
+- Campo `userId` (nullable ora) su `Variant` e `TrainingSession`.
+- In locale single-user resta null/utente di default.
+- Con Supabase Auth diventerà l'ID utente; nessuna ristrutturazione necessaria se il campo è previsto da subito **ma lasciato inattivo**.
+
+> Principio: aggiungere colonne/nullable è economico; ristrutturare relazioni è costoso. Si predispongono i campi chiave (`userId`, `createdAt`) presto, si rimanda tutto il resto.
+
+---
+
+## 8. Rischi tecnici e decisioni da prendere
+
+| ID | Rischio | Descrizione | Impatto | Quando affrontarlo | Rimandabile? | Decisione minima ora |
+|----|---------|-------------|---------|--------------------|--------------|----------------------|
+| R1 | **Libreria scacchiera frontend** | Quale lib per rendering (es. board UI) + quale per regole (es. `chess.js`) | Alto (è il cuore UI) | Prototipo 1 | No | Scegliere una board + `chess.js` per la legalità. Tenerle separate (rendering vs regole). |
+| R2 | **Rappresentazione mosse** | SAN vs LAN vs UCI; come salvarle | Alto (contratto + DB) | P1 (formato), P4 (storage) | No per il formato | Usare **SAN** nel contratto e in UI; storage come **JSON string** nei prototipi. |
+| R3 | **Validazione mosse legali** | Chi garantisce la legalità: client, server o entrambi | Medio | P1 (client), P5 (eventuale server) | Sì per il server | Legalità lato **client** nei prototipi; validazione server opzionale e rimandata. |
+| R4 | **Validazione training (giusto/sbagliato)** | Confronto mossa attesa lato client o server | Medio | P3 | Sì (server) | **Client** nel MVP; predisporre endpoint `training/check` ma non implementarlo subito. |
+| R5 | **Import PGN** | Parsing robusto, varianti annidate, commenti | Medio | P6 | Sì (robustezza) | Parsing **client** con `chess.js` su PGN a linea singola; PGN complessi rimandati. |
+| R6 | **Gestione stato training** | Dove vive lo stato di sessione | Basso/Medio | P3 | Sì | Stato nel componente/servizio Angular; nessuna persistenza nel MVP. |
+| R7 | **Sincronizzazione FE/BE** | Drift tra DTO e modello TS | Medio | Continuo da P2 | No | Contratto scritto (sezione 6) come fonte unica; aggiornarlo prima del codice. |
+| R8 | **Migrazione H2 → Supabase PostgreSQL** | Differenze SQL, persistenza, connessione | Medio | Post-MVP | Sì | Restare su JPA standard, evitare feature H2-specifiche; valutare Flyway al passaggio. |
+| R9 | **Autenticazione Supabase** | Identità utente, sicurezza endpoint | Alto (ma futuro) | Fase dedicata | Sì | Solo predisporre `userId` nullable; nessuna logica auth ora. |
+| R10 | **Containerizzazione Docker** | Build, networking FE/BE, immagini | Medio | Post-MVP | Sì | Mantenere progetti separati e config via env; nessun Dockerfile ora. |
+| R11 | **Modello a albero/sotto-varianti** | Aperture reali sono alberi, non liste | Alto (se serve) | Dopo P6 | Sì | Nei prototipi una variante = **una linea lineare**. Alberi rimandati con decisione esplicita. |
+
+**Decisioni minime da prendere subito (prima di P1-P2):** R1 (libreria), R2 (SAN + JSON), R7 (contratto scritto). Tutto il resto è rimandabile con sicurezza.
+
+---
+
+## 9. Coordinamento agenti
+
+Modello di collaborazione: **Claude/Opus** operativo, **Codex** analisi/review, **ChatGPT** coordinatore/prompt, **sviluppatore umano** decisore ed esecutore locale.
+
+### Ripartizione dei task
+- **Claude/Opus (operativo):** scaffolding, scrittura di controller/service/entità, componenti Angular, integrazione, refactor, stesura DTO e contratti. È l'agente che produce il codice dei task della sezione 5.
+- **Codex (analisi/review/verifica):** review dei diff prodotti da Claude, controllo coerenza FE/BE vs contratto, verifica legalità mosse/parsing, second opinion su decisioni tecniche (R1-R11), individuazione bug.
+- **ChatGPT (coordinatore/revisore prompt):** trasformare i task in prompt eseguibili, mantenere la roadmap aggiornata, mediare tra output di Claude e Codex, preparare i prompt successivi (sezione 10).
+- **Sviluppatore umano (decisore/esecutore):** prende le decisioni aperte (R1, R2, R11...), esegue avvii locali e validazioni manuali, fa commit/merge, approva i passaggi di prototipo.
+
+### Come evitare conflitti sui file
+- **Separazione netta per workstream:** backend e frontend sono progetti/cartelle distinti → conflitti minimi tra agenti che lavorano su lati diversi.
+- **Un task = un'area** (sezione 5). Non assegnare a due agenti lo stesso file nello stesso momento.
+- **Regola del repository (da CLAUDE.md):** controllare sempre lo stato git prima di modificare; non sovrascrivere modifiche altrui.
+- **Il contratto (sezione 6) è la fonte unica:** ogni cambio di API si fa prima nel documento contratto, poi nel codice, per evitare drift FE/BE.
+
+### Quando fare review
+- Dopo ogni task `BE`/`FE` significativo, prima del merge → review Codex.
+- Sempre a fine prototipo (`REV.x`), prima di dichiararlo completato.
+- Su ogni decisione tecnica aperta (R1-R11) → second opinion prima di procedere.
+
+### Quando aggiornare la documentazione
+- A fine di ogni prototipo: aggiornare lo stato nel planning e, **se** è stata presa una decisione architetturale rilevante, aggiornare la documentazione progettuale (coerente con la nota in `CLAUDE.md`).
+- Ogni modifica al contratto FE/BE va riflessa subito nella sezione 6 (o nel suo successore).
+
+### Come mantenere allineati frontend e backend
+- Contratto scritto e versionato come riferimento condiviso.
+- Mock frontend **identici** ai DTO reali, sostituiti appena l'endpoint è pronto (passaggio esplicito in ogni prototipo).
+- Endpoint `/api/ping` e i test manuali end-to-end come canarino dell'integrazione.
+
+---
+
+## 10. Prompt successivi consigliati
+
+Bozze sintetiche, da espandere al momento dell'uso.
+
+1. **Analisi stato reale repo:** "Analizza lo stato attuale del repository (file, struttura, git) e dimmi cosa esiste già e cosa manca rispetto al Prototipo 0 del planning."
+2. **Definizione primo prototipo:** "Dettaglia il Prototipo 0 in task eseguibili con comandi concreti per scaffolding backend e frontend, rispettando versioni e CLI locale."
+3. **Implementazione backend primo prototipo:** "Implementa lo scaffold Spring Boot con H2, CORS dev e endpoint `/api/ping` secondo il contratto della sezione 6."
+4. **Implementazione frontend primo prototipo:** "Crea lo scaffold Angular (CLI locale) con `ApiService` e home che consuma `/api/ping`, con proxy verso :8080."
+5. **Integrazione FE/BE:** "Verifica e correggi l'integrazione end-to-end del ping dal browser (CORS, proxy) e documenta l'esito."
+6. **Review del codice prodotto:** "Esegui una review (ruolo Codex) dei diff del Prototipo 0 cercando bug, problemi di config e scostamenti dal contratto."
+7. **Validazione manuale locale:** "Elenca ed esegui i test manuali del Prototipo 0 e riporta gli esiti passo per passo."
+8. **Aggiornamento documentazione:** "Aggiorna lo stato del prototipo nel planning e annota eventuali decisioni architetturali prese."
+9. **Preparazione prototipo successivo:** "Sulla base dello stato attuale, prepara i task del Prototipo 1 (scacchiera) inclusa la decisione sulla libreria (R1)."
+
+---
+
+*Fine del planning. Documento di sola pianificazione: nessun codice applicativo incluso. I file `preanalisi-progetto.md` e `CLAUDE.md` restano la fonte autorevole per obiettivo, stack e versioni.*
