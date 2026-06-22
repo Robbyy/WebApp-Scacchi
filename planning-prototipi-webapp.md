@@ -21,6 +21,20 @@ Principi guida:
 
 Logica di fondo: arrivare presto al loop minimo *"ho una variante → la visualizzo → la alleno → l'app mi dice se la mossa è giusta → completo la variante"*. Tutto il resto è successivo.
 
+### Struttura del repository — vincolo non negoziabile
+
+**Frontend e backend risiedono in due cartelle/progetti distinti e non vanno mai mescolati.**
+
+- Due alberi di progetto separati, ciascuno con il proprio sistema di build:
+  - `backend/` → progetto Maven Spring Boot (`pom.xml`, `src/main/java`, ...).
+  - `frontend/` → progetto Angular (`package.json`, `angular.json`, `src/app`, ...).
+- Nessuna dipendenza di build incrociata: il backend non costruisce il frontend e viceversa. Nessun `package.json` dentro `backend/`, nessun `pom.xml` dentro `frontend/`.
+- I due progetti comunicano **solo** via HTTP (contratto REST della sezione 6), mai per import diretto di file.
+- Le dipendenze restano isolate: `node_modules` solo lato frontend, dipendenze Maven solo lato backend.
+- Questa separazione è la stessa che renderà naturale, in futuro, una containerizzazione Docker con due immagini distinte (vedi rischio R10). Non va compromessa per comodità nei prototipi.
+
+> Nota: la struttura esatta (mono-repo con due cartelle vs due repository git separati) è una decisione aperta; in entrambi i casi i **progetti** restano fisicamente separati. Per lo sviluppo locale incrementale un mono-repo con `backend/` e `frontend/` affiancati è il default consigliato.
+
 ---
 
 ## 2. Roadmap per prototipi
@@ -99,23 +113,24 @@ Spaced repetition, statistiche/report, multi-utente con Supabase Auth, migrazion
 ### Prototipo 0 - Scaffolding & hello-world
 
 #### Obiettivo
-Due progetti separati (backend Spring Boot, frontend Angular) che partono in locale e comunicano via HTTP, con CORS configurato per l'ambiente di sviluppo.
+Due progetti **fisicamente separati** (`backend/` Spring Boot, `frontend/` Angular — vedi vincolo struttura repository in sezione 1) che partono in locale e comunicano via HTTP, con CORS configurato per l'ambiente di sviluppo.
 
 #### Risultato funzionante atteso
-Backend su `http://localhost:8080`, frontend su `http://localhost:4200`. La home Angular chiama `GET /api/ping` e mostra `pong`.
+Backend su `http://localhost:8080`, frontend su `http://localhost:4200`. La home Angular chiama `GET /api/ping` e mostra `pong`. Le due cartelle hanno build indipendenti e nessuna dipendenza incrociata.
 
 #### Backend workstream
-- Progetto Spring Boot (Java 21, Spring Boot 4.1.0) generato via start.spring.io o Maven archetype. Dipendenze: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `h2`.
+- Progetto Spring Boot (Java 21, Spring Boot 4.1.0) generato nella cartella `backend/` via start.spring.io o Maven archetype. Dipendenze: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `h2`.
 - `PingController` con `GET /api/ping` → `{ "status": "pong" }`.
 - Configurazione CORS dev per `http://localhost:4200`.
 - H2 in memoria configurata in `application.yml` (anche se non ancora usata), console H2 abilitata.
 - Nessuna entità ancora.
 
 #### Frontend workstream
-- Progetto Angular 22.x generato con **CLI locale al progetto** (via `npx @angular/cli new ...`), nessuna CLI globale.
+- Progetto Angular 22.x generato nella cartella `frontend/` con **CLI locale al progetto** (via `npx @angular/cli new ...`), nessuna CLI globale.
 - Servizio `ApiService` con metodo `ping()`.
 - Componente home che mostra l'esito del ping.
 - Configurazione `proxy.conf.json` o base URL ambiente per puntare a `:8080`.
+- (Opzionale, anticipabile) impostare i **token visivi** del riferimento Lovable (vedi preanalisi: palette pergamena, colori case `#f0d9b5`/`#b58863`, token legno/ottone) come variabili CSS globali, così da averli pronti per il Prototipo 1.
 
 #### Integration workstream
 - Contratto: `GET /api/ping` → `{ status: string }`.
@@ -147,10 +162,17 @@ Una scacchiera interattiva: i pezzi si muovono via drag/click, le mosse illegali
 #### Backend workstream
 - **Nessuna attività obbligatoria.** Il prototipo è puramente frontend. (Workstream backend libero di avanzare su P2 in parallelo: vedi note dipendenze.)
 
+> **Indicazioni già fissate dalla preanalisi** (sezione "Riferimento frontend iniziale"), che riducono il rischio R1:
+> - **Regole/PGN:** usare `chess.js` (confermato come dipendenza frontend).
+> - **Rendering:** in prima fase **una libreria scacchiera compatibile con Angular** (NON `react-chessboard`, legata a React), che permetta controllo di FEN, orientamento, stile case e pezzi. Scacchiera custom Angular/CSS/SVG come possibile evoluzione futura se la libreria non desse abbastanza controllo visivo.
+> - **Pezzi:** stile classico Staunton via asset SVG, per avvicinarsi ai pezzi predefiniti del prototipo.
+> - **Aspetto:** applicare i token visivi (case `#f0d9b5`/`#b58863`, cornice legno, palette pergamena/ottone) definiti nella preanalisi.
+
 #### Frontend workstream
-- Scelta e integrazione libreria scacchiera per il rendering (decisione: sezione 8, rischio R1).
-- Integrazione `chess.js` (o equivalente) come motore di regole/legalità.
+- Integrazione `chess.js` come motore di regole/legalità e parsing (scelta confermata dalla preanalisi).
+- Selezione della specifica libreria scacchiera Angular-compatibile per il rendering (residuo di R1: resta da scegliere *quale*, non *se*). Criteri: controllo di FEN/orientamento, stile case configurabile, pezzi sostituibili con SVG Staunton.
 - Componente `ChessboardComponent` riusabile: input posizione (FEN), output evento `moveMade` (mossa in formato SAN + FEN risultante).
+- Applicare i **token visivi** del riferimento Lovable: colori case `#f0d9b5` (chiare) / `#b58863` (scure), cornice effetto legno, coordinate `a-h`/`1-8` come nello screenshot.
 - Stato locale minimo dentro il componente (istanza del motore di gioco).
 
 #### Integration workstream
@@ -158,15 +180,16 @@ Una scacchiera interattiva: i pezzi si muovono via drag/click, le mosse illegali
 
 #### Validazione del prototipo
 1. Apro la pagina scacchiera.
-2. Muovo e2-e4: accettata.
-3. Provo una mossa illegale (es. Re1-e3): rifiutata.
-4. Verifico che il componente emetta SAN corretto (`e4`) e FEN aggiornata.
+2. La scacchiera ha l'aspetto del riferimento (case crema/marrone, cornice legno, coordinate).
+3. Muovo e2-e4: accettata.
+4. Provo una mossa illegale (es. Re1-e3): rifiutata.
+5. Verifico che il componente emetta SAN corretto (`e4`) e FEN aggiornata.
 
 #### Criteri di completamento
-La scacchiera renderizza, accetta solo mosse legali ed emette mossa SAN + FEN. Componente isolato e riusabile.
+La scacchiera renderizza con l'aspetto del riferimento Lovable, accetta solo mosse legali ed emette mossa SAN + FEN. Componente isolato e riusabile.
 
 #### Cosa non fare ancora
-Nessun collegamento alle varianti, nessun training, nessuna persistenza, niente promozione/scelta pezzo elaborata oltre il default a Donna (se la libreria lo gestisce di default va bene).
+Nessun collegamento alle varianti, nessun training, nessuna persistenza, niente promozione/scelta pezzo elaborata oltre il default a Donna (se la libreria lo gestisce di default va bene). Il layout completo a pannelli (lista mosse + PGN + controlli replay) arriva nel Prototipo 2.
 
 ---
 
@@ -188,6 +211,8 @@ Pagina che mostra nome variante e lista mosse, con scacchiera alla posizione ini
 - Modello TypeScript `Variant` allineato a `VariantDto`.
 - `VariantService` Angular con `getVariants()` e `getVariant(id)`.
 - Pagina/lista varianti + pagina dettaglio che usa `ChessboardComponent` (da P1) in sola visualizzazione.
+- **Layout a pannelli del riferimento Lovable** (vedi screenshot/preanalisi): scacchiera grande a sinistra, pannello "Mosse" a destra con la lista numerata, controlli di navigazione/replay sotto la scacchiera (inizio, indietro, auto-play, avanti, fine, reset) con navigazione anche da tastiera (← →). Il pannello "Carica PGN" può essere predisposto come segnaposto, ma l'import vero arriva nel Prototipo 6.
+- Ricostruzione dello storico posizioni come lista di FEN (via `chess.js`) per permettere lo scorrimento mossa-per-mossa, come nel componente di riferimento.
 - Mock iniziale opzionale: il frontend può partire con un JSON mock identico al DTO, **da sostituire** con la chiamata reale entro fine prototipo.
 
 #### Integration workstream
@@ -198,11 +223,12 @@ Pagina che mostra nome variante e lista mosse, con scacchiera alla posizione ini
 #### Validazione del prototipo
 1. Avvio backend, chiamo `GET /api/variants/1` (browser/curl) → JSON corretto.
 2. Avvio frontend, apro lista → vedo la variante.
-3. Apro dettaglio → vedo nome + mosse + scacchiera iniziale.
-4. Verifico in Network tab che i dati arrivino dal backend, non dal mock.
+3. Apro dettaglio → vedo nome + lista mosse nel pannello + scacchiera, con l'aspetto del riferimento.
+4. Uso i controlli di replay (avanti/indietro/auto-play) e la tastiera per scorrere le mosse.
+5. Verifico in Network tab che i dati arrivino dal backend, non dal mock.
 
 #### Criteri di completamento
-La variante hardcoded attraversa tutto lo stack e si vede nel frontend tramite il contratto reale.
+La variante hardcoded attraversa tutto lo stack e si vede nel frontend tramite il contratto reale, con il layout a pannelli e i controlli di replay del riferimento Lovable funzionanti.
 
 #### Cosa non fare ancora
 Niente persistenza, niente training, niente creazione/modifica varianti.
@@ -392,8 +418,8 @@ Task piccoli (~1 ora), assegnabili ad agenti AI. Legenda area: **BE** backend, *
 ### Prototipo 0
 | ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
 |----|--------|------|-------|-------|--------|------------|-------------|-----------|
-| T0.1 | Scaffold backend Spring Boot | BE | Progetto base + H2 + CORS | preanalisi (versioni) | progetto che parte su :8080 | — | `mvn spring-boot:run` ok | con T0.2 |
-| T0.2 | Scaffold frontend Angular (CLI locale) | FE | Progetto base + proxy | preanalisi (versioni) | progetto che parte su :4200 | — | `npm start` ok | con T0.1 |
+| T0.1 | Scaffold backend Spring Boot in `backend/` | BE | Progetto base + H2 + CORS (cartella separata) | preanalisi (versioni) | progetto che parte su :8080 | — | `mvn spring-boot:run` ok, nessun file FE in `backend/` | con T0.2 |
+| T0.2 | Scaffold frontend Angular in `frontend/` (CLI locale) | FE | Progetto base + proxy (cartella separata) | preanalisi (versioni) | progetto che parte su :4200 | — | `npm start` ok, nessun file BE in `frontend/` | con T0.1 |
 | T0.3 | Endpoint `/api/ping` | BE | Ping di salute | T0.1 | controller + risposta | T0.1 | `pong` da browser | no |
 | T0.4 | Home con chiamata ping | FE | Verifica integrazione | T0.2 | ApiService + home | T0.2 | pagina mostra pong | no |
 | T0.5 | Verifica CORS end-to-end | INT | Confermare comunicazione | T0.3, T0.4 | ping dal browser ok | T0.3, T0.4 | no errori CORS | no |
@@ -401,8 +427,8 @@ Task piccoli (~1 ora), assegnabili ad agenti AI. Legenda area: **BE** backend, *
 ### Prototipo 1
 | ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
 |----|--------|------|-------|-------|--------|------------|-------------|-----------|
-| T1.1 | Decisione libreria scacchiera | REV/DOC | Scegliere rendering + regole | sezione 8 R1 | decisione scritta | T0.2 | decisione approvata | no |
-| T1.2 | `ChessboardComponent` rendering | FE | Mostrare scacchiera | T1.1 | componente | T1.1 | scacchiera visibile | no |
+| T1.1 | Scelta board Angular (regole già = `chess.js`) | REV/DOC | Scegliere *quale* board Angular vs token visivi | sezione 8 R1/R12 + preanalisi | decisione scritta | T0.2 | decisione approvata | no |
+| T1.2 | `ChessboardComponent` rendering + token visivi | FE | Mostrare scacchiera in stile riferimento | T1.1 | componente | T1.1 | scacchiera con case `#f0d9b5`/`#b58863` e cornice legno | no |
 | T1.3 | Integrazione motore regole (legalità) | FE | Mosse legali + SAN/FEN | T1.2 | mosse validate, eventi | T1.2 | illegale rifiutata | no |
 
 ### Prototipo 2
@@ -411,7 +437,7 @@ Task piccoli (~1 ora), assegnabili ad agenti AI. Legenda area: **BE** backend, *
 | T2.1 | Definire `VariantDto` + contratto | INT/DOC | Concordare API | sezione 6 | DTO documentato | T0.5 | contratto approvato | con T1.* |
 | T2.2 | `VariantController` + service hardcoded | BE | Servire 1 variante | T2.1 | GET list/detail | T2.1 | JSON corretto | con T2.3 |
 | T2.3 | `VariantService` Angular + modello TS | FE | Consumare API | T2.1 | service + modello | T2.1 | mock funziona | con T2.2 |
-| T2.4 | Pagina lista + dettaglio variante | FE | Visualizzare | T2.3, T1.3 | pagine | T2.3, T1.3 | variante mostrata | no |
+| T2.4 | Pagina dettaglio + layout a pannelli | FE | Visualizzare in stile riferimento | T2.3, T1.3 | pagina con pannello Mosse + controlli replay | T2.3, T1.3 | variante mostrata, replay/tastiera ok | no |
 | T2.5 | Sostituire mock con chiamata reale | INT | Integrazione reale | T2.2, T2.4 | dati da backend | T2.2, T2.4 | Network = backend | no |
 
 ### Prototipo 3 (MVP)
@@ -576,19 +602,22 @@ Derivabili da `TrainingSession`/`TrainingMove` (aggregazioni). Nessuna tabella n
 
 | ID | Rischio | Descrizione | Impatto | Quando affrontarlo | Rimandabile? | Decisione minima ora |
 |----|---------|-------------|---------|--------------------|--------------|----------------------|
-| R1 | **Libreria scacchiera frontend** | Quale lib per rendering (es. board UI) + quale per regole (es. `chess.js`) | Alto (è il cuore UI) | Prototipo 1 | No | Scegliere una board + `chess.js` per la legalità. Tenerle separate (rendering vs regole). |
-| R2 | **Rappresentazione mosse** | SAN vs LAN vs UCI; come salvarle | Alto (contratto + DB) | P1 (formato), P4 (storage) | No per il formato | Usare **SAN** nel contratto e in UI; storage come **JSON string** nei prototipi. |
+| R1 | **Libreria scacchiera frontend** | ~~Quale lib per rendering + quale per regole~~ **Quasi risolto dalla preanalisi:** regole = `chess.js` (confermato); rendering = libreria board **Angular-compatibile** (NO `react-chessboard`); pezzi Staunton SVG; custom board come evoluzione futura. Residuo: scegliere *quale* board Angular. | Medio (era Alto) | Prototipo 1 | Residuo sì | Confermare `chess.js`; valutare 1-2 board Angular vs i token visivi richiesti; tenere rendering e regole separati. |
+| R2 | **Rappresentazione mosse** | SAN vs LAN vs UCI; come salvarle. Coerente con `chess.js`/PGN della preanalisi. | Alto (contratto + DB) | P1 (formato), P4 (storage) | No per il formato | Usare **SAN** nel contratto e in UI (nativo in `chess.js`); storage come **JSON string** nei prototipi. |
 | R3 | **Validazione mosse legali** | Chi garantisce la legalità: client, server o entrambi | Medio | P1 (client), P5 (eventuale server) | Sì per il server | Legalità lato **client** nei prototipi; validazione server opzionale e rimandata. |
 | R4 | **Validazione training (giusto/sbagliato)** | Confronto mossa attesa lato client o server | Medio | P3 | Sì (server) | **Client** nel MVP; predisporre endpoint `training/check` ma non implementarlo subito. |
-| R5 | **Import PGN** | Parsing robusto, varianti annidate, commenti | Medio | P6 | Sì (robustezza) | Parsing **client** con `chess.js` su PGN a linea singola; PGN complessi rimandati. |
+| R5 | **Import PGN** | Parsing robusto, varianti annidate, commenti. La preanalisi conferma `chess.js` (`Chess().loadPgn(...)`) come strumento. | Medio | P6 | Sì (robustezza) | Parsing **client** con `chess.js` su PGN a linea singola; PGN complessi rimandati. |
 | R6 | **Gestione stato training** | Dove vive lo stato di sessione | Basso/Medio | P3 | Sì | Stato nel componente/servizio Angular; nessuna persistenza nel MVP. |
 | R7 | **Sincronizzazione FE/BE** | Drift tra DTO e modello TS | Medio | Continuo da P2 | No | Contratto scritto (sezione 6) come fonte unica; aggiornarlo prima del codice. |
 | R8 | **Migrazione H2 → Supabase PostgreSQL** | Differenze SQL, persistenza, connessione | Medio | Post-MVP | Sì | Restare su JPA standard, evitare feature H2-specifiche; valutare Flyway al passaggio. |
 | R9 | **Autenticazione Supabase** | Identità utente, sicurezza endpoint | Alto (ma futuro) | Fase dedicata | Sì | Solo predisporre `userId` nullable; nessuna logica auth ora. |
-| R10 | **Containerizzazione Docker** | Build, networking FE/BE, immagini | Medio | Post-MVP | Sì | Mantenere progetti separati e config via env; nessun Dockerfile ora. |
+| R10 | **Containerizzazione Docker** | Build, networking FE/BE, immagini | Medio | Post-MVP | Sì | Mantenere `backend/` e `frontend/` come progetti **fisicamente separati** (vedi sezione 1) e config via env; nessun Dockerfile ora. La separazione abilita due immagini distinte in futuro. |
 | R11 | **Modello a albero/sotto-varianti** | Aperture reali sono alberi, non liste | Alto (se serve) | Dopo P6 | Sì | Nei prototipi una variante = **una linea lineare**. Alberi rimandati con decisione esplicita. |
+| R12 | **Scelta specifica board Angular** | Tra le librerie scacchiera Angular-compatibili, quale dà controllo su FEN/orientamento/case/pezzi SVG | Medio | Prototipo 1 | Residuo di R1 | Valutare 1-2 candidate contro i token visivi del riferimento; fallback a board custom CSS/SVG se insufficienti. |
 
-**Decisioni minime da prendere subito (prima di P1-P2):** R1 (libreria), R2 (SAN + JSON), R7 (contratto scritto). Tutto il resto è rimandabile con sicurezza.
+**Decisioni minime da prendere subito (prima di P1-P2):** R1/R12 (quale board Angular — `chess.js` già confermato), R2 (SAN + JSON), R7 (contratto scritto). Tutto il resto è rimandabile con sicurezza.
+
+**Chiuse dalla preanalisi:** scelta del motore regole/PGN (`chess.js`), esclusione di `react-chessboard`, formato pezzi (Staunton SVG), token visivi e layout (palette pergamena, case `#f0d9b5`/`#b58863`, cornice legno, layout a pannelli, controlli replay).
 
 ---
 
