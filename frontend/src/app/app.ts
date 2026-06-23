@@ -1,10 +1,11 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ApiService } from './core/api.service';
+import { Chessboard, MoveMade } from './chessboard/chessboard';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, Chessboard],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -14,6 +15,7 @@ export class App implements OnInit {
   protected readonly title = signal('WebApp Scacchi');
   protected readonly pingStatus = signal<string>('');
   protected readonly pingError = signal<string | null>(null);
+  protected readonly lastMove = signal<MoveMade | null>(null);
 
   ngOnInit(): void {
     this.api.ping().subscribe({
@@ -23,5 +25,9 @@ export class App implements OnInit {
         console.error('Ping fallito', err);
       }
     });
+  }
+
+  protected onMove(move: MoveMade): void {
+    this.lastMove.set(move);
   }
 }

@@ -17,5 +17,16 @@
     }
   </section>
 
+  <section class="board-section">
+    <app-chessboard (moveMade)="onMove($event)" />
+    <p class="board-hint">
+      @if (lastMove(); as m) {
+        Ultima mossa: <strong>{{ m.san }}</strong> ({{ m.from }}&#8594;{{ m.to }})
+      } @else {
+        Clicca un pezzo e poi la casa di destinazione. Solo mosse legali.
+      }
+    </p>
+  </section>
+
   <router-outlet />
 </main>

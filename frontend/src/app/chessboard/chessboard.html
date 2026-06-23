@@ -1,0 +1,34 @@
+<div class="board-frame">
+  <div class="board-grid" role="grid" aria-label="Scacchiera">
+    @for (sq of squares(); track sq.square) {
+      <button
+        type="button"
+        class="square"
+        [class.square--dark]="sq.dark"
+        [class.square--light]="!sq.dark"
+        [class.square--selected]="sq.selected"
+        [attr.data-square]="sq.square"
+        [attr.aria-label]="sq.square"
+        (click)="onSquareClick(sq.square)"
+      >
+        @if (sq.rankLabel) {
+          <span class="coord coord--rank">{{ sq.rankLabel }}</span>
+        }
+        @if (sq.fileLabel) {
+          <span class="coord coord--file">{{ sq.fileLabel }}</span>
+        }
+        @if (sq.legalTarget) {
+          <span class="legal-dot" [class.legal-dot--capture]="sq.piece"></span>
+        }
+        @if (sq.piece) {
+          <span
+            class="piece"
+            [class.piece--white]="sq.piece.color === 'w'"
+            [class.piece--black]="sq.piece.color === 'b'"
+            >{{ sq.glyph }}</span
+          >
+        }
+      </button>
+    }
+  </div>
+</div>

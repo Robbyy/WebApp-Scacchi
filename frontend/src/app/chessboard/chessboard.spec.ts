@@ -1,0 +1,80 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Chessboard, MoveMade } from './chessboard';
+
+function clickSquare(fixture: ComponentFixture<Chessboard>, square: string): void {
+  const el = fixture.nativeElement.querySelector(
+    `[data-square="${square}"]`,
+  ) as HTMLButtonElement;
+  el.click();
+}
+
+describe('Chessboard', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [Chessboard] }).compileComponents();
+  });
+
+  it('renders 64 squares', () => {
+    const fixture = TestBed.createComponent(Chessboard);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.square').length).toBe(64);
+  });
+
+  it('shows 32 pieces at the initial position', () => {
+    const fixture = TestBed.createComponent(Chessboard);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.piece').length).toBe(32);
+  });
+
+  it('emits a legal move (e2-e4) in SAN', () => {
+    const fixture = TestBed.createComponent(Chessboard);
+    fixture.detectChanges();
+    let emitted: MoveMade | undefined;
+    fixture.componentInstance.moveMade.subscribe((m) => (emitted = m));
+
+    clickSquare(fixture, 'e2');
+    fixture.detectChanges();
+    clickSquare(fixture, 'e4');
+
+    expect(emitted).toBeDefined();
+    expect(emitted!.san).toBe('e4');
+    expect(emitted!.from).toBe('e2');
+    expect(emitted!.to).toBe('e4');
+  });
+
+  it('does not emit on an illegal move (e2-e5)', () => {
+    const fixture = TestBed.createComponent(Chessboard);
+    fixture.detectChanges();
+    let count = 0;
+    fixture.componentInstance.moveMade.subscribe(() => count++);
+
+    clickSquare(fixture, 'e2');
+    fixture.detectChanges();
+    clickSquare(fixture, 'e5');
+
+    expect(count).toBe(0);
+  });
+
+  it('ignores selecting an opponent piece first', () => {
+    const fixture = TestBed.createComponent(Chessboard);
+    fixture.detectChanges();
+    let count = 0;
+    fixture.componentInstance.moveMade.subscribe(() => count++);
+
+    clickSquare(fixture, 'e7'); // pezzo nero, ma muove il bianco
+    fixture.detectChanges();
+    clickSquare(fixture, 'e5');
+
+    expect(count).toBe(0);
+  });
+
+  it('passes the turn to black after a white move', () => {
+    const fixture = TestBed.createComponent(Chessboard);
+    fixture.detectChanges();
+
+    clickSquare(fixture, 'e2');
+    fixture.detectChanges();
+    clickSquare(fixture, 'e4');
+
+    expect(fixture.componentInstance.currentFen().split(' ')[1]).toBe('b');
+  });
+});
