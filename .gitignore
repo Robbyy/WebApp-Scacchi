@@ -16,6 +16,11 @@ backend/.mvn/wrapper/maven-wrapper.jar
 backend/**/application-local.yml
 backend/**/application-local.properties
 
+# Database H2 persistito su file (sviluppo locale)
+backend/data/
+*.mv.db
+*.trace.db
+
 # ---------- Frontend: Angular / Node ----------
 frontend/node_modules/
 frontend/dist/

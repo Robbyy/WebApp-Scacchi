@@ -1,0 +1,17 @@
+# Configurazione usata SOLO nei test: database H2 in memoria e isolato, così i
+# test non dipendono dal file di sviluppo (backend/data) e non lo modificano.
+spring:
+  application:
+    name: backend-test
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+  h2:
+    console:
+      enabled: false

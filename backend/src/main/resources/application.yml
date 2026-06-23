@@ -2,7 +2,11 @@ spring:
   application:
     name: backend
   datasource:
-    url: jdbc:h2:mem:scacchi;DB_CLOSE_DELAY=-1
+    # Persistenza su file: i dati sopravvivono al riavvio del backend.
+    # Path parametrizzabile via H2_DB_PATH (default: ./data/scacchi nella
+    # working directory del modulo backend). AUTO_SERVER consente l'accesso
+    # concorrente (es. un tool esterno) mentre il backend è in esecuzione.
+    url: jdbc:h2:file:${H2_DB_PATH:./data/scacchi};AUTO_SERVER=TRUE
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
