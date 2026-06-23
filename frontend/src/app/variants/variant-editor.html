@@ -1,0 +1,76 @@
+<div class="detail">
+  <div class="board-col">
+    <app-chessboard
+      [position]="fen()"
+      [interactive]="true"
+      [controlled]="true"
+      [orientation]="orientation()"
+      (moveMade)="onMove($event)"
+    />
+    <p class="move-counter">
+      Muove il {{ turn() === 'w' ? 'Bianco' : 'Nero' }} · {{ moves().length }} mosse inserite
+    </p>
+    <div class="editor-controls">
+      <button type="button" class="btn" (click)="undo()" [disabled]="moves().length === 0">
+        &#8624; Annulla mossa
+      </button>
+      <button type="button" class="btn" (click)="reset()" [disabled]="moves().length === 0">
+        Reset
+      </button>
+    </div>
+  </div>
+
+  <aside class="side">
+    <header class="side-head">
+      <p class="side-kicker">Nuova variante</p>
+      <h2 class="side-title">Crea dalla scacchiera</h2>
+    </header>
+
+    <div class="form-field">
+      <label for="vname">Nome</label>
+      <input
+        id="vname"
+        name="name"
+        [ngModel]="name()"
+        (ngModelChange)="name.set($event)"
+        placeholder="Es. Difesa Francese"
+      />
+    </div>
+
+    <div class="form-field">
+      <label for="vcolor">Lato da allenare</label>
+      <select id="vcolor" name="color" [ngModel]="color()" (ngModelChange)="color.set($event)">
+        <option value="WHITE">Bianco</option>
+        <option value="BLACK">Nero</option>
+      </select>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Mosse inserite</h3>
+      @if (rows().length === 0) {
+        <p class="panel-note">Gioca le mosse sulla scacchiera per costruire la linea.</p>
+      } @else {
+        <ol class="moves">
+          @for (row of rows(); track row.number) {
+            <li class="move-row">
+              <span class="move-num">{{ row.number }}.</span>
+              <span class="move-cell">{{ row.white }}</span>
+              <span class="move-cell">{{ row.black }}</span>
+            </li>
+          }
+        </ol>
+      }
+    </div>
+
+    @if (error()) {
+      <p class="list-error">{{ error() }}</p>
+    }
+
+    <div class="actions">
+      <button type="button" class="btn btn--primary" (click)="save()" [disabled]="saving()">
+        {{ saving() ? 'Salvataggio…' : 'Salva variante' }}
+      </button>
+      <a class="btn" routerLink="/">Annulla</a>
+    </div>
+  </aside>
+</div>

@@ -5,6 +5,10 @@
 }
 
 .list-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 1.5rem;
 }
 
@@ -22,6 +26,30 @@
   color: var(--text-main);
 }
 
+.new-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: 0.6rem;
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--board-light);
+  background: linear-gradient(135deg, var(--wood-medium), var(--wood-dark));
+  box-shadow: 0 2px 8px oklch(0.3 0.05 45 / 0.3);
+}
+
+.new-cta svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.new-cta:hover {
+  color: #fff;
+}
+
 .list-muted {
   color: var(--text-muted);
 }
@@ -32,7 +60,7 @@
 
 .variant-cards {
   list-style: none;
-  margin: 0 0 1.5rem;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -122,58 +150,4 @@
 .delete-btn:hover {
   background: oklch(0.92 0.06 25);
   color: oklch(0.45 0.16 25);
-}
-
-.create-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 1.25rem;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 0.85rem;
-}
-
-.create-title {
-  margin: 0;
-  font-size: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-}
-
-.create-row {
-  display: flex;
-  gap: 0.6rem;
-}
-
-.create-input,
-.create-select {
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--panel-border);
-  border-radius: 0.55rem;
-  background: oklch(0.99 0.01 80);
-  color: var(--text-main);
-  font: inherit;
-}
-
-.create-input {
-  flex: 1;
-  width: 100%;
-}
-
-.btn-create {
-  align-self: flex-start;
-  padding: 0.55rem 1.2rem;
-  border: none;
-  border-radius: 0.6rem;
-  font-weight: 700;
-  color: var(--board-light);
-  background: linear-gradient(135deg, var(--wood-medium), var(--wood-dark));
-  cursor: pointer;
-}
-
-.btn-create:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
