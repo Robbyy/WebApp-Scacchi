@@ -35,23 +35,24 @@
   height: 2.5rem;
   min-width: 2.5rem;
   padding: 0 0.6rem;
-  border: none;
+  border: 1px solid var(--panel-border);
   border-radius: 0.6rem;
-  background: transparent;
+  background: oklch(0.965 0.018 80);
   color: var(--wood-dark);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease, transform 0.08s ease;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
 }
 
 .ctrl svg {
-  width: 18px;
-  height: 18px;
+  width: 19px;
+  height: 19px;
   fill: currentColor;
   display: block;
 }
 
 .ctrl:hover:not(:disabled) {
   background: var(--wood-light);
+  border-color: var(--wood-light);
 }
 
 .ctrl:active:not(:disabled) {
@@ -69,6 +70,7 @@
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--board-light);
+  border-color: transparent;
   background: linear-gradient(135deg, var(--wood-medium), var(--wood-dark));
   box-shadow: 0 2px 8px oklch(0.3 0.05 45 / 0.35);
 }
