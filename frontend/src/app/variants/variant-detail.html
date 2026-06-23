@@ -10,14 +10,32 @@
       />
 
       <div class="controls">
-        <button type="button" (click)="first()" title="Inizio" [disabled]="index() === 0">&#9198;</button>
-        <button type="button" (click)="prev()" title="Indietro" [disabled]="index() === 0">&#8249;</button>
-        <button type="button" class="controls-play" (click)="togglePlay()" [disabled]="totalMoves() === 0">
-          {{ playing() ? '⏸ Pausa' : '▶ Auto-play' }}
+        <button type="button" class="ctrl" (click)="first()" title="Vai all'inizio" aria-label="Vai all'inizio" [disabled]="index() === 0">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h2.2v14H7zM20 5v14L9.6 12z"/></svg>
         </button>
-        <button type="button" (click)="next()" title="Avanti" [disabled]="index() === totalMoves()">&#8250;</button>
-        <button type="button" (click)="last()" title="Fine" [disabled]="index() === totalMoves()">&#9197;</button>
-        <button type="button" (click)="reset()" title="Reset">&#8635;</button>
+        <button type="button" class="ctrl" (click)="prev()" title="Mossa precedente" aria-label="Mossa precedente" [disabled]="index() === 0">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5v14L6 12z"/></svg>
+        </button>
+
+        <button type="button" class="ctrl ctrl--play" (click)="togglePlay()" [disabled]="totalMoves() === 0" [attr.aria-label]="playing() ? 'Metti in pausa' : 'Riproduci automaticamente'">
+          @if (playing()) {
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+            <span>Pausa</span>
+          } @else {
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+            <span>Auto-play</span>
+          }
+        </button>
+
+        <button type="button" class="ctrl" (click)="next()" title="Mossa successiva" aria-label="Mossa successiva" [disabled]="index() === totalMoves()">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l10-7z"/></svg>
+        </button>
+        <button type="button" class="ctrl" (click)="last()" title="Vai alla fine" aria-label="Vai alla fine" [disabled]="index() === totalMoves()">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5v14l10.4-7zM14.8 5H17v14h-2.2z"/></svg>
+        </button>
+        <button type="button" class="ctrl ctrl--reset" (click)="reset()" title="Ricomincia" aria-label="Ricomincia" [disabled]="index() === 0 && !playing()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11A8 8 0 1 0 18 16"/><path d="M20 4v6h-6"/></svg>
+        </button>
       </div>
 
       <p class="move-counter">
