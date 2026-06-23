@@ -1,0 +1,87 @@
+@if (status() === 'error') {
+  <p class="detail-error">Variante non trovata. — <a routerLink="/">torna alle varianti</a></p>
+} @else if (variant(); as v) {
+  <div class="detail">
+    <div class="board-col">
+      <app-chessboard
+        [position]="boardFen()"
+        [interactive]="canPlay()"
+        [controlled]="true"
+        [orientation]="orientation()"
+        (moveMade)="onUserMove($event)"
+      />
+      <p class="move-counter">
+        Alleni il lato {{ userColor() === 'w' ? 'Bianco' : 'Nero' }}
+        @if (status() === 'opponent') {
+          · l'avversario sta rispondendo&#8230;
+        }
+      </p>
+    </div>
+
+    <aside class="side">
+      <header class="side-head">
+        <p class="side-kicker">Allenamento</p>
+        <h2 class="side-title">{{ v.name }}</h2>
+        <span
+          class="badge"
+          [class.badge--white]="v.color === 'WHITE'"
+          [class.badge--black]="v.color === 'BLACK'"
+          >{{ v.color === 'WHITE' ? 'Lato Bianco' : 'Lato Nero' }}</span
+        >
+      </header>
+
+      <div
+        class="feedback"
+        [class.feedback--ok]="status() === 'playing' || status() === 'opponent'"
+        [class.feedback--wrong]="status() === 'wrong'"
+        [class.feedback--done]="status() === 'completed'"
+      >
+        @switch (status()) {
+          @case ('completed') {
+            <strong>✓ Variante completata!</strong>
+            <span>Hai giocato tutta la linea. Errori: {{ mistakes() }}.</span>
+          }
+          @case ('wrong') {
+            <strong>✗ {{ wrongMove() }} non è la mossa attesa</strong>
+            <span>Riprova: rimetti il pezzo e trova la mossa giusta.</span>
+          }
+          @case ('opponent') {
+            <strong>Mossa corretta!</strong>
+            <span>L'avversario risponde&#8230;</span>
+          }
+          @default {
+            <strong>Tocca a te</strong>
+            <span>Gioca la mossa attesa del {{ userColor() === 'w' ? 'Bianco' : 'Nero' }}.</span>
+          }
+        }
+      </div>
+
+      <div class="progress">
+        <div class="progress-bar" [style.width.%]="progressPct()"></div>
+      </div>
+      <p class="progress-text">Mossa {{ index() }} di {{ total() }} · errori: {{ mistakes() }}</p>
+
+      <div class="actions">
+        @if (status() === 'completed') {
+          <button type="button" class="btn btn--primary" (click)="start()">Ricomincia</button>
+        } @else {
+          @if (showHint()) {
+            <p class="hint">Suggerimento: gioca <strong>{{ expectedMove() }}</strong></p>
+          } @else {
+            <button type="button" class="btn" (click)="revealHint()" [disabled]="!canPlay()">
+              Suggerimento
+            </button>
+          }
+          <button type="button" class="btn" (click)="start()">Ricomincia</button>
+        }
+      </div>
+
+      <div class="links">
+        <a routerLink="/variants/{{ v.id }}">Vedi la variante</a>
+        <a routerLink="/">Tutte le varianti</a>
+      </div>
+    </aside>
+  </div>
+} @else {
+  <p class="detail-muted">Caricamento&#8230;</p>
+}

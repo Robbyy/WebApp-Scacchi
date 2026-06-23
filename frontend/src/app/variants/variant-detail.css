@@ -135,6 +135,32 @@
   color: var(--board-light);
 }
 
+.train-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  border-radius: 0.7rem;
+  text-decoration: none;
+  font-weight: 700;
+  color: var(--board-light);
+  background: linear-gradient(135deg, var(--wood-medium), var(--wood-dark));
+  box-shadow: 0 2px 8px oklch(0.3 0.05 45 / 0.35);
+  transition: transform 0.08s ease;
+}
+
+.train-cta svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.train-cta:hover {
+  transform: translateY(-1px);
+  color: #fff;
+}
+
 .panel {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);

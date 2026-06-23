@@ -74,6 +74,13 @@ export class Chessboard {
   readonly position = input<string>('');
   /** Se false la scacchiera è di sola visualizzazione (nessuna mossa). */
   readonly interactive = input<boolean>(true);
+  /**
+   * Modalità controllata: dopo una mossa la scacchiera emette l'evento ma annulla
+   * internamente la mossa, lasciando al componente genitore il controllo della
+   * posizione autoritativa tramite l'input `position`. Usata nel training, dove
+   * la mossa va accettata/rifiutata e seguita dall'eventuale replica avversaria.
+   */
+  readonly controlled = input<boolean>(false);
   /** Orientamento: 'white' = bianco in basso, 'black' = nero in basso. */
   readonly orientation = input<'white' | 'black'>('white');
   /** Emesso a ogni mossa legale. */
@@ -166,13 +173,18 @@ export class Chessboard {
 
     try {
       const move = this.chess.move({ from: sel, to: square, promotion: 'q' });
+      const fenAfterMove = this.chess.fen();
       this.selected.set(null);
+      if (this.controlled()) {
+        // ripristina la posizione: la decide il genitore tramite `position`.
+        this.chess.undo();
+      }
       this.fen.set(this.chess.fen());
       this.moveMade.emit({
         san: move.san,
         from: move.from,
         to: move.to,
-        fen: this.chess.fen(),
+        fen: fenAfterMove,
       });
     } catch {
       // Mossa illegale: se ho cliccato un mio pezzo cambio selezione, altrimenti annullo.

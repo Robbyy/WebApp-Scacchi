@@ -55,6 +55,11 @@
         >
       </header>
 
+      <a class="train-cta" routerLink="/variants/{{ v.id }}/train">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+        Allena questa variante
+      </a>
+
       <div class="panel">
         <h3 class="panel-title">Mosse</h3>
         @if (rows().length === 0) {
