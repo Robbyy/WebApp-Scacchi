@@ -21,12 +21,7 @@
           <span class="legal-dot" [class.legal-dot--capture]="sq.piece"></span>
         }
         @if (sq.piece) {
-          <span
-            class="piece"
-            [class.piece--white]="sq.piece.color === 'w'"
-            [class.piece--black]="sq.piece.color === 'b'"
-            >{{ sq.glyph }}</span
-          >
+          <img class="piece" [src]="sq.pieceSrc" [alt]="sq.pieceAlt" draggable="false" />
         }
       </button>
     }

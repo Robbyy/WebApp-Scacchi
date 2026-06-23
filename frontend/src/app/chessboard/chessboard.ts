@@ -21,23 +21,42 @@ interface BoardSquare {
   square: string;
   dark: boolean;
   piece: { type: string; color: 'w' | 'b' } | null;
-  glyph: string;
+  pieceSrc: string | null;
+  pieceAlt: string;
   selected: boolean;
   legalTarget: boolean;
   rankLabel: string | null;
   fileLabel: string | null;
 }
 
-const GLYPHS: Record<string, string> = {
-  k: '♚',
-  q: '♛',
-  r: '♜',
-  b: '♝',
-  n: '♞',
-  p: '♟',
+/** Codice file del set di pezzi (cburnett Staunton): es. pedone bianco = wP. */
+const TYPE_CODE: Record<string, string> = {
+  k: 'K',
+  q: 'Q',
+  r: 'R',
+  b: 'B',
+  n: 'N',
+  p: 'P',
+};
+
+const TYPE_NAME: Record<string, string> = {
+  k: 're',
+  q: 'donna',
+  r: 'torre',
+  b: 'alfiere',
+  n: 'cavallo',
+  p: 'pedone',
 };
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+
+function pieceSrc(color: 'w' | 'b', type: string): string {
+  return `/pieces/${color}${TYPE_CODE[type]}.svg`;
+}
+
+function pieceAlt(color: 'w' | 'b', type: string): string {
+  return `${color === 'w' ? 'bianco' : 'nero'} ${TYPE_NAME[type]}`;
+}
 
 /**
  * Scacchiera renderizzata (Prototipo 1). Il rendering è custom (CSS grid +
@@ -103,7 +122,8 @@ export class Chessboard {
           square,
           dark: (rankIdx + fileIdx) % 2 === 1,
           piece: cell ? { type: cell.type, color: cell.color } : null,
-          glyph: cell ? GLYPHS[cell.type] : '',
+          pieceSrc: cell ? pieceSrc(cell.color, cell.type) : null,
+          pieceAlt: cell ? pieceAlt(cell.color, cell.type) : '',
           selected: sel === square,
           legalTarget: targets.has(square),
           rankLabel: fileIdx === 0 ? String(rankNumber) : null,

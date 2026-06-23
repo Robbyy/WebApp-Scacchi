@@ -55,20 +55,11 @@
 }
 
 .piece {
-  font-size: clamp(1.6rem, 7vw, 2.6rem);
-  line-height: 1;
+  width: 88%;
+  height: 88%;
   pointer-events: none;
-}
-
-.piece--white {
-  color: #f7f1e6;
-  -webkit-text-stroke: 1.4px #2a2018;
-  text-shadow: 0 1px 1px oklch(0.2 0.03 40 / 0.5);
-}
-
-.piece--black {
-  color: #241c14;
-  -webkit-text-stroke: 1.2px #0f0b07;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 1px 1px oklch(0.2 0.03 40 / 0.35));
 }
 
 .coord {
