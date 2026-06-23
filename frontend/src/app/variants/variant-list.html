@@ -4,10 +4,18 @@
       <p class="list-kicker">Repertorio</p>
       <h2 class="list-title">Le tue varianti</h2>
     </div>
-    <a class="new-cta" routerLink="/variants/new">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" /></svg>
-      Nuova variante
-    </a>
+    <div class="head-actions">
+      <a class="new-cta new-cta--ghost" routerLink="/variants/import">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3v10m0 0l-4-4m4 4l4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Importa PGN
+      </a>
+      <a class="new-cta" routerLink="/variants/new">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" /></svg>
+        Nuova variante
+      </a>
+    </div>
   </header>
 
   @if (loading()) {

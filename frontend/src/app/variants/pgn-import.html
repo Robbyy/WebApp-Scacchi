@@ -1,0 +1,80 @@
+<section class="import">
+  <header class="import-head">
+    <p class="import-kicker">Import</p>
+    <h2 class="import-title">Importa da PGN</h2>
+  </header>
+
+  <div class="import-grid">
+    <div class="import-col">
+      <label class="field-label" for="pgn">Incolla il PGN (linea principale)</label>
+      <textarea
+        id="pgn"
+        class="pgn-area"
+        name="pgn"
+        rows="12"
+        [ngModel]="pgn()"
+        (ngModelChange)="pgn.set($event)"
+        placeholder='[Event "..."]&#10;1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 ...'
+      ></textarea>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="name">Nome</label>
+          <input
+            id="name"
+            name="name"
+            [ngModel]="name()"
+            (ngModelChange)="name.set($event)"
+            [placeholder]="state() === 'ok' ? (suggestedName() || 'Variante importata') : 'Nome variante'"
+          />
+        </div>
+        <div class="field">
+          <label class="field-label" for="color">Lato</label>
+          <select id="color" name="color" [ngModel]="color()" (ngModelChange)="color.set($event)">
+            <option value="WHITE">Bianco</option>
+            <option value="BLACK">Nero</option>
+          </select>
+        </div>
+      </div>
+
+      @if (error()) {
+        <p class="import-error">{{ error() }}</p>
+      }
+
+      <div class="actions">
+        <button
+          type="button"
+          class="btn btn--primary"
+          (click)="save()"
+          [disabled]="saving() || state() !== 'ok'"
+        >
+          {{ saving() ? 'Salvataggio…' : 'Importa variante' }}
+        </button>
+        <a class="btn" routerLink="/">Annulla</a>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <h3 class="panel-title">Anteprima mosse</h3>
+      @switch (state()) {
+        @case ('ok') {
+          <ol class="moves">
+            @for (row of rows(); track row.number) {
+              <li class="move-row">
+                <span class="move-num">{{ row.number }}.</span>
+                <span class="move-cell">{{ row.white }}</span>
+                <span class="move-cell">{{ row.black }}</span>
+              </li>
+            }
+          </ol>
+        }
+        @case ('error') {
+          <p class="panel-note panel-note--error">{{ errorMessage() }}</p>
+        }
+        @default {
+          <p class="panel-note">Incolla un PGN per vedere le mosse riconosciute.</p>
+        }
+      }
+    </aside>
+  </div>
+</section>
