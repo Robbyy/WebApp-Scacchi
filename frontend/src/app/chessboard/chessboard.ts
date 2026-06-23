@@ -89,6 +89,18 @@ export class Chessboard {
   private readonly chess = new Chess();
   private readonly fen = signal<string>(this.chess.fen());
   private readonly selected = signal<string | null>(null);
+  /** Promozione in attesa di scelta del pezzo (from/to + colore che promuove). */
+  protected readonly pendingPromotion = signal<{ from: string; to: string; color: 'w' | 'b' } | null>(
+    null,
+  );
+
+  /** Pezzi selezionabili per la promozione. */
+  protected readonly promoPieces = [
+    { code: 'q', label: 'Donna' },
+    { code: 'r', label: 'Torre' },
+    { code: 'b', label: 'Alfiere' },
+    { code: 'n', label: 'Cavallo' },
+  ] as const;
 
   constructor() {
     effect(() => {
@@ -99,6 +111,7 @@ export class Chessboard {
       try {
         this.chess.load(pos);
         this.selected.set(null);
+        this.pendingPromotion.set(null);
         this.fen.set(this.chess.fen());
       } catch {
         // FEN non valida: si ignora, la posizione corrente resta invariata.
@@ -157,7 +170,7 @@ export class Chessboard {
   });
 
   protected onSquareClick(square: string): void {
-    if (!this.interactive()) {
+    if (!this.interactive() || this.pendingPromotion()) {
       return;
     }
     const sel = this.selected();
@@ -171,8 +184,47 @@ export class Chessboard {
       return;
     }
 
+    // Mossa di promozione: chiedi quale pezzo prima di applicare.
+    if (this.isPromotion(sel, square)) {
+      this.pendingPromotion.set({ from: sel, to: square, color: this.chess.turn() });
+      this.selected.set(null);
+      return;
+    }
+
+    this.applyMove(sel, square, 'q');
+  }
+
+  /** Conferma la promozione con il pezzo scelto. */
+  protected choosePromotion(piece: 'q' | 'r' | 'b' | 'n'): void {
+    const promo = this.pendingPromotion();
+    if (!promo) {
+      return;
+    }
+    this.pendingPromotion.set(null);
+    this.applyMove(promo.from, promo.to, piece);
+  }
+
+  /** Annulla la promozione in corso. */
+  protected cancelPromotion(): void {
+    this.pendingPromotion.set(null);
+    this.selected.set(null);
+  }
+
+  /** URL dell'asset del pezzo per il selettore di promozione. */
+  protected promoSrc(code: string): string {
+    const promo = this.pendingPromotion();
+    return promo ? `/pieces/${promo.color}${code.toUpperCase()}.svg` : '';
+  }
+
+  private isPromotion(from: string, to: string): boolean {
+    return this.chess
+      .moves({ square: from as ChessSquare, verbose: true })
+      .some((m) => m.to === to && m.promotion);
+  }
+
+  private applyMove(from: string, to: string, promotion: 'q' | 'r' | 'b' | 'n'): void {
     try {
-      const move = this.chess.move({ from: sel, to: square, promotion: 'q' });
+      const move = this.chess.move({ from, to, promotion });
       const fenAfterMove = this.chess.fen();
       this.selected.set(null);
       if (this.controlled()) {
@@ -188,7 +240,7 @@ export class Chessboard {
       });
     } catch {
       // Mossa illegale: se ho cliccato un mio pezzo cambio selezione, altrimenti annullo.
-      this.selectIfOwnPiece(square);
+      this.selectIfOwnPiece(to);
     }
   }
 

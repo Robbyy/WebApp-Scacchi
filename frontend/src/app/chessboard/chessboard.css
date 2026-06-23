@@ -3,6 +3,7 @@
 }
 
 .board-frame {
+  position: relative;
   padding: 14px;
   border-radius: 8px;
   /* Cornice effetto legno: repeating-linear-gradient verticale (preanalisi). */
@@ -108,4 +109,65 @@
   background: transparent;
   border: 5px solid oklch(0.35 0.05 45 / 0.35);
   box-sizing: border-box;
+}
+
+/* Selettore di promozione */
+.promo-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: oklch(0.2 0.03 40 / 0.55);
+  z-index: 5;
+}
+
+.promo-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  border-radius: 0.85rem;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 12px 32px oklch(0.2 0.05 40 / 0.5);
+}
+
+.promo-title {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+.promo-pieces {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.promo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.55rem;
+  background: var(--board-light);
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease;
+}
+
+.promo-btn:hover {
+  background: var(--wood-light);
+  transform: translateY(-1px);
+}
+
+.promo-btn img {
+  width: 80%;
+  height: 80%;
 }

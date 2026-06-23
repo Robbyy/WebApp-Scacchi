@@ -77,4 +77,48 @@ describe('Chessboard', () => {
 
     expect(fixture.componentInstance.currentFen().split(' ')[1]).toBe('b');
   });
+
+  it('asks for the promotion piece and applies the chosen one', () => {
+    const fixture = TestBed.createComponent(Chessboard);
+    // pedone bianco in a7, pronto a promuovere
+    fixture.componentRef.setInput('position', '8/P7/8/7k/8/8/8/4K3 w - - 0 1');
+    fixture.detectChanges();
+
+    let emitted: MoveMade | undefined;
+    fixture.componentInstance.moveMade.subscribe((m) => (emitted = m));
+
+    clickSquare(fixture, 'a7');
+    fixture.detectChanges();
+    clickSquare(fixture, 'a8');
+    fixture.detectChanges();
+
+    // nessuna mossa emessa: si attende la scelta del pezzo
+    expect(emitted).toBeUndefined();
+    expect(fixture.nativeElement.querySelector('.promo-picker')).not.toBeNull();
+
+    // scegli la Torre
+    (fixture.componentInstance as unknown as { choosePromotion(p: string): void }).choosePromotion('r');
+    fixture.detectChanges();
+
+    expect(emitted).toBeDefined();
+    expect(emitted!.san).toBe('a8=R');
+    expect(fixture.nativeElement.querySelector('.promo-picker')).toBeNull();
+  });
+
+  it('auto-queen is not forced: promoting to knight yields a knight move', () => {
+    const fixture = TestBed.createComponent(Chessboard);
+    fixture.componentRef.setInput('position', '8/P7/8/7k/8/8/8/4K3 w - - 0 1');
+    fixture.detectChanges();
+
+    let emitted: MoveMade | undefined;
+    fixture.componentInstance.moveMade.subscribe((m) => (emitted = m));
+
+    clickSquare(fixture, 'a7');
+    fixture.detectChanges();
+    clickSquare(fixture, 'a8');
+    fixture.detectChanges();
+    (fixture.componentInstance as unknown as { choosePromotion(p: string): void }).choosePromotion('n');
+
+    expect(emitted!.san).toBe('a8=N');
+  });
 });

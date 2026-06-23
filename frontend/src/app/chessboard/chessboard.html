@@ -31,4 +31,25 @@
       </button>
     }
   </div>
+
+  @if (pendingPromotion()) {
+    <div class="promo-overlay" (click)="cancelPromotion()">
+      <div class="promo-picker" (click)="$event.stopPropagation()">
+        <span class="promo-title">Promuovi a</span>
+        <div class="promo-pieces">
+          @for (p of promoPieces; track p.code) {
+            <button
+              type="button"
+              class="promo-btn"
+              (click)="choosePromotion(p.code)"
+              [attr.aria-label]="p.label"
+              [title]="p.label"
+            >
+              <img [src]="promoSrc(p.code)" [alt]="p.label" draggable="false" />
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
 </div>
