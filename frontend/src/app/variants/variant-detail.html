@@ -1,0 +1,85 @@
+@if (error()) {
+  <p class="detail-error">{{ error() }} — <a routerLink="/">torna alle varianti</a></p>
+} @else if (variant(); as v) {
+  <div class="detail">
+    <div class="board-col">
+      <app-chessboard
+        [position]="currentFen()"
+        [interactive]="false"
+        [orientation]="orientation()"
+      />
+
+      <div class="controls">
+        <button type="button" (click)="first()" title="Inizio" [disabled]="index() === 0">&#9198;</button>
+        <button type="button" (click)="prev()" title="Indietro" [disabled]="index() === 0">&#8249;</button>
+        <button type="button" class="controls-play" (click)="togglePlay()" [disabled]="totalMoves() === 0">
+          {{ playing() ? '⏸ Pausa' : '▶ Auto-play' }}
+        </button>
+        <button type="button" (click)="next()" title="Avanti" [disabled]="index() === totalMoves()">&#8250;</button>
+        <button type="button" (click)="last()" title="Fine" [disabled]="index() === totalMoves()">&#9197;</button>
+        <button type="button" (click)="reset()" title="Reset">&#8635;</button>
+      </div>
+
+      <p class="move-counter">
+        Mossa {{ index() }} di {{ totalMoves() }} · usa &#8592; &#8594; per navigare
+      </p>
+    </div>
+
+    <aside class="side">
+      <header class="side-head">
+        <p class="side-kicker">Variante</p>
+        <h2 class="side-title">{{ v.name }}</h2>
+        <span
+          class="badge"
+          [class.badge--white]="v.color === 'WHITE'"
+          [class.badge--black]="v.color === 'BLACK'"
+          >{{ v.color === 'WHITE' ? 'Lato Bianco' : 'Lato Nero' }}</span
+        >
+      </header>
+
+      <div class="panel">
+        <h3 class="panel-title">Mosse</h3>
+        @if (rows().length === 0) {
+          <p class="panel-note">Nessuna mossa.</p>
+        } @else {
+          <ol class="moves">
+            @for (row of rows(); track row.number) {
+              <li class="move-row">
+                <span class="move-num">{{ row.number }}.</span>
+                @if (row.white; as w) {
+                  <button
+                    type="button"
+                    class="move"
+                    [class.move--current]="index() === w.ply"
+                    (click)="goToPly(w.ply)"
+                  >
+                    {{ w.san }}
+                  </button>
+                }
+                @if (row.black; as b) {
+                  <button
+                    type="button"
+                    class="move"
+                    [class.move--current]="index() === b.ply"
+                    (click)="goToPly(b.ply)"
+                  >
+                    {{ b.san }}
+                  </button>
+                }
+              </li>
+            }
+          </ol>
+        }
+      </div>
+
+      <div class="panel panel--muted">
+        <h3 class="panel-title">Carica PGN</h3>
+        <p class="panel-note">Import da PGN disponibile nel Prototipo 6.</p>
+      </div>
+
+      <a class="back-link" routerLink="/">&#8592; Tutte le varianti</a>
+    </aside>
+  </div>
+} @else {
+  <p class="detail-muted">Caricamento&#8230;</p>
+}

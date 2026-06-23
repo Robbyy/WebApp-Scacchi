@@ -1,32 +1,20 @@
-<main class="app-shell">
-  <header class="app-header">
-    <p class="app-kicker">Allenamento aperture</p>
-    <h1 class="app-brand">{{ title() }}</h1>
-  </header>
-
-  <section class="status-card">
-    <span class="status-label">Stato backend</span>
-    @if (pingError()) {
-      <span class="status-badge status-badge--error">offline</span>
-      <p class="status-detail">{{ pingError() }}</p>
-    } @else if (pingStatus() === 'pong') {
-      <span class="status-badge status-badge--ok">{{ pingStatus() }}</span>
-      <p class="status-detail">Connessione frontend &#8644; backend verificata.</p>
+<header class="topbar">
+  <a class="brand" routerLink="/">{{ title() }}</a>
+  <span
+    class="conn"
+    [class.conn--ok]="online() === true"
+    [class.conn--off]="online() === false"
+  >
+    @if (online() === true) {
+      backend online
+    } @else if (online() === false) {
+      backend offline
     } @else {
-      <span class="status-badge">verifica&#8230;</span>
+      &#8230;
     }
-  </section>
+  </span>
+</header>
 
-  <section class="board-section">
-    <app-chessboard (moveMade)="onMove($event)" />
-    <p class="board-hint">
-      @if (lastMove(); as m) {
-        Ultima mossa: <strong>{{ m.san }}</strong> ({{ m.from }}&#8594;{{ m.to }})
-      } @else {
-        Clicca un pezzo e poi la casa di destinazione. Solo mosse legali.
-      }
-    </p>
-  </section>
-
+<main class="content">
   <router-outlet />
 </main>

@@ -72,6 +72,10 @@ function pieceAlt(color: 'w' | 'b', type: string): string {
 export class Chessboard {
   /** Posizione iniziale come FEN; vuoto = posizione di partenza standard. */
   readonly position = input<string>('');
+  /** Se false la scacchiera è di sola visualizzazione (nessuna mossa). */
+  readonly interactive = input<boolean>(true);
+  /** Orientamento: 'white' = bianco in basso, 'black' = nero in basso. */
+  readonly orientation = input<'white' | 'black'>('white');
   /** Emesso a ogni mossa legale. */
   readonly moveMade = output<MoveMade>();
 
@@ -110,12 +114,17 @@ export class Chessboard {
     const sel = this.selected();
     const targets = this.legalTargets();
     const board = this.chess.board();
+    const flip = this.orientation() === 'black';
     const result: BoardSquare[] = [];
 
-    // rank 8 (indice 0) in alto, file a..h da sinistra: orientamento bianco.
-    for (let rankIdx = 0; rankIdx < 8; rankIdx++) {
-      const rankNumber = 8 - rankIdx;
-      for (let fileIdx = 0; fileIdx < 8; fileIdx++) {
+    // vr/vf = riga/colonna visiva (0 in alto a sinistra). Con orientamento nero
+    // si invertono gli indici reali della scacchiera. board[rankIdx][fileIdx]:
+    // rankIdx 0 = traversa 8, fileIdx 0 = colonna a.
+    for (let vr = 0; vr < 8; vr++) {
+      for (let vf = 0; vf < 8; vf++) {
+        const rankIdx = flip ? 7 - vr : vr;
+        const fileIdx = flip ? 7 - vf : vf;
+        const rankNumber = 8 - rankIdx;
         const cell = board[rankIdx][fileIdx];
         const square = `${FILES[fileIdx]}${rankNumber}`;
         result.push({
@@ -126,8 +135,8 @@ export class Chessboard {
           pieceAlt: cell ? pieceAlt(cell.color, cell.type) : '',
           selected: sel === square,
           legalTarget: targets.has(square),
-          rankLabel: fileIdx === 0 ? String(rankNumber) : null,
-          fileLabel: rankIdx === 7 ? FILES[fileIdx] : null,
+          rankLabel: vf === 0 ? String(rankNumber) : null,
+          fileLabel: vr === 7 ? FILES[fileIdx] : null,
         });
       }
     }
@@ -141,6 +150,9 @@ export class Chessboard {
   });
 
   protected onSquareClick(square: string): void {
+    if (!this.interactive()) {
+      return;
+    }
     const sel = this.selected();
 
     if (sel === null) {

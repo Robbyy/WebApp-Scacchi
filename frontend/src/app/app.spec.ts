@@ -4,6 +4,7 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 import { App } from './app';
 
 describe('App', () => {
@@ -12,7 +13,7 @@ describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
   });
@@ -21,28 +22,28 @@ describe('App', () => {
     httpMock.verify();
   });
 
-  it('should create the app', () => {
+  it('creates the app and pings the backend', () => {
     const fixture = TestBed.createComponent(App);
-    fixture.detectChanges(); // esegue ngOnInit -> ping()
+    fixture.detectChanges();
     httpMock.expectOne('/api/ping').flush({ status: 'pong' });
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should render the brand title', () => {
+  it('shows the brand title', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     httpMock.expectOne('/api/ping').flush({ status: 'pong' });
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('WebApp Scacchi');
+    expect(compiled.querySelector('.brand')?.textContent).toContain('WebApp Scacchi');
   });
 
-  it('should show the backend status badge when ping succeeds', () => {
+  it('marks the backend online when ping succeeds', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     httpMock.expectOne('/api/ping').flush({ status: 'pong' });
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.status-badge--ok')?.textContent).toContain('pong');
+    expect(compiled.querySelector('.conn--ok')).not.toBeNull();
   });
 });

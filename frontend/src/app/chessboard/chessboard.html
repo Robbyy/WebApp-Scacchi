@@ -1,5 +1,10 @@
 <div class="board-frame">
-  <div class="board-grid" role="grid" aria-label="Scacchiera">
+  <div
+    class="board-grid"
+    [class.board-grid--static]="!interactive()"
+    role="grid"
+    aria-label="Scacchiera"
+  >
     @for (sq of squares(); track sq.square) {
       <button
         type="button"
