@@ -10,3 +10,11 @@ export interface Variant {
   sourcePgn?: string | null;
   createdAt?: string | null;
 }
+
+/** Payload per la creazione di una variante (POST /api/variants). */
+export interface CreateVariantRequest {
+  name: string;
+  color: VariantColor;
+  moves: string[];
+  sourcePgn?: string | null;
+}

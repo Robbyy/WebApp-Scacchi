@@ -8,26 +8,67 @@
     <p class="list-muted">Caricamento&#8230;</p>
   } @else if (error()) {
     <p class="list-error">{{ error() }}</p>
-  } @else if (variants().length === 0) {
-    <p class="list-muted">Nessuna variante disponibile.</p>
   } @else {
-    <ul class="variant-cards">
-      @for (v of variants(); track v.id) {
-        <li>
-          <a class="variant-card" [routerLink]="['/variants', v.id]">
-            <span class="variant-name">{{ v.name }}</span>
-            <span class="variant-meta">
-              <span
-                class="badge"
-                [class.badge--white]="v.color === 'WHITE'"
-                [class.badge--black]="v.color === 'BLACK'"
-                >{{ v.color === 'WHITE' ? 'Bianco' : 'Nero' }}</span
-              >
-              <span class="variant-count">{{ v.moves.length }} mosse</span>
-            </span>
-          </a>
-        </li>
+    @if (variants().length === 0) {
+      <p class="list-muted">Nessuna variante. Creane una qui sotto.</p>
+    } @else {
+      <ul class="variant-cards">
+        @for (v of variants(); track v.id) {
+          <li class="variant-card">
+            <a class="variant-main" [routerLink]="['/variants', v.id]">
+              <span class="variant-name">{{ v.name }}</span>
+              <span class="variant-meta">
+                <span
+                  class="badge"
+                  [class.badge--white]="v.color === 'WHITE'"
+                  [class.badge--black]="v.color === 'BLACK'"
+                  >{{ v.color === 'WHITE' ? 'Bianco' : 'Nero' }}</span
+                >
+                <span class="variant-count">{{ v.moves.length }} mosse</span>
+              </span>
+            </a>
+            <button
+              class="delete-btn"
+              type="button"
+              (click)="remove(v)"
+              [attr.aria-label]="'Elimina ' + v.name"
+              title="Elimina"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 3v1H4v2h16V4h-5V3H9zM6 8l1 12h10l1-12H6z" />
+              </svg>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+
+    <form class="create-form" (ngSubmit)="create()">
+      <h3 class="create-title">Nuova variante</h3>
+      <div class="create-row">
+        <input
+          class="create-input"
+          name="name"
+          [(ngModel)]="newName"
+          placeholder="Nome (es. Apertura Spagnola)"
+        />
+        <select class="create-select" name="color" [(ngModel)]="newColor">
+          <option value="WHITE">Bianco</option>
+          <option value="BLACK">Nero</option>
+        </select>
+      </div>
+      <input
+        class="create-input"
+        name="moves"
+        [(ngModel)]="newMoves"
+        placeholder="Mosse SAN separate da spazio: e4 e5 Nf3 Nc6 Bb5"
+      />
+      @if (formError()) {
+        <p class="list-error">{{ formError() }}</p>
       }
-    </ul>
+      <button class="btn-create" type="submit" [disabled]="saving()">
+        {{ saving() ? 'Salvataggio…' : 'Crea variante' }}
+      </button>
+    </form>
   }
 </section>
