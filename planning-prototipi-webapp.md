@@ -50,7 +50,7 @@ Sequenza ordinata. Ogni prototipo è un passo piccolo che abilita il successivo.
 | 4 | **Persistenza varianti (CRUD)** | Creare/elencare/cancellare varianti su H2 | Varianti non più hardcoded, gestione dati reale |
 | 5 | **Inserimento variante mossa-per-mossa** | Creare una variante muovendo sulla scacchiera | Input manuale delle aperture |
 | 6 | **Import PGN base** | Creare una variante da una stringa PGN | Secondo metodo di input previsto dal progetto |
-| 7+ | **Funzionalità avanzate** | Spaced repetition, statistiche, multi-utente | Rinviate: vedi sezioni 7 e 8 |
+| 7+ | **Consolidamento + Studi + Apprendimento** | Validazione albero, studi/gruppi, statistiche, spaced repetition | Pianificati nella **Parte 2** (sezioni 11-17) |
 
 **Dettaglio per prototipo:**
 
@@ -681,4 +681,590 @@ Bozze sintetiche, da espandere al momento dell'uso.
 
 ---
 
-*Fine del planning. Documento di sola pianificazione: nessun codice applicativo incluso. I file `preanalisi-progetto.md` e `CLAUDE.md` restano la fonte autorevole per obiettivo, stack e versioni.*
+# PARTE 2 — Consolidamento e organizzazione in studi
+
+> Seconda tornata di pianificazione. Riprende lo stile e i principi della Parte 1 (prototipi piccoli, verificabili, validati a mano).
+> Fonti: `stato-avanzamento-lavori.md` (cosa risulta mancante, sezione 5), questo planning (sezioni 1-10), `preanalisi-progetto.md`.
+> **Esclusioni esplicite di questa Parte 2** (rinviate alla terza tornata, sezione 17): multiutente, autenticazione Supabase, migrazioni versionate (Liquibase/Flyway), Supabase PostgreSQL, Docker. Restano gli ultimissimi passi.
+> **Precedenza:** prima il **consolidamento** dell'applicativo (Fase A), poi gli **studi/gruppi** (Fase B), poi import/export e apprendimento (Fasi C-D).
+
+---
+
+## 11. Strategia della Parte 2
+
+L'app ha già un MVP esteso funzionante (prototipi 0-6 + estensioni: editing, alberi, training su rami). Prima di aggiungere superficie nuova, la Parte 2 **stabilizza il nucleo** e poi introduce l'organizzazione delle varianti in **studi**, sul modello degli *studies* di Lichess.
+
+Principi (in continuità con la sezione 1):
+
+- **Consolidare prima di espandere.** Le funzionalità anticipate fuori roadmap (albero, editing) vanno rese affidabili con validazione e test prima di costruirci sopra.
+- **Integrità dei dati a difesa del backend.** Oggi l'API si fida del frontend; la Parte 2 sposta la validazione di legalità anche lato server (rischio R3/R13).
+- **Studi = aggregato di varianti.** Uno **Studio** raggruppa più **Varianti** (mappatura: Studio ≈ *study/repertorio* Lichess, Variante ≈ *chapter*). Dentro uno studio si crea o si elimina una variante.
+- **Retrocompatibilità.** Le varianti esistenti non si perdono: vengono assegnate a uno studio di default; `studyId` è introdotto come campo nullable.
+- **Separazione `backend/` ↔ `frontend/` invariata** (vincolo non negoziabile della sezione 1).
+- **Niente over-engineering verso il multiutente.** I campi `userId` restano predisposti ma inattivi (sezione 7); nessuna logica auth in Parte 2.
+
+Logica di fondo: arrivare a *"i miei repertori sono organizzati in studi, ogni mossa salvata è legale e verificata, posso allenarli e vedere i miei progressi"* — senza ancora toccare cloud, autenticazione o deploy.
+
+---
+
+## 12. Roadmap Parte 2 (prototipi 7+)
+
+| # | Prototipo | Fase | Obiettivo sintetico | Valore prodotto |
+|---|-----------|------|---------------------|-----------------|
+| 7 | **Validazione scacchistica lato backend** | A · Consolidamento | Backend valida legalità di mainline e albero | Integrità dati, API non più "fidata" |
+| 8 | **Consolidamento del modello ad albero** | A · Consolidamento | Round-trip `tree`, "promuovi a mainline", protezione sottoalberi | Albero affidabile e usabile |
+| 9 | **Robustezza interazioni e azioni distruttive** | A · Consolidamento | Conferme, guard "modifiche non salvate", feedback errori | Niente perdite dati accidentali |
+| 10 | **Suite test automatici + checklist E2E** | A · Consolidamento | Test su flussi completi, checklist ripetibile | Regressioni sotto controllo |
+| 11 | **Modello Studi (backend)** | B · Studi | Entità `Study` + relazione 1-N con `Variant` + CRUD | Raggruppamento varianti |
+| 12 | **UI Studi** | B · Studi | Lista/dettaglio studio; crea/elimina variante dentro lo studio | Organizzazione tipo Lichess |
+| 13 | **Assegnazione e migrazione varianti** | B · Studi | Sposta varianti tra studi; studio di default per le esistenti | Repertori ordinati |
+| 14 | **Import PGN avanzato** | C · PGN | Varianti annidate → `tree`; commenti/NAG di base | Import realistico |
+| 15 | **Export PGN** | C · PGN | Esporta mainline + varianti in PGN | Portabilità del repertorio |
+| 16 | **Persistenza sessioni di allenamento** | D · Progresso | Salva `TrainingSession`/`TrainingMove` | Base dati per stats e ripetizione |
+| 17 | **Statistiche e reportistica** | D · Progresso | Report errori/completamenti per variante e studio | Feedback sull'allenamento |
+| 18 | **Spaced repetition** | D · Progresso | Scheduling delle ripetizioni per variante | Memorizzazione efficace |
+
+Ordine consigliato di esecuzione: **7 → 8 → 9 → 10** (consolidamento), poi **11 → 12 → 13** (studi), poi **14 → 15** (PGN), infine **16 → 17 → 18** (apprendimento). Le fasi C e D sono indipendenti tra loro e possono essere riordinate in base alle priorità del momento.
+
+---
+
+## 13. Dettaglio dei prototipi 7+
+
+### Prototipo 7 - Validazione scacchistica lato backend
+
+#### Obiettivo
+Il backend non si fida più ciecamente del frontend: valida la **legalità** della sequenza mosse (mainline) e, ricorsivamente, di ogni ramo dell'albero, rifiutando payload incoerenti con `400` e messaggio utile.
+
+#### Risultato funzionante atteso
+`POST`/`PUT /api/variants` con SAN illegale o albero incoerente → `400 Bad Request` con dettaglio (quale ply, quale ramo). Payload validi → invariati nel comportamento.
+
+#### Backend workstream
+- Decisione tecnica (R13): introdurre una **libreria scacchi Java** (candidata: `chesslib`) per ricostruire la posizione e validare ogni SAN, **oppure** mantenere validazione minima e formalizzare che la legalità resta responsabilità del client. Scelta consigliata: validazione server con libreria, per integrità reale.
+- `VariantValidator`: ricostruisce la posizione da `startingFen` e verifica che ogni mossa della mainline sia legale; per `tree`, visita in profondità validando ogni figlio dal nodo padre.
+- Mappare gli errori di validazione a `400` con corpo strutturato (`{ field, ply, message }`).
+- Test: mainline valida/invalida, albero con ramo illegale, FEN di partenza non standard.
+
+#### Frontend workstream
+- Gestione del `400` strutturato: messaggio chiaro nell'editor/import (quale mossa è stata rifiutata).
+- Nessun cambio al flusso felice.
+
+#### Integration workstream
+- Contratto `400` arricchito (sezione 14). DTO di richiesta invariati.
+
+#### Validazione del prototipo
+1. Creo via API una variante con SAN illegale → `400` con messaggio.
+2. Creo un albero con un ramo illegale → `400` che indica il ramo.
+3. Creo una variante valida → `201` come prima.
+4. L'editor mostra l'errore in modo leggibile.
+
+#### Criteri di completamento
+Nessuna variante con mosse illegali può entrare in DB via API; gli errori sono comprensibili lato UI.
+
+#### Cosa non fare ancora
+Niente validazione semantica "di apertura" (non si giudica se la linea è *buona*, solo se è *legale*).
+
+---
+
+### Prototipo 8 - Consolidamento del modello ad albero
+
+#### Obiettivo
+Rendere l'albero (`MoveNode`) affidabile e gestibile: round-trip dati garantito, comandi espliciti per gestire i rami, protezione dalle cancellazioni accidentali.
+
+#### Risultato funzionante atteso
+Posso creare rami multipli dall'editor, salvare, riaprire e ritrovarli identici; posso **promuovere un ramo a mainline**; cancellare un sottoalbero chiede conferma.
+
+#### Backend workstream
+- Test di round-trip `tree → DB (JSON text) → DTO → tree`, inclusi rami multipli e profondi.
+- Confermare come **vincolo ufficiale** `children[0] = mainline` (già in ADR 0002); derivazione `moves` sempre coerente dopo ogni update.
+- Endpoint/azione per "promuovi ramo a mainline" (può essere risolto lato client riordinando `children` e rifacendo `PUT`).
+
+#### Frontend workstream
+- Editor: UX chiara per distinguere **mainline** e **varianti** (già stili `move--variation`); comando "rendi mainline" sul nodo corrente.
+- Conferma prima di cancellare un nodo che ha figli (sottoalbero).
+- Visualizzazione path/ramo corrente più esplicita.
+
+#### Integration workstream
+- Nessun nuovo endpoint obbligatorio (riuso `PUT`); il riordino dei `children` è la primitiva per "promuovi a mainline".
+
+#### Validazione del prototipo
+1. Creo `1.e4 e5` con due risposte alternative del Nero, salvo, riapro → entrambe presenti.
+2. Promuovo la variante a mainline → `moves` derivata aggiornata.
+3. Cancello un sottoalbero → conferma richiesta, poi rimosso.
+4. Alleno una variante con rami → tutte le risposte valide sono accettate.
+
+#### Criteri di completamento
+Albero stabile, round-trip garantito da test, gestione rami esplicita e protetta.
+
+#### Cosa non fare ancora
+Niente import/export PGN dei rami (arriva in P14/P15); niente commenti/NAG.
+
+---
+
+### Prototipo 9 - Robustezza interazioni e azioni distruttive
+
+#### Obiettivo
+Eliminare le perdite di dati accidentali e rendere il feedback degli errori esplicito.
+
+#### Risultato funzionante atteso
+Eliminare una variante o una mossa chiede conferma; uscire dall'editor con modifiche non salvate avvisa; gli errori API mostrano un messaggio (toast) invece di fallire in silenzio.
+
+#### Backend workstream
+- Nessuna nuova logica obbligatoria; rifinire i messaggi d'errore (`400`/`404`) già esistenti.
+
+#### Frontend workstream
+- Dialog di conferma per: elimina variante (lista/dettaglio), elimina mossa/sottoalbero (editor).
+- Route guard `canDeactivate` sull'editor: avviso se ci sono modifiche non salvate.
+- Sistema di **toast/snackbar** per esiti (salvato, errore di rete, `404`/`400`).
+- Stati di `loading`/`saving` su pulsanti e liste; disabilitazione durante le chiamate.
+
+#### Integration workstream
+- Mappatura coerente codici HTTP → messaggi utente.
+
+#### Validazione del prototipo
+1. Elimino una variante → conferma → eliminata; annullo → resta.
+2. Modifico l'editor e provo a uscire → avviso "modifiche non salvate".
+3. Spengo il backend e salvo → toast d'errore, nessun crash.
+
+#### Criteri di completamento
+Nessuna azione distruttiva senza conferma; ogni errore ha feedback visibile.
+
+#### Cosa non fare ancora
+Niente restyle grafico complessivo (le proposte estetiche restano nella sezione 16, da validare a parte).
+
+---
+
+### Prototipo 10 - Suite test automatici + checklist E2E
+
+#### Obiettivo
+Trasformare le verifiche manuali in test ripetibili e in una checklist formale (sezione 5.5 dello stato avanzamento).
+
+#### Risultato funzionante atteso
+Una suite che copre i flussi completi (crea → dettaglio → training → modifica → ramo → import → delete) e una checklist manuale documentata.
+
+#### Backend workstream
+- Test di integrazione sui controller `Variant` (e futuri `Study`): CRUD, validazione, round-trip albero.
+
+#### Frontend workstream
+- Test dei componenti chiave già presenti; aggiungere test sui flussi editor/training con rami.
+- (Opzionale, valutare) un runner E2E leggero per i percorsi principali.
+
+#### Integration workstream
+- Checklist E2E scritta (riprendere la lista a 12 punti della sezione 5.5 dello stato avanzamento).
+
+#### Validazione del prototipo
+1. La suite passa in locale (backend e frontend).
+2. La checklist manuale è eseguibile in pochi minuti e documentata.
+
+#### Criteri di completamento
+Flussi critici coperti da test automatici + checklist ripetibile versionata.
+
+#### Cosa non fare ancora
+Niente CI/CD (richiede infrastruttura, rinviato con Docker/Supabase alla terza tornata).
+
+---
+
+### Prototipo 11 - Modello Studi (backend)
+
+#### Obiettivo
+Introdurre l'entità **Study** che raggruppa più varianti, con CRUD completo, mantenendo la retrocompatibilità delle varianti esistenti.
+
+#### Risultato funzionante atteso
+`GET /api/studies` elenca gli studi con il conteggio varianti; `GET /api/studies/{id}` restituisce lo studio con le sue varianti; creo/rinomino/elimino studi via API.
+
+#### Backend workstream
+- Entità `Study` (sezione 14): `id`, `name`, `description?`, `color?` (WHITE/BLACK/MIXED, opzionale), `createdAt`.
+- Relazione **1-N** `Study → Variant`: su `Variant` si aggiunge `studyId` (FK **nullable**) e `orderIndex` (posizione nello studio).
+- `StudyRepository`, `StudyService`, `StudyController`: `GET` lista/dettaglio, `POST`, `PUT`, `DELETE`.
+- Politica di cancellazione studio (R14): scelta consigliata **non distruttiva** — eliminando uno studio le sue varianti tornano "senza studio" (`studyId = null`), non vengono cancellate. (Alternativa cascade da decidere.)
+- Seed: uno studio di default "Repertorio" a cui agganciare le varianti esistenti.
+
+#### Frontend workstream
+- Modello TS `Study`; `StudyService` con i metodi CRUD.
+- (UI vera e propria in P12.)
+
+#### Integration workstream
+- Nuovi endpoint `/api/studies` (sezione 14). `VariantDto` arricchito con `studyId` (nullable).
+
+#### Validazione del prototipo
+1. `GET /api/studies` → studio di default con le varianti seed.
+2. `POST` nuovo studio → `201`.
+3. `DELETE` studio non vuoto → le varianti diventano "senza studio", non spariscono.
+4. Test backend su CRUD studi e relazione.
+
+#### Criteri di completamento
+Gli studi vivono in DB, il CRUD funziona, nessuna variante esistente è persa.
+
+#### Cosa non fare ancora
+Niente UI studi (P12); niente condivisione/esportazione studi (terza tornata).
+
+---
+
+### Prototipo 12 - UI Studi
+
+#### Obiettivo
+Portare gli studi nel frontend: navigare gli studi, aprire uno studio e gestirne le varianti (crea/elimina) dall'interno, sul modello degli *studies* di Lichess.
+
+#### Risultato funzionante atteso
+La home mostra gli **studi**; aprendo uno studio vedo le sue varianti (i "capitoli"); dentro lo studio posso **creare una nuova variante** o **eliminarne** una esistente.
+
+#### Backend workstream
+- `POST /api/studies/{id}/variants` (crea variante già agganciata allo studio) — oppure riuso di `POST /api/variants` con `studyId` nel body. Scelta consigliata: endpoint nidificato per chiarezza.
+- `DELETE /api/variants/{id}` già esistente (riuso).
+
+#### Frontend workstream
+- Nuova `StudyList` (home a studi) e `StudyDetail` (intestazione studio + lista varianti/capitoli + azioni).
+- Da dentro lo studio: pulsante "Nuova variante" (apre l'editor pre-agganciato allo studio) e "Importa PGN" nello studio; azione "Elimina" per ogni variante.
+- Aggiornare routing: `/` → studi, `/studies/:id` → dettaglio studio; le rotte variante restano (`/variants/:id`, `/edit`, `/train`).
+- Breadcrumb Studio → Variante per orientarsi.
+
+#### Integration workstream
+- Endpoint studi + creazione variante nello studio.
+
+#### Validazione del prototipo
+1. Apro la home → vedo gli studi.
+2. Apro uno studio → vedo le sue varianti.
+3. Creo una variante dentro lo studio → compare nello studio.
+4. Elimino una variante dello studio → conferma (da P9) → rimossa.
+
+#### Criteri di completamento
+Gli studi sono navigabili e si gestiscono le varianti dall'interno, end-to-end.
+
+#### Cosa non fare ancora
+Niente drag-and-drop di riordino avanzato (può arrivare in P13); niente condivisione.
+
+---
+
+### Prototipo 13 - Assegnazione e migrazione varianti
+
+#### Obiettivo
+Permettere di spostare varianti tra studi e riordinarle, e garantire che le varianti preesistenti finiscano in uno studio sensato.
+
+#### Risultato funzionante atteso
+Posso spostare una variante da uno studio a un altro; posso riordinare le varianti dentro uno studio; le varianti "senza studio" sono raggiungibili e assegnabili.
+
+#### Backend workstream
+- `PUT /api/variants/{id}/study` (o campo `studyId` in `PUT /api/variants/{id}`) per riassegnare lo studio.
+- Gestione `orderIndex` per il riordino dentro lo studio.
+- Migrazione dati seed/esistenti verso lo studio di default (idempotente).
+
+#### Frontend workstream
+- UI "sposta in studio" (select) dal dettaglio/lista variante.
+- Riordino varianti dentro lo studio (frecce su/giù o drag-and-drop — riusa il pattern drag già presente sulla board come esperienza, ma su lista).
+- Sezione "Senza studio" per le varianti orfane.
+
+#### Integration workstream
+- Endpoint riassegnazione/riordino.
+
+#### Validazione del prototipo
+1. Sposto una variante in un altro studio → si aggiorna in entrambi.
+2. Riordino le varianti di uno studio → ordine persistito.
+3. Una variante orfana è visibile e assegnabile.
+
+#### Criteri di completamento
+Le varianti si organizzano liberamente tra e dentro gli studi, con ordine persistito.
+
+#### Cosa non fare ancora
+Niente sotto-studi/cartelle annidate; niente tag trasversali (idee per la terza tornata).
+
+---
+
+### Prototipo 14 - Import PGN avanzato
+
+#### Obiettivo
+Superare l'import "solo linea principale": leggere PGN con **varianti annidate** e mapparle sull'albero `tree`; gestire commenti/NAG di base.
+
+#### Risultato funzionante atteso
+Incollo un PGN con varianti tra parentesi → l'app costruisce l'albero corretto (mainline + sotto-varianti) e lo salva.
+
+#### Backend workstream
+- Decisione (R15): parsing avanzato lato **frontend** con `chess.js` (che gestisce varianti) o lato backend con libreria Java. Consigliato: continuare lato frontend, coerente con P6.
+- Eventuale validazione dell'albero importato riusando `VariantValidator` (P7).
+
+#### Frontend workstream
+- Estendere `PgnImport`: dal PGN con varianti, costruire `MoveNode[]` (parentesi → `children` alternativi).
+- Gestione di base di commenti `{...}` e NAG (`$n`): almeno non rompere il parsing; opzionale conservarli.
+- Anteprima ad albero del PGN importato prima del salvataggio.
+
+#### Integration workstream
+- Riuso `POST /api/variants` / endpoint studio con `tree` popolato.
+
+#### Validazione del prototipo
+1. Importo un PGN con 2-3 varianti annidate → albero corretto in anteprima.
+2. Salvo → ritrovo i rami nel dettaglio/editor.
+3. Importo un PGN con commenti → nessun crash.
+
+#### Criteri di completamento
+PGN ramificati diventano varianti ad albero allenabili.
+
+#### Cosa non fare ancora
+Niente PGN multi-partita in un file; niente import di file `.pgn` (solo incolla testo); gestione NAG completa rinviata.
+
+---
+
+### Prototipo 15 - Export PGN
+
+#### Obiettivo
+Esportare una variante (mainline + sotto-varianti) come stringa PGN standard, per portabilità e backup.
+
+#### Risultato funzionante atteso
+Da una variante/studio ottengo un PGN copiabile che, reimportato, ricostruisce lo stesso albero (round-trip P14↔P15).
+
+#### Backend workstream
+- (Opzionale) endpoint export server-side; consigliato lato frontend per riuso di `chess.js`.
+
+#### Frontend workstream
+- Generazione PGN dall'albero (`tree` → PGN con varianti tra parentesi).
+- Pulsante "Esporta PGN" (copia negli appunti / mostra in textarea) su variante e, opzionale, su intero studio (multi-partita).
+
+#### Integration workstream
+- Nessun nuovo endpoint se lato frontend.
+
+#### Validazione del prototipo
+1. Esporto una variante con rami → PGN valido.
+2. Reimporto il PGN esportato (P14) → stesso albero.
+
+#### Criteri di completamento
+Round-trip import/export verificato su varianti ramificate.
+
+#### Cosa non fare ancora
+Niente esportazione in formati non-PGN; niente download file (solo copia/testo) finché non serve.
+
+---
+
+### Prototipo 16 - Persistenza sessioni di allenamento
+
+#### Obiettivo
+Salvare l'esito degli allenamenti, creando la base dati per statistiche e ripetizione (entità già previste in sezione 7).
+
+#### Risultato funzionante atteso
+Completando un training, l'app registra la sessione (variante, esito, numero errori, durata) e le singole mosse.
+
+#### Backend workstream
+- Entità `TrainingSession` e `TrainingMove` (sezione 7), `userId` nullable (predisposto, inattivo).
+- `POST /api/training-sessions` per registrare una sessione conclusa; `GET` per leggerle.
+
+#### Frontend workstream
+- Al termine del training, inviare la sessione al backend.
+- Stato/loading minimo; nessuna UI statistiche ancora (P17).
+
+#### Integration workstream
+- Nuovi endpoint `training-sessions` (sezione 14).
+
+#### Validazione del prototipo
+1. Completo un training → la sessione compare via `GET`.
+2. Una sessione con errori registra il conteggio corretto.
+
+#### Criteri di completamento
+Le sessioni di allenamento sono persistite e rileggibili.
+
+#### Cosa non fare ancora
+Niente aggregazioni/grafici (P17); niente scheduling ripetizioni (P18).
+
+---
+
+### Prototipo 17 - Statistiche e reportistica
+
+#### Obiettivo
+Mostrare all'utente come sta andando l'allenamento, per variante e per studio, derivando dai dati di P16.
+
+#### Risultato funzionante atteso
+Una vista con: completamenti, percentuale di errore, mosse più sbagliate, ultima esecuzione — per variante e aggregato per studio.
+
+#### Backend workstream
+- Endpoint di aggregazione (`GET /api/stats/...`) o calcolo lato frontend dai dati grezzi delle sessioni. Consigliato: aggregazioni server per efficienza.
+
+#### Frontend workstream
+- Vista statistiche (variante e studio): contatori, eventuali grafici semplici.
+- Evidenza delle mosse più problematiche.
+
+#### Integration workstream
+- Endpoint stats o consumo dei dati `training-sessions`.
+
+#### Validazione del prototipo
+1. Dopo alcuni training, le statistiche riflettono i dati.
+2. L'aggregato di studio somma correttamente le sue varianti.
+
+#### Criteri di completamento
+L'utente vede metriche utili e corrette sui propri allenamenti.
+
+#### Cosa non fare ancora
+Niente analisi qualitativa con motore; niente confronto tra utenti (single-user).
+
+---
+
+### Prototipo 18 - Spaced repetition
+
+#### Obiettivo
+Programmare le ripetizioni delle varianti nel tempo, per favorire la memorizzazione (obiettivo storico del progetto, preanalisi).
+
+#### Risultato funzionante atteso
+Dopo un training, l'app pianifica la prossima ripetizione della variante; una vista "da ripetere oggi" propone le varianti dovute.
+
+#### Backend workstream
+- Campi/tabella `ReviewSchedule` (sezione 7): `easeFactor`, `intervalDays`, `repetitions`, `nextReviewDate`, `lastReviewedAt`.
+- Algoritmo di scheduling (es. SM-2 semplificato) aggiornato a fine sessione.
+- `GET /api/reviews/due` per le varianti dovute.
+
+#### Frontend workstream
+- Vista "Ripeti oggi" con le varianti in scadenza; avvio rapido del training da lì.
+- Indicatore prossima ripetizione nel dettaglio variante.
+
+#### Integration workstream
+- Endpoint reviews + aggiornamento schedule a fine training.
+
+#### Validazione del prototipo
+1. Completo un training → `nextReviewDate` impostata.
+2. La vista "Ripeti oggi" elenca le varianti dovute.
+3. Un esito con molti errori accorcia l'intervallo.
+
+#### Criteri di completamento
+Il ciclo di ripetizione spaziata funziona end-to-end in locale single-user.
+
+#### Cosa non fare ancora
+Niente notifiche push/email; niente sincronizzazione multi-dispositivo (richiede cloud → terza tornata).
+
+---
+
+## 14. Contratti e modello dati della Parte 2
+
+> Estende la sezione 6 (contratto attuale) e la sezione 7 (modello dati). Base URL `/api`.
+
+### Nuovi endpoint REST (Parte 2)
+| Metodo | Path | Scopo | Introdotto in |
+|--------|------|-------|---------------|
+| GET | `/api/studies` | Lista studi (con conteggio varianti) | P11 |
+| GET | `/api/studies/{id}` | Dettaglio studio + sue varianti | P11 |
+| POST | `/api/studies` | Crea studio | P11 |
+| PUT | `/api/studies/{id}` | Aggiorna studio (nome/descrizione) | P11 |
+| DELETE | `/api/studies/{id}` | Elimina studio (varianti → "senza studio") | P11 |
+| POST | `/api/studies/{id}/variants` | Crea variante dentro lo studio | P12 |
+| PUT | `/api/variants/{id}/study` | Riassegna la variante a un altro studio | P13 |
+| POST | `/api/training-sessions` | Registra una sessione di allenamento conclusa | P16 |
+| GET | `/api/training-sessions` | Storico sessioni (filtri per variante/studio) | P16 |
+| GET | `/api/stats/...` | Aggregazioni statistiche (variante/studio) | P17 |
+| GET | `/api/reviews/due` | Varianti dovute per spaced repetition | P18 |
+
+### Nuovi DTO
+
+**`StudyDto`** (risposta)
+```
+id: number
+name: string
+description?: string
+color?: "WHITE" | "BLACK" | "MIXED"   // opzionale: repertorio per colore
+variantCount: number                  // nel dettaglio: variants[] completo
+createdAt?: string
+```
+
+**`CreateStudyRequest`** (richiesta)
+```
+name: string                          // obbligatorio, non vuoto
+description?: string
+color?: "WHITE" | "BLACK" | "MIXED"
+```
+
+**`VariantDto` — campi aggiunti**
+```
+studyId?: number | null               // studio di appartenenza (null = senza studio)
+orderIndex?: number                   // posizione dentro lo studio
+```
+
+**Errore di validazione (P7)** — corpo del `400`
+```
+{ field: string, ply?: number, branchPath?: number[], message: string }
+```
+
+### Modello dati — estensioni
+
+**Entità `Study`** (nuova)
+```
+Study {
+  id: Long (PK)
+  name: String (not null)
+  description: String (nullable, text)
+  color: enum WHITE/BLACK/MIXED (nullable)
+  createdAt: timestamp
+}
+```
+
+**Entità `Variant`** — campi aggiunti
+```
+studyId: Long (FK -> Study, nullable)   // null = senza studio
+orderIndex: int (default 0)             // ordinamento dentro lo studio
+```
+
+**Entità `TrainingSession` / `TrainingMove`** (P16, già abbozzate in sezione 7) e **`ReviewSchedule`** (P18, sezione 7): si attivano solo nelle rispettive fasi.
+
+> Principio invariato (sezione 7): aggiungere colonne nullable è economico. `studyId` nullable garantisce la retrocompatibilità; le varianti esistenti restano valide e vengono assegnate a uno studio di default dal seed.
+
+---
+
+## 15. Rischi aggiornati (Parte 2)
+
+| ID | Rischio | Descrizione | Impatto | Quando | Decisione minima |
+|----|---------|-------------|---------|--------|------------------|
+| R13 | **Validazione scacchistica lato backend** | Servono regole scacchistiche in Java per validare albero/mainline | Medio | P7 | Valutare libreria Java (es. `chesslib`); alternativa: legalità solo client e API "best effort". Consigliato: libreria. |
+| R14 | **Modello Studi e cancellazione** | Cardinalità Study↔Variant, cosa fare alla delete dello studio, migrazione esistenti | Medio | P11 | 1-N con `studyId` nullable; delete studio **non** cancella le varianti (orfane); seed studio di default. |
+| R15 | **Import/Export PGN ramificato** | Mapping bidirezionale `tree` ↔ PGN con varianti annidate, commenti, NAG | Medio | P14/P15 | Parsing/serializzazione lato frontend con `chess.js`; commenti/NAG di base, resto rinviato. |
+| R16 | **Scalabilità/responsive scacchiera** | La board resta 720px tra ~800-1280px e il pannello finisce sotto la piega (vedi sezione 16) | Medio (UX) | Trasversale | La correzione è una **proposta grafica da validare** (sezione 16), non un rilascio finché l'utente non approva. |
+| R17 | **Persistenza dati di apprendimento** | Sessioni/stats/scheduling fanno crescere lo schema H2 locale | Basso/Medio | P16-P18 | Tabelle dedicate, `userId` nullable inattivo; migrazioni versionate rinviate alla terza tornata. |
+
+> I rischi R8/R9/R10 (Supabase DB, Auth, Docker) restano **aperti e rinviati** alla terza tornata per scelta esplicita.
+
+---
+
+## 16. Validazione UX e proposte grafiche — DA VALIDARE, fuori dai rilasci
+
+> Esito della validazione dell'apparenza grafica eseguita sul frontend in esecuzione (home, dettaglio, training; desktop 1400px, laptop 1024px, mobile 375px; nessun errore in console).
+> **Queste proposte NON sono inserite nei prototipi 7-18:** vanno approvate dall'utente prima di diventare task. Sono ordinate per priorità.
+
+### Cosa funziona già bene
+- Palette pergamena/legno coerente col riferimento; scacchiera con cornice mogano e coordinate fedele.
+- Mobile (375px): la board scala a ~90vw e i pannelli si impilano in modo pulito.
+- Desktop largo (≥~1300px): board e pannello affiancati correttamente.
+- Nessun errore in console su nessuna delle pagine provate.
+
+### Proposte (da validare)
+
+1. **[ALTA] Scalabilità responsive della scacchiera.** *Problema osservato:* tra ~800px e ~1280px la board resta fissa a 720px (`min(90vw, 720px)`) e il pannello "Mosse & varianti" + i controlli vanno **sotto la piega** (a 1024px la pagina è alta ~1403px, controlli nascosti). *Proposta:* layout a griglia in cui la board si ridimensiona per condividere la riga col pannello — es. larghezza board `clamp(320px, calc(100vw - 380px - gap), 720px)` — e stack verticale **solo** sotto un vero breakpoint mobile (~720px). Effetto: board+pannello sempre affiancati e visibili su laptop/tablet landscape.
+
+2. **[MEDIA] Composizione e spazi vuoti su schermi larghi.** *Problema:* il blocco dettaglio/training è ancorato in alto a sinistra, con ampie aree vuote a destra e sotto. *Proposta:* centrare orizzontalmente (e bilanciare verticalmente) il contenuto; valutare un cap della board (~560-640px) per equilibrarla col pannello, o arricchire il pannello (commento mossa corrente, mini-statistiche della variante).
+
+3. **[MEDIA] Densità e gerarchia della lista.** *Problema:* lista a colonna singola, `max-width 720px`, percepita sparsa; poca gerarchia oltre nome+badge. *Proposta:* griglia di card responsive con anteprima delle prime mosse; (si integra naturalmente con il raggruppamento per **studio** dei prototipi P11-P13); badge colore con contrasto verificato.
+
+4. **[MEDIA] Accessibilità e focus da tastiera.** *Proposta:* stati `:focus-visible` evidenti su move-buttons e controlli replay; verifica contrasto del testo "muted" su pergamena (target WCAG AA); `aria-live` per il feedback del training (mossa giusta/sbagliata); etichette aria sui controlli complessi.
+
+5. **[MEDIA] Feedback e stati.** *Proposta:* sistema **toast/snackbar** (si lega a P9) per salvataggi/errori; skeleton di caricamento al posto del testo "Caricamento…"; empty-state curato (illustrazione + call-to-action) quando non ci sono varianti/studi.
+
+6. **[BASSA/MEDIA] Affordance sulla scacchiera.** *Proposta:* evidenziare l'**ultima mossa**, evidenziare lo **scacco**, pulsante "**ruota scacchiera**" nel dettaglio/editor, hover sulle case di destinazione legali.
+
+7. **[BASSA] Tema scuro.** I token sono già variabili CSS: predisporre una variante dark con toggle, utile in sessioni serali.
+
+8. **[BASSA] Micro-interazioni.** Animazione morbida del movimento pezzo; transizioni coerenti; opzionale suono mossa (disattivabile).
+
+---
+
+## 17. Idee per la terza tornata di analisi
+
+> Da pianificare in una sessione futura, **dopo** la Parte 2. Comprende gli "ultimissimi passi" esplicitamente rinviati e ulteriori spunti emersi.
+
+### Ultimissimi passi (già rinviati per scelta)
+- **Multiutente:** attivare `userId` (oggi predisposto e nullable) su varianti, studi, sessioni.
+- **Autenticazione Supabase Auth:** identità e protezione endpoint (rischio R9).
+- **Migrazioni versionate (Liquibase/Flyway):** schema ripetibile e versionato, prerequisito per ambienti non-locali (sezione 5.7 stato avanzamento).
+- **Supabase PostgreSQL:** migrazione da H2 file → Postgres; verifica compatibilità colonne `text`, converter JSON e modello `tree` (rischio R8).
+- **Docker/containerizzazione:** due immagini distinte FE/BE (la separazione di progetto è già pronta, rischio R10).
+
+### Altri spunti emersi (da valutare)
+- **Condivisione/esportazione studi** in stile Lichess (link/JSON/PGN di intero studio).
+- **Tag e ricerca** trasversali alle varianti/studi (full-text su nome e mosse).
+- **Integrazione motore** (eval/best-move) come aiuto allo studio, non come avversario.
+- **Import file `.pgn`** e PGN multi-partita; gestione NAG/commenti completa.
+- **Backup/restore** del repertorio locale (export/import dell'intero DB applicativo).
+- **PWA/offline** e, più avanti, app mobile dedicata.
+- **Gamification leggera** (streak di ripetizione) a supporto della spaced repetition.
+- **Sincronizzazione multi-dispositivo** (dipende da Supabase, terza tornata).
+
+---
+
+*Fine del planning. Documento di sola pianificazione: nessun codice applicativo incluso. I file `preanalisi-progetto.md` e `CLAUDE.md` restano la fonte autorevole per obiettivo, stack e versioni. La Parte 2 (sezioni 11-17) estende la Parte 1 senza sostituirla; le proposte grafiche della sezione 16 restano subordinate alla validazione dell'utente.*
