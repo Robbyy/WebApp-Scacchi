@@ -1,16 +1,19 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Chess } from 'chess.js';
 import { Chessboard, MoveMade } from '../chessboard/chessboard';
 import { VariantService } from '../core/variant.service';
-import { CreateVariantRequest, VariantColor } from '../core/variant.model';
-
-interface MoveRow {
-  number: number;
-  white?: string;
-  black?: string;
-}
+import { CreateVariantRequest, MoveNode, VariantColor } from '../core/variant.model';
+import {
+  addChild,
+  buildTokens,
+  childrenAt,
+  fenAt,
+  fromLine,
+  mainline,
+  pathsEqual,
+  removeNode,
+} from '../core/move-tree';
 
 @Component({
   selector: 'app-variant-editor',
@@ -26,16 +29,28 @@ export class VariantEditor {
 
   protected readonly name = signal('');
   protected readonly color = signal<VariantColor>('WHITE');
-  protected readonly moves = signal<string[]>([]);
   protected readonly error = signal<string | null>(null);
   protected readonly saving = signal(false);
 
-  /** Id della variante in modifica; null in creazione. */
   protected readonly editId = signal<number | null>(null);
   protected readonly isEdit = computed(() => this.editId() !== null);
 
-  private game = new Chess();
-  protected readonly fen = signal(this.game.fen());
+  protected readonly tree = signal<MoveNode[]>([]);
+  protected readonly currentPath = signal<number[]>([]);
+  private readonly startingFen = signal<string>('');
+
+  protected readonly fen = computed(() =>
+    fenAt(this.startingFen(), this.tree(), this.currentPath()),
+  );
+  protected readonly tokens = computed(() => buildTokens(this.tree()));
+  protected readonly orientation = computed<'white' | 'black'>(() =>
+    this.color() === 'BLACK' ? 'black' : 'white',
+  );
+  protected readonly atStart = computed(() => this.currentPath().length === 0);
+  protected readonly atLeaf = computed(
+    () => childrenAt(this.tree(), this.currentPath()).length === 0,
+  );
+  protected readonly moveCount = computed(() => this.currentPath().length);
 
   constructor() {
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -44,61 +59,67 @@ export class VariantEditor {
       this.editId.set(id);
       this.service.getVariant(id).subscribe({
         next: (v) => {
-          const game = v.startingFen ? new Chess(v.startingFen) : new Chess();
-          for (const san of v.moves) {
-            try {
-              game.move(san);
-            } catch {
-              break;
-            }
-          }
-          this.game = game;
-          this.moves.set([...v.moves]);
-          this.fen.set(game.fen());
           this.name.set(v.name);
           this.color.set(v.color);
+          this.startingFen.set(v.startingFen ?? '');
+          this.tree.set(v.tree && v.tree.length ? v.tree : fromLine(v.moves));
+          this.currentPath.set([]);
         },
         error: () => this.error.set('Variante non trovata.'),
       });
     }
   }
 
-  protected readonly orientation = computed<'white' | 'black'>(() =>
-    this.color() === 'BLACK' ? 'black' : 'white',
-  );
-  protected readonly turn = computed<'w' | 'b'>(() => {
-    this.fen();
-    return this.game.turn();
-  });
-  protected readonly rows = computed<MoveRow[]>(() => {
-    const m = this.moves();
-    const rows: MoveRow[] = [];
-    for (let i = 0; i < m.length; i += 2) {
-      rows.push({ number: i / 2 + 1, white: m[i], black: m[i + 1] });
-    }
-    return rows;
-  });
-
-  /** Mossa legale giocata sulla scacchiera: la accoda alla linea in costruzione. */
+  /** Mossa legale giocata: segue il figlio esistente o crea una nuova variante. */
   protected onMove(move: MoveMade): void {
-    this.game.move(move.san);
-    this.moves.update((list) => [...list, move.san]);
-    this.fen.set(this.game.fen());
-  }
-
-  protected undo(): void {
-    if (this.moves().length === 0) {
+    const kids = childrenAt(this.tree(), this.currentPath());
+    const existing = kids.findIndex((c) => c.san === move.san);
+    if (existing >= 0) {
+      this.currentPath.update((p) => [...p, existing]);
       return;
     }
-    this.game.undo();
-    this.moves.update((list) => list.slice(0, -1));
-    this.fen.set(this.game.fen());
+    const { tree, index } = addChild(this.tree(), this.currentPath(), move.san);
+    this.tree.set(tree);
+    this.currentPath.update((p) => [...p, index]);
+  }
+
+  protected isCurrent(path: number[] | undefined): boolean {
+    return !!path && pathsEqual(path, this.currentPath());
+  }
+
+  protected goTo(path: number[] | undefined): void {
+    if (path) {
+      this.currentPath.set([...path]);
+    }
+  }
+
+  protected first(): void {
+    this.currentPath.set([]);
+  }
+
+  protected prev(): void {
+    this.currentPath.update((p) => p.slice(0, -1));
+  }
+
+  protected next(): void {
+    if (childrenAt(this.tree(), this.currentPath()).length > 0) {
+      this.currentPath.update((p) => [...p, 0]);
+    }
+  }
+
+  /** Rimuove il nodo corrente (e il suo sottoalbero) e torna al precedente. */
+  protected deleteCurrent(): void {
+    const path = this.currentPath();
+    if (path.length === 0) {
+      return;
+    }
+    this.tree.set(removeNode(this.tree(), path));
+    this.currentPath.update((p) => p.slice(0, -1));
   }
 
   protected reset(): void {
-    this.game.reset();
-    this.moves.set([]);
-    this.fen.set(this.game.fen());
+    this.tree.set([]);
+    this.currentPath.set([]);
   }
 
   protected save(): void {
@@ -107,7 +128,7 @@ export class VariantEditor {
       this.error.set('Inserisci un nome per la variante.');
       return;
     }
-    if (this.moves().length === 0) {
+    if (this.tree().length === 0) {
       this.error.set('Gioca almeno una mossa sulla scacchiera.');
       return;
     }
@@ -116,7 +137,8 @@ export class VariantEditor {
     const request: CreateVariantRequest = {
       name,
       color: this.color(),
-      moves: this.moves(),
+      moves: mainline(this.tree()),
+      tree: this.tree(),
     };
     const id = this.editId();
     const save$ = id !== null

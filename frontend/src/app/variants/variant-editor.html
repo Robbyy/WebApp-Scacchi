@@ -7,14 +7,26 @@
       [orientation]="orientation()"
       (moveMade)="onMove($event)"
     />
-    <p class="move-counter">
-      Muove il {{ turn() === 'w' ? 'Bianco' : 'Nero' }} · {{ moves().length }} mosse inserite
-    </p>
-    <div class="editor-controls">
-      <button type="button" class="btn" (click)="undo()" [disabled]="moves().length === 0">
-        &#8624; Annulla mossa
+
+    <div class="controls">
+      <button type="button" class="ctrl" (click)="first()" title="Vai all'inizio" aria-label="Vai all'inizio" [disabled]="atStart()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h2.2v14H7zM20 5v14L9.6 12z" /></svg>
       </button>
-      <button type="button" class="btn" (click)="reset()" [disabled]="moves().length === 0">
+      <button type="button" class="ctrl" (click)="prev()" title="Indietro" aria-label="Indietro" [disabled]="atStart()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5v14L6 12z" /></svg>
+      </button>
+      <button type="button" class="ctrl" (click)="next()" title="Avanti (mainline)" aria-label="Avanti" [disabled]="atLeaf()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l10-7z" /></svg>
+      </button>
+    </div>
+
+    <p class="move-counter">Semimossa {{ moveCount() }} · gioca una mossa per continuare</p>
+
+    <div class="editor-controls">
+      <button type="button" class="btn" (click)="deleteCurrent()" [disabled]="atStart()">
+        &#10005; Elimina mossa
+      </button>
+      <button type="button" class="btn" (click)="reset()" [disabled]="tree().length === 0">
         Reset
       </button>
     </div>
@@ -46,19 +58,36 @@
     </div>
 
     <div class="panel">
-      <h3 class="panel-title">Mosse inserite</h3>
-      @if (rows().length === 0) {
-        <p class="panel-note">Gioca le mosse sulla scacchiera per costruire la linea.</p>
+      <h3 class="panel-title">Mosse &amp; varianti</h3>
+      @if (tokens().length === 0) {
+        <p class="panel-note">Gioca le mosse sulla scacchiera. Da una posizione, una mossa diversa crea una variante.</p>
       } @else {
-        <ol class="moves">
-          @for (row of rows(); track row.number) {
-            <li class="move-row">
-              <span class="move-num">{{ row.number }}.</span>
-              <span class="move-cell">{{ row.white }}</span>
-              <span class="move-cell">{{ row.black }}</span>
-            </li>
+        <div class="pgn">
+          @for (t of tokens(); track $index) {
+            @switch (t.kind) {
+              @case ('open') {
+                <span class="paren">(</span>
+              }
+              @case ('close') {
+                <span class="paren">)</span>
+              }
+              @default {
+                @if (t.label) {
+                  <span class="move-num">{{ t.label }}</span>
+                }
+                <button
+                  type="button"
+                  class="move"
+                  [class.move--variation]="t.variation"
+                  [class.move--current]="isCurrent(t.path)"
+                  (click)="goTo(t.path)"
+                >
+                  {{ t.san }}
+                </button>
+              }
+            }
           }
-        </ol>
+        </div>
       }
     </div>
 

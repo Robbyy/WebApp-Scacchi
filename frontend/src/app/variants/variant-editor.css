@@ -27,6 +27,102 @@
   gap: 0.5rem;
 }
 
+/* Barra di navigazione albero */
+.controls {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.4rem;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.9rem;
+  box-shadow: 0 4px 14px oklch(0.4 0.05 50 / 0.1);
+}
+
+.ctrl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  min-width: 2.5rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.6rem;
+  background: oklch(0.965 0.018 80);
+  color: var(--wood-dark);
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.08s ease;
+}
+
+.ctrl svg {
+  width: 19px;
+  height: 19px;
+  fill: currentColor;
+  display: block;
+}
+
+.ctrl:hover:not(:disabled) {
+  background: var(--wood-light);
+}
+
+.ctrl:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.ctrl:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Vista PGN ad albero */
+.pgn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.25rem;
+  max-height: 260px;
+  overflow-y: auto;
+  line-height: 1.7;
+}
+
+.pgn .move-num {
+  margin-left: 0.15rem;
+}
+
+.move {
+  padding: 0.1rem 0.4rem;
+  border: none;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.move:hover {
+  background: var(--wood-light);
+}
+
+.move--current {
+  background: var(--brass);
+  color: var(--wood-dark);
+}
+
+.move--variation {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.move--variation.move--current {
+  color: var(--wood-dark);
+}
+
+.paren {
+  color: var(--text-muted);
+}
+
 .side {
   display: flex;
   flex-direction: column;

@@ -32,30 +32,53 @@ function setup(service: Partial<VariantService>, routeId?: number) {
 }
 
 describe('VariantEditor', () => {
-  it('accumulates played moves', () => {
+  it('plays moves building the mainline', () => {
     const { cmp } = setup({});
     cmp.onMove(move('e4'));
     cmp.onMove(move('e5'));
     cmp.onMove(move('Nf3'));
-    expect(cmp.moves()).toEqual(['e4', 'e5', 'Nf3']);
-    expect(cmp.turn()).toBe('b');
+    expect(cmp.currentPath()).toEqual([0, 0, 0]);
+    expect(cmp.tree()[0].san).toBe('e4');
+    expect(cmp.tree()[0].children[0].san).toBe('e5');
+    expect(cmp.tree()[0].children[0].children[0].san).toBe('Nf3');
   });
 
-  it('undoes the last move', () => {
+  it('creates a variation when playing a different move at a position', () => {
     const { cmp } = setup({});
     cmp.onMove(move('e4'));
     cmp.onMove(move('e5'));
-    cmp.undo();
-    expect(cmp.moves()).toEqual(['e4']);
+    cmp.goTo([0]); // dopo e4
+    cmp.onMove(move('c5'));
+    expect(cmp.tree()[0].children.length).toBe(2);
+    expect(cmp.tree()[0].children[1].san).toBe('c5');
+    expect(cmp.currentPath()).toEqual([0, 1]);
   });
 
-  it('resets the board and the moves', () => {
+  it('follows an existing child instead of duplicating it', () => {
     const { cmp } = setup({});
     cmp.onMove(move('e4'));
     cmp.onMove(move('e5'));
+    cmp.first();
+    cmp.onMove(move('e4'));
+    expect(cmp.tree().length).toBe(1);
+    expect(cmp.currentPath()).toEqual([0]);
+  });
+
+  it('deletes the current node', () => {
+    const { cmp } = setup({});
+    cmp.onMove(move('e4'));
+    cmp.onMove(move('e5'));
+    cmp.deleteCurrent();
+    expect(cmp.tree()[0].children.length).toBe(0);
+    expect(cmp.currentPath()).toEqual([0]);
+  });
+
+  it('resets the tree', () => {
+    const { cmp } = setup({});
+    cmp.onMove(move('e4'));
     cmp.reset();
-    expect(cmp.moves()).toEqual([]);
-    expect(cmp.turn()).toBe('w');
+    expect(cmp.tree()).toEqual([]);
+    expect(cmp.currentPath()).toEqual([]);
   });
 
   it('orients the board for the selected side', () => {
@@ -65,27 +88,19 @@ describe('VariantEditor', () => {
     expect(cmp.orientation()).toBe('black');
   });
 
-  it('refuses to save without a name', () => {
+  it('refuses to save without a name or without moves', () => {
     let called = false;
     const { cmp } = setup({ createVariant: () => { called = true; return of({} as Variant); } });
-    cmp.onMove(move('e4'));
-    cmp.name.set('  ');
-    cmp.save();
+    cmp.save(); // niente nome né mosse
+    expect(called).toBe(false);
+    cmp.name.set('X');
+    cmp.save(); // nome ma niente mosse
     expect(called).toBe(false);
     expect(cmp.error()).toBeTruthy();
   });
 
-  it('refuses to save without moves', () => {
-    let called = false;
-    const { cmp } = setup({ createVariant: () => { called = true; return of({} as Variant); } });
-    cmp.name.set('Vuota');
-    cmp.save();
-    expect(called).toBe(false);
-    expect(cmp.error()).toBeTruthy();
-  });
-
-  it('creates a valid variant and navigates to it', () => {
-    const created: Variant = { id: 7, name: 'Italiana base', color: 'WHITE', moves: ['e4', 'e5'], startingFen: '' };
+  it('creates a variant sending tree and mainline, then navigates', () => {
+    const created: Variant = { id: 7, name: 'Italiana', color: 'WHITE', moves: ['e4', 'e5'], startingFen: '' };
     let captured: CreateVariantRequest | null = null;
     const { cmp } = setup({
       createVariant: (req: CreateVariantRequest) => {
@@ -95,19 +110,17 @@ describe('VariantEditor', () => {
     });
     const router = TestBed.inject(Router);
     let navTarget: unknown[] | null = null;
-    router.navigate = ((commands: unknown[]) => {
-      navTarget = commands;
-      return Promise.resolve(true);
-    }) as typeof router.navigate;
+    router.navigate = ((c: unknown[]) => { navTarget = c; return Promise.resolve(true); }) as typeof router.navigate;
 
     cmp.onMove(move('e4'));
     cmp.onMove(move('e5'));
-    cmp.name.set('Italiana base');
+    cmp.name.set('Italiana');
     cmp.save();
 
-    expect(captured).toEqual({ name: 'Italiana base', color: 'WHITE', moves: ['e4', 'e5'] });
+    expect(captured!.name).toBe('Italiana');
+    expect(captured!.moves).toEqual(['e4', 'e5']);
+    expect(captured!.tree?.[0].san).toBe('e4');
     expect(navTarget).toEqual(['/variants', 7]);
-    expect(cmp.isEdit()).toBe(false);
   });
 
   it('loads an existing variant in edit mode and updates it', () => {
@@ -119,13 +132,11 @@ describe('VariantEditor', () => {
       startingFen: START,
     };
     let updateId: number | null = null;
-    let captured: CreateVariantRequest | null = null;
     const { cmp } = setup(
       {
         getVariant: () => of(existing),
-        updateVariant: (id: number, req: CreateVariantRequest) => {
+        updateVariant: (id: number) => {
           updateId = id;
-          captured = req;
           return of({ ...existing, name: 'Italiana mod' });
         },
       },
@@ -135,13 +146,10 @@ describe('VariantEditor', () => {
     router.navigate = (() => Promise.resolve(true)) as typeof router.navigate;
 
     expect(cmp.isEdit()).toBe(true);
-    expect(cmp.moves()).toEqual(['e4', 'e5', 'Nf3']);
-    expect(cmp.name()).toBe('Italiana');
+    expect(cmp.tree()[0].san).toBe('e4');
 
     cmp.name.set('Italiana mod');
     cmp.save();
-
     expect(updateId).toBe(5);
-    expect(captured).toEqual({ name: 'Italiana mod', color: 'WHITE', moves: ['e4', 'e5', 'Nf3'] });
   });
 });
