@@ -169,6 +169,18 @@ export class Chessboard {
     return this.chess.turn();
   });
 
+  /** Etichette delle traverse nella cornice (dall'alto in basso). */
+  protected readonly rankLabels = computed<string[]>(() => {
+    const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+    return this.orientation() === 'black' ? [...ranks].reverse() : ranks;
+  });
+
+  /** Etichette delle colonne nella cornice (da sinistra a destra). */
+  protected readonly fileLabels = computed<string[]>(() => {
+    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    return this.orientation() === 'black' ? [...files].reverse() : files;
+  });
+
   protected onSquareClick(square: string): void {
     if (!this.interactive() || this.pendingPromotion()) {
       return;

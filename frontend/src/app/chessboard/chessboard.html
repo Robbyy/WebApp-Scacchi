@@ -1,4 +1,10 @@
 <div class="board-frame">
+  <div class="ranks" aria-hidden="true">
+    @for (r of rankLabels(); track $index) {
+      <span class="coord">{{ r }}</span>
+    }
+  </div>
+
   <div
     class="board-grid"
     [class.board-grid--static]="!interactive()"
@@ -16,12 +22,6 @@
         [attr.aria-label]="sq.square"
         (click)="onSquareClick(sq.square)"
       >
-        @if (sq.rankLabel) {
-          <span class="coord coord--rank">{{ sq.rankLabel }}</span>
-        }
-        @if (sq.fileLabel) {
-          <span class="coord coord--file">{{ sq.fileLabel }}</span>
-        }
         @if (sq.legalTarget) {
           <span class="legal-dot" [class.legal-dot--capture]="sq.piece"></span>
         }
@@ -29,6 +29,12 @@
           <img class="piece" [src]="sq.pieceSrc" [alt]="sq.pieceAlt" draggable="false" />
         }
       </button>
+    }
+  </div>
+
+  <div class="files" aria-hidden="true">
+    @for (f of fileLabels(); track $index) {
+      <span class="coord">{{ f }}</span>
     }
   </div>
 

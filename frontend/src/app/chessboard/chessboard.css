@@ -4,29 +4,67 @@
 
 .board-frame {
   position: relative;
-  padding: 14px;
-  border-radius: 8px;
-  /* Cornice effetto legno: repeating-linear-gradient verticale (preanalisi). */
+  display: inline-grid;
+  grid-template-columns: 1.6rem auto 1.6rem;
+  grid-template-rows: 1.6rem auto 1.6rem;
+  padding: 10px;
+  border-radius: 6px;
+  /* Cornice in legno mogano scuro con venatura verticale (riferimento). */
   background: repeating-linear-gradient(
-    180deg,
-    var(--wood-dark) 0,
-    var(--wood-dark) 3px,
-    var(--wood-medium) 3px,
-    var(--wood-medium) 7px
+    90deg,
+    #43291a 0px,
+    #5c3a24 2px,
+    #71492f 5px,
+    #5c3a24 8px,
+    #43291a 11px
   );
   box-shadow:
-    0 10px 30px oklch(0.3 0.05 45 / 0.35),
-    inset 0 0 0 1px oklch(0.25 0.05 40 / 0.6);
+    0 12px 34px oklch(0.25 0.05 40 / 0.45),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+}
+
+.ranks {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: repeat(8, 1fr);
+}
+
+.files {
+  grid-column: 2;
+  grid-row: 3;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+}
+
+.ranks .coord,
+.files .coord {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(0.6rem, 1.4vw, 0.85rem);
+  font-weight: 600;
+  color: #f3e6cc;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
 }
 
 .board-grid {
+  grid-column: 2;
+  grid-row: 2;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  width: min(70vw, 480px);
-  height: min(70vw, 480px);
-  border-radius: 3px;
+  width: min(90vw, 720px);
+  aspect-ratio: 1 / 1;
+  border-radius: 2px;
   overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(245, 235, 210, 0.25),
+    0 0 0 3px rgba(0, 0, 0, 0.45);
+}
+
+.board-grid--static .square {
+  cursor: default;
 }
 
 .square {
@@ -55,43 +93,12 @@
   box-shadow: inset 0 0 0 4px var(--brass);
 }
 
-.board-grid--static .square {
-  cursor: default;
-}
-
 .piece {
   width: 88%;
   height: 88%;
   pointer-events: none;
   -webkit-user-drag: none;
   filter: drop-shadow(0 1px 1px oklch(0.2 0.03 40 / 0.35));
-}
-
-.coord {
-  position: absolute;
-  font-size: 0.62rem;
-  font-weight: 700;
-  pointer-events: none;
-  opacity: 0.75;
-}
-
-.coord--rank {
-  top: 2px;
-  left: 3px;
-}
-
-.coord--file {
-  bottom: 1px;
-  right: 3px;
-}
-
-/* Coordinate: colore in contrasto con la casa. */
-.square--light .coord {
-  color: var(--board-dark);
-}
-
-.square--dark .coord {
-  color: var(--board-light);
 }
 
 .legal-dot {
@@ -118,7 +125,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 6px;
   background: oklch(0.2 0.03 40 / 0.55);
   z-index: 5;
 }
