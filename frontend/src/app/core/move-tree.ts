@@ -50,6 +50,17 @@ export function childrenAt(tree: MoveNode[], path: number[]): MoveNode[] {
   return nodes;
 }
 
+/** Numero di semimosse rimanenti seguendo la mainline dal nodo in `path`. */
+export function remainingMainline(tree: MoveNode[], path: number[]): number {
+  let kids = childrenAt(tree, path);
+  let n = 0;
+  while (kids.length > 0) {
+    n++;
+    kids = kids[0].children;
+  }
+  return n;
+}
+
 /** FEN della posizione raggiunta seguendo il percorso dall'inizio. */
 export function fenAt(startingFen: string | undefined, tree: MoveNode[], path: number[]): string {
   const chess = startingFen ? new Chess(startingFen) : new Chess();

@@ -7,10 +7,10 @@ import {
   signal,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Chess } from 'chess.js';
 import { Chessboard, MoveMade } from '../chessboard/chessboard';
 import { VariantService } from '../core/variant.service';
-import { Variant } from '../core/variant.model';
+import { MoveNode, Variant } from '../core/variant.model';
+import { childrenAt, fenAt, fromLine, remainingMainline } from '../core/move-tree';
 
 type TrainingStatus = 'loading' | 'playing' | 'opponent' | 'wrong' | 'completed' | 'error';
 
@@ -27,36 +27,50 @@ export class VariantTraining implements OnDestroy {
 
   protected readonly variant = signal<Variant | null>(null);
   protected readonly status = signal<TrainingStatus>('loading');
-  protected readonly index = signal(0);
+  protected readonly currentPath = signal<number[]>([]);
   protected readonly mistakes = signal(0);
   protected readonly wrongMove = signal<string | null>(null);
   protected readonly showHint = signal(false);
-  protected readonly boardFen = signal('');
 
   /** Ritardo (ms) prima della replica avversaria; 0 nei test. */
   replyDelayMs = 450;
 
-  private game = new Chess();
-  private opponentTimer: ReturnType<typeof setTimeout> | null = null;
+  private opponentTimer: ReturnType<typeof setInterval> | null = null;
 
+  protected readonly tree = computed<MoveNode[]>(() => {
+    const v = this.variant();
+    if (!v) {
+      return [];
+    }
+    return v.tree && v.tree.length ? v.tree : fromLine(v.moves);
+  });
+
+  private startingFen(): string {
+    return this.variant()?.startingFen ?? '';
+  }
+
+  protected readonly boardFen = computed(() =>
+    fenAt(this.startingFen(), this.tree(), this.currentPath()),
+  );
   protected readonly userColor = computed<'w' | 'b'>(() =>
     this.variant()?.color === 'BLACK' ? 'b' : 'w',
   );
   protected readonly orientation = computed<'white' | 'black'>(() =>
     this.userColor() === 'b' ? 'black' : 'white',
   );
-  protected readonly total = computed(() => this.variant()?.moves.length ?? 0);
-  protected readonly progressPct = computed(() =>
-    this.total() === 0 ? 0 : Math.round((this.index() / this.total()) * 100),
+  protected readonly currentChildren = computed<MoveNode[]>(() =>
+    childrenAt(this.tree(), this.currentPath()),
   );
-  /** Scacchiera interattiva solo quando tocca all'utente. */
+  /** Mosse accettabili adesso (più di una se c'è un bivio dal lato dell'utente). */
+  protected readonly expectedMoves = computed(() => this.currentChildren().map((c) => c.san));
   protected readonly canPlay = computed(
     () => this.status() === 'playing' || this.status() === 'wrong',
   );
-  /** Mossa attesa adesso (per il suggerimento). */
-  protected readonly expectedMove = computed(() => {
-    const v = this.variant();
-    return v && this.index() < v.moves.length ? v.moves[this.index()] : null;
+  protected readonly ply = computed(() => this.currentPath().length);
+  protected readonly progressPct = computed(() => {
+    const done = this.currentPath().length;
+    const total = done + remainingMainline(this.tree(), this.currentPath());
+    return total > 0 ? Math.round((done / total) * 100) : 0;
   });
 
   constructor() {
@@ -70,71 +84,78 @@ export class VariantTraining implements OnDestroy {
     });
   }
 
-  /** Avvia/riavvia la sessione di allenamento. */
   protected start(): void {
-    const v = this.variant();
-    if (!v) {
+    if (!this.variant()) {
       return;
     }
     this.clearTimer();
-    this.game = v.startingFen ? new Chess(v.startingFen) : new Chess();
-    this.index.set(0);
     this.mistakes.set(0);
     this.wrongMove.set(null);
     this.showHint.set(false);
 
     // gioca le eventuali mosse iniziali dell'avversario (es. variante nera: 1.e4)
-    while (this.index() < v.moves.length && this.game.turn() !== this.userColor()) {
-      this.game.move(v.moves[this.index()]);
-      this.index.update((i) => i + 1);
+    const tree = this.tree();
+    let path: number[] = [];
+    while (true) {
+      const kids = childrenAt(tree, path);
+      if (kids.length === 0) {
+        break;
+      }
+      const turn = fenAt(this.startingFen(), tree, path).split(' ')[1];
+      if (turn === this.userColor()) {
+        break;
+      }
+      path = [...path, this.pickChild(kids)];
     }
-    this.boardFen.set(this.game.fen());
-    this.status.set(this.index() >= v.moves.length ? 'completed' : 'playing');
+    this.currentPath.set(path);
+    this.status.set(childrenAt(tree, path).length === 0 ? 'completed' : 'playing');
   }
 
   protected onUserMove(move: MoveMade): void {
-    const v = this.variant();
-    if (!v || !this.canPlay()) {
+    if (!this.canPlay()) {
       return;
     }
-    const expected = v.moves[this.index()];
-    if (!sameMove(move.san, expected)) {
+    const kids = this.currentChildren();
+    const idx = kids.findIndex((c) => sameMove(c.san, move.san));
+    if (idx < 0) {
       this.wrongMove.set(move.san);
       this.mistakes.update((m) => m + 1);
       this.status.set('wrong');
       return;
     }
 
-    // mossa corretta dell'utente
-    this.game.move(expected);
-    this.index.update((i) => i + 1);
+    const path = [...this.currentPath(), idx];
+    this.currentPath.set(path);
     this.wrongMove.set(null);
     this.showHint.set(false);
-    this.boardFen.set(this.game.fen());
 
-    if (this.index() >= v.moves.length) {
+    if (childrenAt(this.tree(), path).length === 0) {
       this.status.set('completed');
       return;
     }
-    // replica avversaria
     this.status.set('opponent');
     this.opponentTimer = setTimeout(() => this.applyOpponentReply(), this.replyDelayMs);
   }
 
-  /** Applica la mossa dell'avversario e ridà il turno all'utente. */
+  /** L'avversario sceglie una delle sue varianti e ridà il turno all'utente. */
   protected applyOpponentReply(): void {
-    const v = this.variant();
-    if (!v || this.index() >= v.moves.length) {
+    const kids = this.currentChildren();
+    if (kids.length === 0) {
+      this.status.set('completed');
       return;
     }
-    this.game.move(v.moves[this.index()]);
-    this.index.update((i) => i + 1);
-    this.boardFen.set(this.game.fen());
-    this.status.set(this.index() >= v.moves.length ? 'completed' : 'playing');
+    const path = [...this.currentPath(), this.pickChild(kids)];
+    this.currentPath.set(path);
+    this.status.set(childrenAt(this.tree(), path).length === 0 ? 'completed' : 'playing');
   }
 
   protected revealHint(): void {
     this.showHint.set(true);
+  }
+
+  /** Scelta del ramo avversario (sovrascrivibile nei test); default: casuale. */
+  protected pickChild(children: MoveNode[]): number {
+    return Math.floor(Math.random() * children.length);
   }
 
   private clearTimer(): void {

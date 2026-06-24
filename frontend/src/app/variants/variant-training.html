@@ -51,7 +51,12 @@
           }
           @default {
             <strong>Tocca a te</strong>
-            <span>Gioca la mossa attesa del {{ userColor() === 'w' ? 'Bianco' : 'Nero' }}.</span>
+            <span>
+              Gioca una mossa del {{ userColor() === 'w' ? 'Bianco' : 'Nero' }}.
+              @if (expectedMoves().length > 1) {
+                Ci sono più seguiti corretti.
+              }
+            </span>
           }
         }
       </div>
@@ -59,14 +64,14 @@
       <div class="progress">
         <div class="progress-bar" [style.width.%]="progressPct()"></div>
       </div>
-      <p class="progress-text">Mossa {{ index() }} di {{ total() }} · errori: {{ mistakes() }}</p>
+      <p class="progress-text">Semimossa {{ ply() }} · errori: {{ mistakes() }}</p>
 
       <div class="actions">
         @if (status() === 'completed') {
           <button type="button" class="btn btn--primary" (click)="start()">Ricomincia</button>
         } @else {
           @if (showHint()) {
-            <p class="hint">Suggerimento: gioca <strong>{{ expectedMove() }}</strong></p>
+            <p class="hint">Suggerimento: gioca <strong>{{ expectedMoves().join(' / ') }}</strong></p>
           } @else {
             <button type="button" class="btn" (click)="revealHint()" [disabled]="!canPlay()">
               Suggerimento
