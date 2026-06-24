@@ -36,7 +36,9 @@ public class VariantService {
         Variant entity = new Variant();
         entity.setName(request.name().trim());
         entity.setColor(Color.valueOf(request.color()));
-        entity.setMoves(List.copyOf(request.moves()));
+        List<MoveNode> tree = resolveTree(request);
+        entity.setTree(tree);
+        entity.setMoves(MoveNode.mainline(tree));
         entity.setStartingFen(START_FEN);
         entity.setSourcePgn(request.sourcePgn());
         return toDto(repository.save(entity));
@@ -46,11 +48,21 @@ public class VariantService {
         return repository.findById(id).map(entity -> {
             entity.setName(request.name().trim());
             entity.setColor(Color.valueOf(request.color()));
-            entity.setMoves(List.copyOf(request.moves()));
+            List<MoveNode> tree = resolveTree(request);
+            entity.setTree(tree);
+            entity.setMoves(MoveNode.mainline(tree));
             entity.setSourcePgn(request.sourcePgn());
             // startingFen e createdAt restano invariati
             return toDto(repository.save(entity));
         });
+    }
+
+    /** Albero dalla richiesta: usa tree se presente, altrimenti lo costruisce dalla linea. */
+    private static List<MoveNode> resolveTree(CreateVariantRequest request) {
+        if (request.tree() != null && !request.tree().isEmpty()) {
+            return request.tree();
+        }
+        return MoveNode.fromLine(request.moves());
     }
 
     public boolean delete(Long id) {
@@ -62,11 +74,16 @@ public class VariantService {
     }
 
     private static VariantDto toDto(Variant v) {
+        // Righe legacy senza albero: lo si deriva dalla linea principale.
+        List<MoveNode> tree = v.getTree() != null && !v.getTree().isEmpty()
+            ? v.getTree()
+            : MoveNode.fromLine(v.getMoves());
         return new VariantDto(
             v.getId(),
             v.getName(),
             v.getColor().name(),
-            v.getMoves(),
+            MoveNode.mainline(tree),
+            tree,
             v.getStartingFen(),
             v.getSourcePgn(),
             v.getCreatedAt() == null ? null : v.getCreatedAt().toString()

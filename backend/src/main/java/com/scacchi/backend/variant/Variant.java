@@ -34,6 +34,10 @@ public class Variant {
     @Column(name = "moves", nullable = false, columnDefinition = "text")
     private List<String> moves = new ArrayList<>();
 
+    @Convert(converter = TreeConverter.class)
+    @Column(name = "tree", columnDefinition = "text")
+    private List<MoveNode> tree = new ArrayList<>();
+
     @Column(name = "starting_fen", nullable = false)
     private String startingFen;
 
@@ -76,6 +80,14 @@ public class Variant {
 
     public void setMoves(List<String> moves) {
         this.moves = moves;
+    }
+
+    public List<MoveNode> getTree() {
+        return tree;
+    }
+
+    public void setTree(List<MoveNode> tree) {
+        this.tree = tree;
     }
 
     public String getStartingFen() {

@@ -99,6 +99,25 @@ class VariantControllerTest {
     }
 
     @Test
+    void createFromTreeDerivesTheMainlineAndReturnsTheTree() throws Exception {
+        String body = """
+            {"name":"Con varianti","color":"WHITE","tree":[
+              {"san":"e4","children":[
+                {"san":"e5","children":[{"san":"Nf3","children":[]}]},
+                {"san":"c5","children":[]}
+              ]}
+            ]}""";
+        mockMvc.perform(post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.moves.length()").value(3))
+            .andExpect(jsonPath("$.moves[0]").value("e4"))
+            .andExpect(jsonPath("$.moves[2]").value("Nf3"))
+            .andExpect(jsonPath("$.tree[0].san").value("e4"))
+            .andExpect(jsonPath("$.tree[0].children.length()").value(2))
+            .andExpect(jsonPath("$.tree[0].children[1].san").value("c5"));
+    }
+
+    @Test
     void updateReturns404WhenMissing() throws Exception {
         String body = """
             {"name":"X","color":"WHITE","moves":["e4"]}""";

@@ -68,8 +68,12 @@ public class VariantController {
     private static boolean isValid(CreateVariantRequest request) {
         if (request == null
             || request.name() == null || request.name().isBlank()
-            || request.moves() == null || request.moves().isEmpty()
             || request.color() == null) {
+            return false;
+        }
+        boolean hasMoves = request.moves() != null && !request.moves().isEmpty();
+        boolean hasTree = request.tree() != null && !request.tree().isEmpty();
+        if (!hasMoves && !hasTree) {
             return false;
         }
         try {
