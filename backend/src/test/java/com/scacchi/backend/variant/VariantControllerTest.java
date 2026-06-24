@@ -52,6 +52,22 @@ class VariantControllerTest {
     }
 
     @Test
+    void createAcceptsLongSourcePgn() throws Exception {
+        String longPgn = "[Event \\\"PGN lungo\\\"] "
+            + "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 ".repeat(12)
+            + "*";
+        String escapedPgn = longPgn.replace("\\", "\\\\").replace("\"", "\\\"");
+        String body = """
+            {"name":"PGN lungo","color":"WHITE","moves":["e4","e5"],"sourcePgn":"%s"}"""
+            .formatted(escapedPgn);
+
+        mockMvc.perform(post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("PGN lungo"))
+            .andExpect(jsonPath("$.sourcePgn").value(longPgn));
+    }
+
+    @Test
     void createRejectsInvalidPayload() throws Exception {
         String body = """
             {"name":"","color":"WHITE","moves":["e4"]}""";

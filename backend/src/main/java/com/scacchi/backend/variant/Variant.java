@@ -41,7 +41,7 @@ public class Variant {
     @Column(name = "starting_fen", nullable = false)
     private String startingFen;
 
-    @Column(name = "source_pgn")
+    @Column(name = "source_pgn", columnDefinition = "text")
     private String sourcePgn;
 
     @Column(name = "created_at", nullable = false, updatable = false)
