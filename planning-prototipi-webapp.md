@@ -711,7 +711,7 @@ Logica di fondo: arrivare a *"i miei repertori sono organizzati in studi, ogni m
 
 | # | Prototipo | Fase | Obiettivo sintetico | Valore prodotto |
 |---|-----------|------|---------------------|-----------------|
-| 7 | **Validazione scacchistica lato backend** | A · Consolidamento | Backend valida legalità di mainline e albero | Integrità dati, API non più "fidata" |
+| 7 | **Validazione scacchistica lato backend** + fix scacchiera | A · Consolidamento | Backend valida legalità di mainline/albero; correzioni drag-and-drop e cornice board | Integrità dati + scacchiera più curata |
 | 8 | **Consolidamento del modello ad albero** | A · Consolidamento | Round-trip `tree`, "promuovi a mainline", protezione sottoalberi | Albero affidabile e usabile |
 | 9 | **Robustezza interazioni e azioni distruttive** | A · Consolidamento | Conferme, guard "modifiche non salvate", feedback errori | Niente perdite dati accidentali |
 | 10 | **Suite test automatici + checklist E2E** | A · Consolidamento | Test su flussi completi, checklist ripetibile | Regressioni sotto controllo |
@@ -723,8 +723,9 @@ Logica di fondo: arrivare a *"i miei repertori sono organizzati in studi, ogni m
 | 16 | **Persistenza sessioni di allenamento** | D · Progresso | Salva `TrainingSession`/`TrainingMove` | Base dati per stats e ripetizione |
 | 17 | **Statistiche e reportistica** | D · Progresso | Report errori/completamenti per variante e studio | Feedback sull'allenamento |
 | 18 | **Spaced repetition** | D · Progresso | Scheduling delle ripetizioni per variante | Memorizzazione efficace |
+| 19 | **Integrazione Stockfish** | E · Motore | Valutazione, mossa migliore, rilevamento errori | Analisi e aiuto allo studio |
 
-Ordine consigliato di esecuzione: **7 → 8 → 9 → 10** (consolidamento), poi **11 → 12 → 13** (studi), poi **14 → 15** (PGN), infine **16 → 17 → 18** (apprendimento). Le fasi C e D sono indipendenti tra loro e possono essere riordinate in base alle priorità del momento.
+Ordine consigliato di esecuzione: **7 → 8 → 9 → 10** (consolidamento), poi **11 → 12 → 13** (studi), poi **14 → 15** (PGN), poi **16 → 17 → 18** (apprendimento), infine **19** (motore Stockfish) come **ultimo rilascio pianificato** della Parte 2. Le fasi C e D sono indipendenti tra loro e possono essere riordinate in base alle priorità del momento; la Fase E resta l'ultima.
 
 ---
 
@@ -748,6 +749,15 @@ Il backend non si fida più ciecamente del frontend: valida la **legalità** del
 - Gestione del `400` strutturato: messaggio chiaro nell'editor/import (quale mossa è stata rifiutata).
 - Nessun cambio al flusso felice.
 
+#### Correzioni scacchiera incluse in questo rilascio (frontend)
+Tre difetti visivi del componente `Chessboard` rilevati durante l'uso, da correggere in questo primo rilascio della Parte 2:
+
+1. **Il drag non deve trascinare lo sfondo della casa.** Oggi l'immagine trascinata (drag ghost) include anche lo sfondo/cornice della casa di partenza (evidenza rossa nello screenshot). Deve essere trascinato **solo il pezzo**, su sfondo trasparente. *Indirizzo tecnico (non vincolante):* impostare un drag image custom con la sola immagine del pezzo (es. `dataTransfer.setDataImage`/un elemento immagine dedicato) invece di lasciare che il browser catturi l'intero quadrato.
+2. **Il pezzo non deve restare nella casa di partenza durante il trascinamento.** Oggi, mentre si trascina, il pezzo resta visibile anche sulla casa d'origine (evidenza gialla nello screenshot, casa e2). Durante il drag il pezzo d'origine va **nascosto** (la casa di partenza resta vuota finché la mossa non è confermata o annullata). *Indirizzo tecnico:* nascondere il pezzo sulla casa con `dragging() === square` (classe/stile dedicato), ripristinandolo su `dragend`/drop annullato.
+3. **Cornice della scacchiera più stretta.** Ridurre lo spessore della cornice/bordo legno (oggi `padding` 10px + gutter coordinate 1.6rem in `chessboard.css`), per una cornice un po' più sottile mantenendo la leggibilità delle coordinate.
+
+> Queste correzioni sono **decise** (non semplici proposte): vanno implementate nel rilascio. Le restanti idee estetiche restano nella sezione 16, subordinate a validazione.
+
 #### Integration workstream
 - Contratto `400` arricchito (sezione 14). DTO di richiesta invariati.
 
@@ -756,6 +766,8 @@ Il backend non si fida più ciecamente del frontend: valida la **legalità** del
 2. Creo un albero con un ramo illegale → `400` che indica il ramo.
 3. Creo una variante valida → `201` come prima.
 4. L'editor mostra l'errore in modo leggibile.
+5. Trascino un pezzo: viene trascinato **solo il pezzo** (nessuno sfondo della casa) e la casa di partenza resta **vuota** durante il drag.
+6. La cornice della scacchiera risulta visibilmente più stretta, con coordinate ancora leggibili.
 
 #### Criteri di completamento
 Nessuna variante con mosse illegali può entrare in DB via API; gli errori sono comprensibili lato UI.
@@ -1125,6 +1137,44 @@ Niente notifiche push/email; niente sincronizzazione multi-dispositivo (richiede
 
 ---
 
+### Prototipo 19 - Integrazione Stockfish
+
+> **Ultimo rilascio pianificato della Parte 2.** Aggiunge il motore di analisi come aiuto allo studio, non come avversario.
+
+#### Obiettivo
+Integrare **Stockfish** per fornire valutazione della posizione, mossa migliore e (opzionale) rilevamento degli errori grossolani durante l'allenamento.
+
+#### Risultato funzionante atteso
+Nel dettaglio/training compaiono una **valutazione** (barra e/o centipawn) e, su richiesta, la **mossa migliore** suggerita dal motore. Opzionale: durante il training, segnalazione se la mossa giocata è un errore grave rispetto al motore.
+
+#### Backend workstream
+- Decisione (R18): eseguire Stockfish **client-side via WebAssembly** (`stockfish.wasm` in un Web Worker) — **consigliato**: nessuna dipendenza server, coerente col principio "regole/motore lato client" e con la separazione FE/BE. Alternativa: processo Stockfish **lato backend** con endpoint `POST /api/analysis` (utile solo se in futuro si vorrà condividere l'analisi o alleggerire i client deboli).
+- Se client-side: nessun lavoro backend obbligatorio. Se backend: gestione del processo UCI, profondità/timeout, mappatura richiesta/risposta.
+
+#### Frontend workstream
+- Caricamento di `stockfish.wasm` in un **Web Worker**; wrapper minimale del protocollo **UCI** (`position fen ...`, `go depth/movetime`, parsing di `bestmove` e `info score cp/mate`).
+- **Barra di valutazione** e/o testo in centipawn nel dettaglio/training.
+- Pulsante "**mossa migliore**" on-demand (nessun calcolo automatico continuo, per non rallentare l'interfaccia).
+- (Opzionale) in training: confronto della mossa utente con la valutazione del motore per evidenziare i **blunder**.
+
+#### Integration workstream
+- Client-side: **nessun endpoint nuovo**. Attenzione: la versione **multi-thread** di Stockfish WASM richiede `SharedArrayBuffer` e quindi gli header di **cross-origin isolation** (COOP/COEP) sul dev server e in produzione; se non configurabili, usare la versione **single-thread** (più lenta ma senza vincoli sugli header).
+- Se backend: contratto `POST /api/analysis` `{ fen, depth? }` → `{ bestMove, scoreCp?, mate? }`.
+
+#### Validazione del prototipo
+1. Apro una posizione → la barra mostra una valutazione plausibile.
+2. Chiedo la mossa migliore → il motore risponde entro pochi secondi.
+3. (Opzionale) Gioco un errore grave in training → segnalazione.
+4. La separazione `backend/` ↔ `frontend/` resta invariata.
+
+#### Criteri di completamento
+Il motore fornisce valutazione e mossa migliore in locale, senza rompere la separazione FE/BE.
+
+#### Cosa non fare ancora
+Niente *opening explorer*/database online; niente analisi multi-PV pesante di default; nessuna dipendenza dal cloud.
+
+---
+
 ## 14. Contratti e modello dati della Parte 2
 
 > Estende la sezione 6 (contratto attuale) e la sezione 7 (modello dati). Base URL `/api`.
@@ -1208,6 +1258,7 @@ orderIndex: int (default 0)             // ordinamento dentro lo studio
 | R15 | **Import/Export PGN ramificato** | Mapping bidirezionale `tree` ↔ PGN con varianti annidate, commenti, NAG | Medio | P14/P15 | Parsing/serializzazione lato frontend con `chess.js`; commenti/NAG di base, resto rinviato. |
 | R16 | **Scalabilità/responsive scacchiera** | La board resta 720px tra ~800-1280px e il pannello finisce sotto la piega (vedi sezione 16) | Medio (UX) | Trasversale | La correzione è una **proposta grafica da validare** (sezione 16), non un rilascio finché l'utente non approva. |
 | R17 | **Persistenza dati di apprendimento** | Sessioni/stats/scheduling fanno crescere lo schema H2 locale | Basso/Medio | P16-P18 | Tabelle dedicate, `userId` nullable inattivo; migrazioni versionate rinviate alla terza tornata. |
+| R18 | **Integrazione Stockfish** | Esecuzione del motore (WASM in Web Worker vs processo backend), threading/`SharedArrayBuffer` (header COOP/COEP), performance su client deboli | Medio | P19 | Consigliato Stockfish **WASM client-side** in Web Worker; usare la versione **single-thread** se gli header di cross-origin isolation non sono disponibili; backend solo se serve condivisione dell'analisi. |
 
 > I rischi R8/R9/R10 (Supabase DB, Auth, Docker) restano **aperti e rinviati** alla terza tornata per scelta esplicita.
 
@@ -1258,7 +1309,6 @@ orderIndex: int (default 0)             // ordinamento dentro lo studio
 ### Altri spunti emersi (da valutare)
 - **Condivisione/esportazione studi** in stile Lichess (link/JSON/PGN di intero studio).
 - **Tag e ricerca** trasversali alle varianti/studi (full-text su nome e mosse).
-- **Integrazione motore** (eval/best-move) come aiuto allo studio, non come avversario.
 - **Import file `.pgn`** e PGN multi-partita; gestione NAG/commenti completa.
 - **Backup/restore** del repertorio locale (export/import dell'intero DB applicativo).
 - **PWA/offline** e, più avanti, app mobile dedicata.
