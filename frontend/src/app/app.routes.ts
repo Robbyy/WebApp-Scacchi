@@ -10,6 +10,7 @@ export const routes: Routes = [
   { path: 'variants/new', component: VariantEditor },
   { path: 'variants/import', component: PgnImport },
   { path: 'variants/:id', component: VariantDetail },
+  { path: 'variants/:id/edit', component: VariantEditor },
   { path: 'variants/:id/train', component: VariantTraining },
   { path: '**', redirectTo: '' },
 ];

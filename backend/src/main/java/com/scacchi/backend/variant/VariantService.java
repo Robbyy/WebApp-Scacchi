@@ -42,6 +42,17 @@ public class VariantService {
         return toDto(repository.save(entity));
     }
 
+    public Optional<VariantDto> update(Long id, CreateVariantRequest request) {
+        return repository.findById(id).map(entity -> {
+            entity.setName(request.name().trim());
+            entity.setColor(Color.valueOf(request.color()));
+            entity.setMoves(List.copyOf(request.moves()));
+            entity.setSourcePgn(request.sourcePgn());
+            // startingFen e createdAt restano invariati
+            return toDto(repository.save(entity));
+        });
+    }
+
     public boolean delete(Long id) {
         if (!repository.existsById(id)) {
             return false;

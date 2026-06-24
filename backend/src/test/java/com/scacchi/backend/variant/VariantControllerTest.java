@@ -3,6 +3,7 @@ package com.scacchi.backend.variant;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -75,5 +76,41 @@ class VariantControllerTest {
     @Test
     void deleteReturns404WhenMissing() throws Exception {
         mockMvc.perform(delete("/api/variants/999999")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updateChangesAnExistingVariant() throws Exception {
+        String create = """
+            {"name":"Da modificare","color":"WHITE","moves":["e4","e5"]}""";
+        MvcResult result = mockMvc.perform(
+                post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(create))
+            .andExpect(status().isCreated())
+            .andReturn();
+        int id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+
+        String update = """
+            {"name":"Modificata","color":"BLACK","moves":["d4","d5","c4"]}""";
+        mockMvc.perform(put("/api/variants/" + id).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(id))
+            .andExpect(jsonPath("$.name").value("Modificata"))
+            .andExpect(jsonPath("$.color").value("BLACK"))
+            .andExpect(jsonPath("$.moves.length()").value(3));
+    }
+
+    @Test
+    void updateReturns404WhenMissing() throws Exception {
+        String body = """
+            {"name":"X","color":"WHITE","moves":["e4"]}""";
+        mockMvc.perform(put("/api/variants/999999").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updateRejectsInvalidPayload() throws Exception {
+        String body = """
+            {"name":"","color":"WHITE","moves":["e4"]}""";
+        mockMvc.perform(put("/api/variants/1").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest());
     }
 }

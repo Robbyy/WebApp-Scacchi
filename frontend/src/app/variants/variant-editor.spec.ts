@@ -1,19 +1,30 @@
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { VariantEditor } from './variant-editor';
 import { VariantService } from '../core/variant.service';
 import { CreateVariantRequest, Variant } from '../core/variant.model';
 import { MoveMade } from '../chessboard/chessboard';
 
+const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
 function move(san: string): MoveMade {
   return { san, from: '', to: '', fen: '' };
 }
 
-function setup(service: Partial<VariantService>) {
+function setup(service: Partial<VariantService>, routeId?: number) {
   TestBed.configureTestingModule({
     imports: [VariantEditor],
-    providers: [provideRouter([]), { provide: VariantService, useValue: service }],
+    providers: [
+      provideRouter([]),
+      { provide: VariantService, useValue: service },
+      {
+        provide: ActivatedRoute,
+        useValue: {
+          snapshot: { paramMap: convertToParamMap(routeId ? { id: String(routeId) } : {}) },
+        },
+      },
+    ],
   });
   const fixture = TestBed.createComponent(VariantEditor);
   fixture.detectChanges();
@@ -27,7 +38,7 @@ describe('VariantEditor', () => {
     cmp.onMove(move('e5'));
     cmp.onMove(move('Nf3'));
     expect(cmp.moves()).toEqual(['e4', 'e5', 'Nf3']);
-    expect(cmp.turn()).toBe('b'); // dopo e4 e5 Nf3 tocca al nero
+    expect(cmp.turn()).toBe('b');
   });
 
   it('undoes the last move', () => {
@@ -73,10 +84,10 @@ describe('VariantEditor', () => {
     expect(cmp.error()).toBeTruthy();
   });
 
-  it('saves a valid variant and navigates to it', () => {
+  it('creates a valid variant and navigates to it', () => {
     const created: Variant = { id: 7, name: 'Italiana base', color: 'WHITE', moves: ['e4', 'e5'], startingFen: '' };
     let captured: CreateVariantRequest | null = null;
-    const { fixture, cmp } = setup({
+    const { cmp } = setup({
       createVariant: (req: CreateVariantRequest) => {
         captured = req;
         return of(created);
@@ -96,5 +107,41 @@ describe('VariantEditor', () => {
 
     expect(captured).toEqual({ name: 'Italiana base', color: 'WHITE', moves: ['e4', 'e5'] });
     expect(navTarget).toEqual(['/variants', 7]);
+    expect(cmp.isEdit()).toBe(false);
+  });
+
+  it('loads an existing variant in edit mode and updates it', () => {
+    const existing: Variant = {
+      id: 5,
+      name: 'Italiana',
+      color: 'WHITE',
+      moves: ['e4', 'e5', 'Nf3'],
+      startingFen: START,
+    };
+    let updateId: number | null = null;
+    let captured: CreateVariantRequest | null = null;
+    const { cmp } = setup(
+      {
+        getVariant: () => of(existing),
+        updateVariant: (id: number, req: CreateVariantRequest) => {
+          updateId = id;
+          captured = req;
+          return of({ ...existing, name: 'Italiana mod' });
+        },
+      },
+      5,
+    );
+    const router = TestBed.inject(Router);
+    router.navigate = (() => Promise.resolve(true)) as typeof router.navigate;
+
+    expect(cmp.isEdit()).toBe(true);
+    expect(cmp.moves()).toEqual(['e4', 'e5', 'Nf3']);
+    expect(cmp.name()).toBe('Italiana');
+
+    cmp.name.set('Italiana mod');
+    cmp.save();
+
+    expect(updateId).toBe(5);
+    expect(captured).toEqual({ name: 'Italiana mod', color: 'WHITE', moves: ['e4', 'e5', 'Nf3'] });
   });
 });

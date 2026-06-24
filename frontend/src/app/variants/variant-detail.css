@@ -229,6 +229,37 @@
   color: var(--wood-dark);
 }
 
+.detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.edit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  align-self: flex-start;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.6rem;
+  background: oklch(0.965 0.018 80);
+  color: var(--wood-dark);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+
+.edit-link svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.edit-link:hover {
+  background: var(--wood-light);
+}
+
 .back-link {
   color: var(--text-muted);
   text-decoration: none;

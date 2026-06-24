@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Chess } from 'chess.js';
 import { Chessboard, MoveMade } from '../chessboard/chessboard';
 import { VariantService } from '../core/variant.service';
@@ -22,6 +22,7 @@ interface MoveRow {
 export class VariantEditor {
   private readonly service = inject(VariantService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly name = signal('');
   protected readonly color = signal<VariantColor>('WHITE');
@@ -29,8 +30,38 @@ export class VariantEditor {
   protected readonly error = signal<string | null>(null);
   protected readonly saving = signal(false);
 
+  /** Id della variante in modifica; null in creazione. */
+  protected readonly editId = signal<number | null>(null);
+  protected readonly isEdit = computed(() => this.editId() !== null);
+
   private game = new Chess();
   protected readonly fen = signal(this.game.fen());
+
+  constructor() {
+    const idParam = this.route.snapshot.paramMap.get('id');
+    if (idParam) {
+      const id = Number(idParam);
+      this.editId.set(id);
+      this.service.getVariant(id).subscribe({
+        next: (v) => {
+          const game = v.startingFen ? new Chess(v.startingFen) : new Chess();
+          for (const san of v.moves) {
+            try {
+              game.move(san);
+            } catch {
+              break;
+            }
+          }
+          this.game = game;
+          this.moves.set([...v.moves]);
+          this.fen.set(game.fen());
+          this.name.set(v.name);
+          this.color.set(v.color);
+        },
+        error: () => this.error.set('Variante non trovata.'),
+      });
+    }
+  }
 
   protected readonly orientation = computed<'white' | 'black'>(() =>
     this.color() === 'BLACK' ? 'black' : 'white',
@@ -87,8 +118,12 @@ export class VariantEditor {
       color: this.color(),
       moves: this.moves(),
     };
-    this.service.createVariant(request).subscribe({
-      next: (created) => this.router.navigate(['/variants', created.id]),
+    const id = this.editId();
+    const save$ = id !== null
+      ? this.service.updateVariant(id, request)
+      : this.service.createVariant(request);
+    save$.subscribe({
+      next: (saved) => this.router.navigate(['/variants', saved.id]),
       error: () => {
         this.error.set('Salvataggio non riuscito.');
         this.saving.set(false);

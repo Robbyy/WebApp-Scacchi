@@ -22,8 +22,8 @@
 
   <aside class="side">
     <header class="side-head">
-      <p class="side-kicker">Nuova variante</p>
-      <h2 class="side-title">Crea dalla scacchiera</h2>
+      <p class="side-kicker">{{ isEdit() ? 'Modifica variante' : 'Nuova variante' }}</p>
+      <h2 class="side-title">{{ isEdit() ? 'Aggiorna la linea' : 'Crea dalla scacchiera' }}</h2>
     </header>
 
     <div class="form-field">
@@ -68,7 +68,7 @@
 
     <div class="actions">
       <button type="button" class="btn btn--primary" (click)="save()" [disabled]="saving()">
-        {{ saving() ? 'Salvataggio…' : 'Salva variante' }}
+        {{ saving() ? 'Salvataggio…' : (isEdit() ? 'Salva modifiche' : 'Salva variante') }}
       </button>
       <a class="btn" routerLink="/">Annulla</a>
     </div>

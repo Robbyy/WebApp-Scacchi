@@ -21,6 +21,10 @@ export class VariantService {
     return this.http.post<Variant>(this.baseUrl, request);
   }
 
+  updateVariant(id: number, request: CreateVariantRequest): Observable<Variant> {
+    return this.http.put<Variant>(`${this.baseUrl}/${id}`, request);
+  }
+
   deleteVariant(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
