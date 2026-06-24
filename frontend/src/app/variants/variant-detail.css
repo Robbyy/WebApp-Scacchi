@@ -229,6 +229,35 @@
   color: var(--wood-dark);
 }
 
+/* Vista PGN ad albero (mainline + varianti) */
+.pgn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.25rem;
+  max-height: 340px;
+  overflow-y: auto;
+  line-height: 1.7;
+}
+
+.pgn .move-num {
+  margin-left: 0.15rem;
+}
+
+.move--variation {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.move--variation.move--current {
+  color: var(--wood-dark);
+}
+
+.paren {
+  color: var(--text-muted);
+}
+
 .detail-actions {
   display: flex;
   flex-direction: column;
