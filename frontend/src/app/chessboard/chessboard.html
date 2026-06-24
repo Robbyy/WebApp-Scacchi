@@ -18,9 +18,15 @@
         [class.square--dark]="sq.dark"
         [class.square--light]="!sq.dark"
         [class.square--selected]="sq.selected"
+        [class.square--draggable]="sq.draggable && interactive()"
+        [attr.draggable]="sq.draggable && interactive() ? 'true' : null"
         [attr.data-square]="sq.square"
         [attr.aria-label]="sq.square"
         (click)="onSquareClick(sq.square)"
+        (dragstart)="onDragStart($event, sq.square)"
+        (dragover)="onDragOver($event)"
+        (drop)="onDrop($event, sq.square)"
+        (dragend)="onDragEnd()"
       >
         @if (sq.legalTarget) {
           <span class="legal-dot" [class.legal-dot--capture]="sq.piece"></span>

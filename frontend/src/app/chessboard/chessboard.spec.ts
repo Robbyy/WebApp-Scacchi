@@ -8,6 +8,37 @@ function clickSquare(fixture: ComponentFixture<Chessboard>, square: string): voi
   el.click();
 }
 
+function eventWithDataTransfer(type: string, dataTransfer: Record<string, unknown>): Event {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+  return event;
+}
+
+function dragSquare(fixture: ComponentFixture<Chessboard>, from: string, to: string): void {
+  const source = fixture.nativeElement.querySelector(
+    `[data-square="${from}"]`,
+  ) as HTMLButtonElement;
+  const target = fixture.nativeElement.querySelector(
+    `[data-square="${to}"]`,
+  ) as HTMLButtonElement;
+  let payload = '';
+  const dataTransfer = {
+    effectAllowed: '',
+    dropEffect: '',
+    setData: (_type: string, value: string) => {
+      payload = value;
+    },
+    getData: () => payload,
+  };
+
+  source.dispatchEvent(eventWithDataTransfer('dragstart', dataTransfer));
+  fixture.detectChanges();
+  target.dispatchEvent(eventWithDataTransfer('dragover', dataTransfer));
+  target.dispatchEvent(eventWithDataTransfer('drop', dataTransfer));
+  source.dispatchEvent(eventWithDataTransfer('dragend', dataTransfer));
+  fixture.detectChanges();
+}
+
 describe('Chessboard', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({ imports: [Chessboard] }).compileComponents();
@@ -41,6 +72,20 @@ describe('Chessboard', () => {
     expect(emitted!.to).toBe('e4');
   });
 
+  it('emits a legal drag-and-drop move (e2-e4) in SAN', () => {
+    const fixture = TestBed.createComponent(Chessboard);
+    fixture.detectChanges();
+    let emitted: MoveMade | undefined;
+    fixture.componentInstance.moveMade.subscribe((m) => (emitted = m));
+
+    dragSquare(fixture, 'e2', 'e4');
+
+    expect(emitted).toBeDefined();
+    expect(emitted!.san).toBe('e4');
+    expect(emitted!.from).toBe('e2');
+    expect(emitted!.to).toBe('e4');
+  });
+
   it('does not emit on an illegal move (e2-e5)', () => {
     const fixture = TestBed.createComponent(Chessboard);
     fixture.detectChanges();
@@ -50,6 +95,29 @@ describe('Chessboard', () => {
     clickSquare(fixture, 'e2');
     fixture.detectChanges();
     clickSquare(fixture, 'e5');
+
+    expect(count).toBe(0);
+  });
+
+  it('does not emit on an illegal drag-and-drop move (e2-e5)', () => {
+    const fixture = TestBed.createComponent(Chessboard);
+    fixture.detectChanges();
+    let count = 0;
+    fixture.componentInstance.moveMade.subscribe(() => count++);
+
+    dragSquare(fixture, 'e2', 'e5');
+
+    expect(count).toBe(0);
+  });
+
+  it('does not emit drag-and-drop moves when not interactive', () => {
+    const fixture = TestBed.createComponent(Chessboard);
+    fixture.componentRef.setInput('interactive', false);
+    fixture.detectChanges();
+    let count = 0;
+    fixture.componentInstance.moveMade.subscribe(() => count++);
+
+    dragSquare(fixture, 'e2', 'e4');
 
     expect(count).toBe(0);
   });

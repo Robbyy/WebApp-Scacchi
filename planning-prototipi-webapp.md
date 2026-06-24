@@ -170,7 +170,7 @@ Una scacchiera interattiva: i pezzi si muovono via drag/click, le mosse illegali
 
 #### Frontend workstream
 - Integrazione `chess.js` come motore di regole/legalità e parsing (scelta confermata dalla preanalisi).
-- Selezione della specifica libreria scacchiera Angular-compatibile per il rendering (residuo di R1: resta da scegliere *quale*, non *se*). Criteri: controllo di FEN/orientamento, stile case configurabile, pezzi sostituibili con SVG Staunton.
+- Scelta attuata per il rendering: componente custom Angular/CSS/SVG, documentato in `decisioni-tecniche.md`. Criteri coperti: controllo di FEN/orientamento, stile case configurabile, pezzi SVG Staunton, click, drag and drop e promozione.
 - Componente `ChessboardComponent` riusabile: input posizione (FEN), output evento `moveMade` (mossa in formato SAN + FEN risultante).
 - Applicare i **token visivi** del riferimento Lovable: colori case `#f0d9b5` (chiare) / `#b58863` (scure), cornice effetto legno, coordinate `a-h`/`1-8` come nello screenshot.
 - Stato locale minimo dentro il componente (istanza del motore di gioco).
@@ -284,7 +284,7 @@ Spostare le varianti da hardcoded a H2 con CRUD minimo, mantenendo invariato il 
 Creazione, elenco, lettura e cancellazione di varianti persistite in H2; il frontend continua a funzionare senza modifiche al contratto.
 
 #### Backend workstream
-- Entità JPA `Variant` (vedi sezione 7, modello MVP): `id`, `name`, `color`, `moves` (serializzate come JSON/stringa o entità `Move` figlia — decisione sezione 8, rischio R2).
+- Entità JPA `Variant` (vedi sezione 7, modello MVP): `id`, `name`, `color`, `moves` come mainline serializzata e `tree` come albero serializzato.
 - `VariantRepository` (Spring Data JPA).
 - `VariantService` rifattorizzato per usare il repository al posto del dato hardcoded.
 - `VariantController`: aggiunti `POST /api/variants` e `DELETE /api/variants/{id}`.
@@ -477,9 +477,9 @@ Task piccoli (~1 ora), assegnabili ad agenti AI. Legenda area: **BE** backend, *
 
 ---
 
-## 6. Contratti iniziali frontend/backend
+## 6. Contratti frontend/backend
 
-Bozza pragmatica, dimensionata sui primi prototipi. Base URL: `/api`.
+Contratto attuale, aggiornato allo stato implementato dei prototipi 0-6 e delle estensioni anticipate (modifica variante e albero mosse). Base URL: `/api`.
 
 ### Endpoint REST principali
 | Metodo | Path | Scopo | Introdotto in |
@@ -488,6 +488,7 @@ Bozza pragmatica, dimensionata sui primi prototipi. Base URL: `/api`.
 | GET | `/api/variants` | Lista varianti | P2 |
 | GET | `/api/variants/{id}` | Dettaglio variante | P2 |
 | POST | `/api/variants` | Crea variante | P4 |
+| PUT | `/api/variants/{id}` | Aggiorna variante esistente | Extra post-P5 anticipato |
 | DELETE | `/api/variants/{id}` | Elimina variante | P4 |
 | POST | `/api/variants/{id}/training/check` | (Opzionale) validazione mossa server-side | P3 se necessario |
 | POST | `/api/variants/import-pgn` | (Opzionale) import PGN server-side | P6 se scelto BE |
@@ -499,18 +500,26 @@ Bozza pragmatica, dimensionata sui primi prototipi. Base URL: `/api`.
 id: number
 name: string
 color: "WHITE" | "BLACK"      // lato da allenare; predisposto
-moves: string[]                // mosse in SAN, es. ["e4","e5","Nf3","Nc6","Bc4"]
+moves: string[]                // mainline in SAN, derivata da tree
+tree?: MoveNode[]              // albero completo: mainline + sotto-varianti
 startingFen: string            // default posizione iniziale; predisposto per future posizioni custom
 sourcePgn?: string             // predisposto, valorizzato dall'import PGN (P6)
 createdAt?: string             // predisposto per ordinamento/storico
 ```
 
-**`CreateVariantRequest`** (richiesta, P4+)
+**`CreateVariantRequest`** (richiesta, P4+; usata anche per `PUT`)
 ```
 name: string                   // obbligatorio, non vuoto
 color: "WHITE" | "BLACK"
-moves: string[]                // obbligatorio, non vuoto
-sourcePgn?: string             // opzionale (import PGN)
+moves: string[]                // mainline in SAN; usata se tree e' assente
+tree?: MoveNode[]              // opzionale; se presente e' la fonte autorevole
+sourcePgn?: string             // opzionale (import PGN), salvato come testo lungo
+```
+
+**`MoveNode`** (albero mosse)
+```
+san: string                    // mossa in SAN
+children: MoveNode[]           // children[0] = continuazione principale; altri figli = sotto-varianti
 ```
 
 **`TrainingCheckRequest` / `TrainingCheckResponse`** (opzionali, solo se validazione server-side)
@@ -521,7 +530,8 @@ sourcePgn?: string             // opzionale (import PGN)
 
 ### Responsabilità del backend
 - Esporre varianti (hardcoded → H2).
-- Persistere e validare i dati minimi (nome non vuoto, mosse non vuote).
+- Persistere e validare i dati minimi (nome non vuoto, colore valido, almeno `moves` o `tree` non vuoto).
+- Mantenere `moves` come mainline derivata da `tree` quando l'albero e' presente.
 - (Opzionale) validare la legalità della sequenza e/o le mosse di training.
 - Mantenere stabile il contratto DTO mentre cambia l'implementazione interna.
 
@@ -529,10 +539,11 @@ sourcePgn?: string             // opzionale (import PGN)
 - Rendering scacchiera e garanzia di legalità delle mosse (motore client).
 - Gestione dello stato della sessione di training.
 - Confronto mossa-attesa (nel MVP) e feedback UX.
+- Creazione/modifica visuale di varianti lineari e ramificate.
 - Parsing PGN client-side (se si sceglie l'opzione FE).
 
 ### Dati minimi scambiati
-Per il MVP basta `VariantDto` con `name` + `moves[]`. Tutto il resto (`color`, `startingFen`, `sourcePgn`, `createdAt`) è **predisposto** ma non bloccante.
+Per il MVP lineare basta `VariantDto` con `name` + `moves[]`. Nello stato attuale `tree` e' gia' disponibile per sotto-varianti, mentre `moves[]` resta la mainline per retrocompatibilita' e viste semplici.
 
 ### Campi predisposti per evoluzioni future
 - `color`, `startingFen` → posizioni/lati custom.
@@ -559,18 +570,19 @@ Variant {
   id: Long (PK)
   name: String (not null)
   color: enum WHITE/BLACK
-  moves: String[]  // serializzate (JSON in colonna text) oppure entità Move figlia
+  moves: String[]      // mainline serializzata come JSON in colonna text
+  tree: MoveNode[]     // albero serializzato come JSON in colonna text
   startingFen: String (default initial)
-  sourcePgn: String (nullable)
+  sourcePgn: String (nullable, colonna text)
   createdAt: timestamp
 }
 ```
-> Decisione aperta (sezione 8, R2): `moves` come stringa JSON in un'unica colonna (più semplice) **vs** entità `Move` con `(variantId, ply, san)` (più normalizzato). Per i prototipi è consigliata la **stringa JSON**.
+> Decisione attuata: nei prototipi le mosse sono salvate come JSON in colonne `text`. `tree` e' la fonte completa quando presente; `moves` resta la mainline derivata per compatibilita' e semplicità di consumo.
 
 ### Modello per gestione completa aperture/varianti (post-MVP)
 - Possibile entità `Opening`/`Repertoire` che raggruppa più `Variant`.
 - Supporto a `startingFen` non standard.
-- Eventuale struttura ad albero per sotto-varianti (decisione importante, rimandata).
+- Struttura ad albero gia' introdotta a livello di singola variante; restano da consolidare UX avanzata, promozione rami a mainline, export/import PGN complesso e validazione completa.
 
 ### Dati futuri - storico allenamenti
 ```
@@ -602,8 +614,8 @@ Derivabili da `TrainingSession`/`TrainingMove` (aggregazioni). Nessuna tabella n
 
 | ID | Rischio | Descrizione | Impatto | Quando affrontarlo | Rimandabile? | Decisione minima ora |
 |----|---------|-------------|---------|--------------------|--------------|----------------------|
-| R1 | **Libreria scacchiera frontend** | ~~Quale lib per rendering + quale per regole~~ **Quasi risolto dalla preanalisi:** regole = `chess.js` (confermato); rendering = libreria board **Angular-compatibile** (NO `react-chessboard`); pezzi Staunton SVG; custom board come evoluzione futura. Residuo: scegliere *quale* board Angular. | Medio (era Alto) | Prototipo 1 | Residuo sì | Confermare `chess.js`; valutare 1-2 board Angular vs i token visivi richiesti; tenere rendering e regole separati. |
-| R2 | **Rappresentazione mosse** | SAN vs LAN vs UCI; come salvarle. Coerente con `chess.js`/PGN della preanalisi. | Alto (contratto + DB) | P1 (formato), P4 (storage) | No per il formato | Usare **SAN** nel contratto e in UI (nativo in `chess.js`); storage come **JSON string** nei prototipi. |
+| R1 | **Libreria scacchiera frontend** | Risolto: rendering custom Angular/CSS con pezzi SVG Staunton; regole = `chess.js`; interazione click + drag and drop. | Basso (era Alto) | Prototipo 1 | No | Mantenere separati rendering e regole; rivalutare libreria esterna solo se emergono requisiti non coperti. |
+| R2 | **Rappresentazione mosse** | SAN vs LAN vs UCI; come salvarle. Coerente con `chess.js`/PGN della preanalisi. | Medio (era Alto) | P1 (formato), P4/P5 (storage + albero) | No per il formato | Usare **SAN** nel contratto e in UI; salvare `tree` come JSON in colonna `text`; mantenere `moves` come mainline derivata. |
 | R3 | **Validazione mosse legali** | Chi garantisce la legalità: client, server o entrambi | Medio | P1 (client), P5 (eventuale server) | Sì per il server | Legalità lato **client** nei prototipi; validazione server opzionale e rimandata. |
 | R4 | **Validazione training (giusto/sbagliato)** | Confronto mossa attesa lato client o server | Medio | P3 | Sì (server) | **Client** nel MVP; predisporre endpoint `training/check` ma non implementarlo subito. |
 | R5 | **Import PGN** | Parsing robusto, varianti annidate, commenti. La preanalisi conferma `chess.js` (`Chess().loadPgn(...)`) come strumento. | Medio | P6 | Sì (robustezza) | Parsing **client** con `chess.js` su PGN a linea singola; PGN complessi rimandati. |
@@ -612,10 +624,10 @@ Derivabili da `TrainingSession`/`TrainingMove` (aggregazioni). Nessuna tabella n
 | R8 | **Migrazione H2 → Supabase PostgreSQL** | Differenze SQL, persistenza, connessione | Medio | Post-MVP | Sì | Restare su JPA standard, evitare feature H2-specifiche; valutare Flyway al passaggio. |
 | R9 | **Autenticazione Supabase** | Identità utente, sicurezza endpoint | Alto (ma futuro) | Fase dedicata | Sì | Solo predisporre `userId` nullable; nessuna logica auth ora. |
 | R10 | **Containerizzazione Docker** | Build, networking FE/BE, immagini | Medio | Post-MVP | Sì | Mantenere `backend/` e `frontend/` come progetti **fisicamente separati** (vedi sezione 1) e config via env; nessun Dockerfile ora. La separazione abilita due immagini distinte in futuro. |
-| R11 | **Modello a albero/sotto-varianti** | Aperture reali sono alberi, non liste | Alto (se serve) | Dopo P6 | Sì | Nei prototipi una variante = **una linea lineare**. Alberi rimandati con decisione esplicita. |
-| R12 | **Scelta specifica board Angular** | Tra le librerie scacchiera Angular-compatibili, quale dà controllo su FEN/orientamento/case/pezzi SVG | Medio | Prototipo 1 | Residuo di R1 | Valutare 1-2 candidate contro i token visivi del riferimento; fallback a board custom CSS/SVG se insufficienti. |
+| R11 | **Modello a albero/sotto-varianti** | Aperture reali sono alberi, non liste | Medio/Alto | Anticipato dopo P5 | Parzialmente | Introdotto `MoveNode`: `children[0]` = mainline, altri figli = sotto-varianti. Restano da consolidare validazione, UX avanzata, import/export PGN complesso. |
+| R12 | **Scelta specifica board Angular** | Risolto con board custom Angular/CSS/SVG, scelta documentata in ADR 0001. | Basso | Prototipo 1 | No | Continuare con board custom finche' soddisfa rendering, FEN/orientamento, click, drag and drop e promozione. |
 
-**Decisioni minime da prendere subito (prima di P1-P2):** R1/R12 (quale board Angular — `chess.js` già confermato), R2 (SAN + JSON), R7 (contratto scritto). Tutto il resto è rimandabile con sicurezza.
+**Decisioni minime prese:** R1/R12 (board custom Angular + `chess.js`), R2 (SAN + JSON in colonne `text`, con `tree` e mainline `moves`), R7 (contratto scritto e aggiornato). Le decisioni successive restano da prendere quando si affrontano PGN complessi, reportistica, autenticazione e database online.
 
 **Chiuse dalla preanalisi:** scelta del motore regole/PGN (`chess.js`), esclusione di `react-chessboard`, formato pezzi (Staunton SVG), token visivi e layout (palette pergamena, case `#f0d9b5`/`#b58863`, cornice legno, layout a pannelli, controlli replay).
 

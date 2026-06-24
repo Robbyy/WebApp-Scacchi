@@ -25,6 +25,7 @@ interface BoardSquare {
   pieceAlt: string;
   selected: boolean;
   legalTarget: boolean;
+  draggable: boolean;
   rankLabel: string | null;
   fileLabel: string | null;
 }
@@ -89,6 +90,7 @@ export class Chessboard {
   private readonly chess = new Chess();
   private readonly fen = signal<string>(this.chess.fen());
   private readonly selected = signal<string | null>(null);
+  private readonly dragging = signal<string | null>(null);
   /** Promozione in attesa di scelta del pezzo (from/to + colore che promuove). */
   protected readonly pendingPromotion = signal<{ from: string; to: string; color: 'w' | 'b' } | null>(
     null,
@@ -155,6 +157,7 @@ export class Chessboard {
           pieceAlt: cell ? pieceAlt(cell.color, cell.type) : '',
           selected: sel === square,
           legalTarget: targets.has(square),
+          draggable: !!cell && cell.color === this.chess.turn(),
           rankLabel: vf === 0 ? String(rankNumber) : null,
           fileLabel: vr === 7 ? FILES[fileIdx] : null,
         });
@@ -196,14 +199,66 @@ export class Chessboard {
       return;
     }
 
+    this.tryMove(sel, square);
+  }
+
+  protected onDragStart(event: DragEvent, square: string): void {
+    if (!this.interactive() || this.pendingPromotion()) {
+      event.preventDefault();
+      return;
+    }
+    const piece = this.chess.get(square as ChessSquare);
+    if (!piece || piece.color !== this.chess.turn()) {
+      event.preventDefault();
+      return;
+    }
+    this.selected.set(square);
+    this.dragging.set(square);
+    event.dataTransfer?.setData('text/plain', square);
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+    }
+  }
+
+  protected onDragOver(event: DragEvent): void {
+    if (this.interactive() && this.dragging() && !this.pendingPromotion()) {
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+      }
+    }
+  }
+
+  protected onDrop(event: DragEvent, square: string): void {
+    if (!this.interactive() || this.pendingPromotion()) {
+      return;
+    }
+    event.preventDefault();
+    const from = this.dragging() ?? event.dataTransfer?.getData('text/plain');
+    this.dragging.set(null);
+    if (!from || from === square) {
+      this.selected.set(null);
+      return;
+    }
+    this.tryMove(from, square);
+  }
+
+  protected onDragEnd(): void {
+    if (this.dragging()) {
+      this.selected.set(null);
+    }
+    this.dragging.set(null);
+  }
+
+  private tryMove(from: string, to: string): void {
     // Mossa di promozione: chiedi quale pezzo prima di applicare.
-    if (this.isPromotion(sel, square)) {
-      this.pendingPromotion.set({ from: sel, to: square, color: this.chess.turn() });
+    if (this.isPromotion(from, to)) {
+      this.pendingPromotion.set({ from, to, color: this.chess.turn() });
       this.selected.set(null);
       return;
     }
 
-    this.applyMove(sel, square, 'q');
+    this.applyMove(from, to, 'q');
   }
 
   /** Conferma la promozione con il pezzo scelto. */
