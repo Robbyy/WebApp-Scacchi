@@ -116,3 +116,40 @@ colore, `moves`, `tree` opzionale e `sourcePgn` opzionale.
   `createdAt` restano invariati.
 - Servono ancora miglioramenti UX: conferma modifiche non salvate, feedback errori
   piu' specifici e protezione da cancellazioni accidentali di sottoalberi.
+
+---
+
+## 0004 — Validazione scacchistica lato backend con chesslib (P7, R13)
+
+**Data:** 2026-06-25 · **Stato:** Accettata · **Contesto:** Prototipo 7 (Parte 2), rischio R13.
+
+### Decisione
+Il backend valida la **legalita' scacchistica** di mainline e albero prima di
+persistere una variante. La libreria scelta e' **`chesslib`**
+(`com.github.bhlangonijr:chesslib:1.3.4`), disponibile **solo via JitPack**
+(aggiunto il repository `https://jitpack.io` al `pom.xml`), non su Maven Central.
+
+### Alternative valutate
+- **Legalita' solo lato client** (API "best effort"): scartata perche' svuota P7 di
+  significato — l'API resterebbe falsificabile da chiamate dirette.
+- **Validatore scacchistico scritto a mano** in Java: scartato perche' reimplementare
+  le regole (inchiodature, scacco, arrocco, en passant, promozione) e' costoso e
+  fragile, e duplicherebbe il motore (contrario al principio "una sola fonte di regole").
+
+### Note di implementazione
+- `chesslib.MoveList.loadFromSan` e' un **decoder SAN→mossa che NON verifica la
+  legalita'** (puo' produrre mosse illegali, es. decodifica il "e4" del Nero come
+  `e7e4`). La legalita' e' quindi controllata esplicitamente con
+  `board.legalMoves().contains(move)` nella posizione corrente.
+- L'albero e' validato in profondita': ogni nodo nella posizione del padre, a
+  partire da `START_FEN`.
+- Gli errori producono `400` con corpo strutturato `ValidationError`
+  (`field`, `ply`, `branchPath`, `message`), gestito da `@ExceptionHandler` nel
+  controller. Il frontend (editor/import) mostra il `message`.
+
+### Conseguenze
+- Nessuna variante con mosse illegali puo' entrare in DB tramite l'API.
+- Dipendenza da JitPack per la build del backend (richiede rete; il workaround TLS
+  `MAVEN_OPTS=-Djavax.net.ssl.trustStoreType=Windows-ROOT` resta necessario in locale).
+- Le varianti partono dalla posizione iniziale standard; per future posizioni di
+  partenza custom (`startingFen`) la validazione andra' estesa a partire da quella FEN.

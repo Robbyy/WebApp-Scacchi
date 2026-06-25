@@ -5,10 +5,10 @@
 .board-frame {
   position: relative;
   display: inline-grid;
-  grid-template-columns: 1.6rem auto 1.6rem;
-  grid-template-rows: 1.6rem auto 1.6rem;
-  padding: 10px;
-  border-radius: 6px;
+  grid-template-columns: 1.25rem auto 1.25rem;
+  grid-template-rows: 1.25rem auto 1.25rem;
+  padding: 5px;
+  border-radius: 5px;
   /* Cornice in legno mogano scuro con venatura verticale (riferimento). */
   background: repeating-linear-gradient(
     90deg,
@@ -107,6 +107,12 @@
   pointer-events: none;
   -webkit-user-drag: none;
   filter: drop-shadow(0 1px 1px oklch(0.2 0.03 40 / 0.35));
+}
+
+/* Durante il trascinamento il pezzo "si solleva": la casa di partenza resta
+   vuota finché la mossa non è confermata o annullata. */
+.piece--dragging {
+  visibility: hidden;
 }
 
 .legal-dot {

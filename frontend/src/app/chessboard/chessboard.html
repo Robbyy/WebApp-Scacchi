@@ -32,7 +32,13 @@
           <span class="legal-dot" [class.legal-dot--capture]="sq.piece"></span>
         }
         @if (sq.piece) {
-          <img class="piece" [src]="sq.pieceSrc" [alt]="sq.pieceAlt" draggable="false" />
+          <img
+            class="piece"
+            [class.piece--dragging]="dragging() === sq.square"
+            [src]="sq.pieceSrc"
+            [alt]="sq.pieceAlt"
+            draggable="false"
+          />
         }
       </button>
     }

@@ -90,7 +90,8 @@ export class Chessboard {
   private readonly chess = new Chess();
   private readonly fen = signal<string>(this.chess.fen());
   private readonly selected = signal<string | null>(null);
-  private readonly dragging = signal<string | null>(null);
+  /** Casa di partenza del pezzo in trascinamento (per nasconderlo all'origine). */
+  protected readonly dragging = signal<string | null>(null);
   /** Promozione in attesa di scelta del pezzo (from/to + colore che promuove). */
   protected readonly pendingPromotion = signal<{ from: string; to: string; color: 'w' | 'b' } | null>(
     null,
@@ -211,6 +212,14 @@ export class Chessboard {
     if (!piece || piece.color !== this.chess.turn()) {
       event.preventDefault();
       return;
+    }
+    // Trascina solo l'immagine del pezzo (niente sfondo della casa): usa il
+    // glifo SVG come drag image, centrato sul cursore.
+    const host = event.currentTarget as HTMLElement | null;
+    const pieceImg = host?.querySelector('img.piece') as HTMLElement | null;
+    if (pieceImg && event.dataTransfer && typeof event.dataTransfer.setDragImage === 'function') {
+      const rect = pieceImg.getBoundingClientRect();
+      event.dataTransfer.setDragImage(pieceImg, rect.width / 2, rect.height / 2);
     }
     this.selected.set(square);
     this.dragging.set(square);

@@ -4,6 +4,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,17 +14,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * API delle varianti di apertura (Prototipo 4): lettura, creazione e
- * cancellazione su persistenza H2.
+ * API delle varianti di apertura: lettura, creazione, modifica e cancellazione
+ * su persistenza H2. Dal Prototipo 7 i payload sono validati anche sulla
+ * legalità scacchistica ({@link VariantValidator}).
  */
 @RestController
 @RequestMapping("/api/variants")
 public class VariantController {
 
     private final VariantService service;
+    private final VariantValidator validator;
 
-    public VariantController(VariantService service) {
+    public VariantController(VariantService service, VariantValidator validator) {
         this.service = service;
+        this.validator = validator;
     }
 
     @GetMapping
@@ -40,9 +44,7 @@ public class VariantController {
 
     @PostMapping
     public ResponseEntity<VariantDto> create(@RequestBody CreateVariantRequest request) {
-        if (!isValid(request)) {
-            return ResponseEntity.badRequest().build();
-        }
+        validator.validate(request);
         VariantDto created = service.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -50,9 +52,7 @@ public class VariantController {
     @PutMapping("/{id}")
     public ResponseEntity<VariantDto> update(
         @PathVariable Long id, @RequestBody CreateVariantRequest request) {
-        if (!isValid(request)) {
-            return ResponseEntity.badRequest().build();
-        }
+        validator.validate(request);
         return service.update(id, request)
             .map(ResponseEntity::ok)
             .orElseGet(() -> ResponseEntity.notFound().build());
@@ -65,22 +65,9 @@ public class VariantController {
             : ResponseEntity.notFound().build();
     }
 
-    private static boolean isValid(CreateVariantRequest request) {
-        if (request == null
-            || request.name() == null || request.name().isBlank()
-            || request.color() == null) {
-            return false;
-        }
-        boolean hasMoves = request.moves() != null && !request.moves().isEmpty();
-        boolean hasTree = request.tree() != null && !request.tree().isEmpty();
-        if (!hasMoves && !hasTree) {
-            return false;
-        }
-        try {
-            Color.valueOf(request.color());
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
+    /** Payload non valido (struttura o legalità): risposta 400 con dettaglio. */
+    @ExceptionHandler(InvalidVariantException.class)
+    public ResponseEntity<ValidationError> handleInvalid(InvalidVariantException ex) {
+        return ResponseEntity.badRequest().body(ex.getError());
     }
 }

@@ -3,7 +3,12 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Chessboard, MoveMade } from '../chessboard/chessboard';
 import { VariantService } from '../core/variant.service';
-import { CreateVariantRequest, MoveNode, VariantColor } from '../core/variant.model';
+import {
+  CreateVariantRequest,
+  MoveNode,
+  VariantColor,
+  validationMessage,
+} from '../core/variant.model';
 import {
   addChild,
   buildTokens,
@@ -146,8 +151,8 @@ export class VariantEditor {
       : this.service.createVariant(request);
     save$.subscribe({
       next: (saved) => this.router.navigate(['/variants', saved.id]),
-      error: () => {
-        this.error.set('Salvataggio non riuscito.');
+      error: (err) => {
+        this.error.set(validationMessage(err) ?? 'Salvataggio non riuscito.');
         this.saving.set(false);
       },
     });

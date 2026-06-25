@@ -76,6 +76,32 @@ class VariantControllerTest {
     }
 
     @Test
+    void createRejectsAnIllegalMoveWithDetail() throws Exception {
+        String body = """
+            {"name":"Illegale","color":"WHITE","moves":["e4","e4"]}""";
+        mockMvc.perform(post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("moves"))
+            .andExpect(jsonPath("$.ply").value(2))
+            .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    void createRejectsAnIllegalBranchInTheTree() throws Exception {
+        String body = """
+            {"name":"Ramo illegale","color":"WHITE","tree":[
+              {"san":"e4","children":[
+                {"san":"e5","children":[]},
+                {"san":"Xx9","children":[]}
+              ]}
+            ]}""";
+        mockMvc.perform(post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("tree"))
+            .andExpect(jsonPath("$.branchPath.length()").value(2));
+    }
+
+    @Test
     void deleteRemovesAnExistingVariant() throws Exception {
         String body = """
             {"name":"Da cancellare","color":"BLACK","moves":["e4","c5"]}""";

@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Chess } from 'chess.js';
 import { VariantService } from '../core/variant.service';
-import { CreateVariantRequest, VariantColor } from '../core/variant.model';
+import { CreateVariantRequest, VariantColor, validationMessage } from '../core/variant.model';
 
 interface MoveRow {
   number: number;
@@ -92,8 +92,8 @@ export class PgnImport {
     };
     this.service.createVariant(request).subscribe({
       next: (created) => this.router.navigate(['/variants', created.id]),
-      error: () => {
-        this.error.set('Salvataggio non riuscito.');
+      error: (err) => {
+        this.error.set(validationMessage(err) ?? 'Salvataggio non riuscito.');
         this.saving.set(false);
       },
     });

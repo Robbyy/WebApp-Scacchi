@@ -99,6 +99,30 @@ describe('Chessboard', () => {
     expect(count).toBe(0);
   });
 
+  it('hides the piece on the origin square while dragging', () => {
+    const fixture = TestBed.createComponent(Chessboard);
+    fixture.detectChanges();
+    const source = fixture.nativeElement.querySelector(
+      '[data-square="e2"]',
+    ) as HTMLButtonElement;
+    const dataTransfer = {
+      effectAllowed: '',
+      dropEffect: '',
+      setData: () => {},
+      getData: () => 'e2',
+    };
+
+    source.dispatchEvent(eventWithDataTransfer('dragstart', dataTransfer));
+    fixture.detectChanges();
+
+    const img = source.querySelector('img.piece') as HTMLImageElement;
+    expect(img.classList.contains('piece--dragging')).toBe(true);
+
+    source.dispatchEvent(eventWithDataTransfer('dragend', dataTransfer));
+    fixture.detectChanges();
+    expect(img.classList.contains('piece--dragging')).toBe(false);
+  });
+
   it('does not emit on an illegal drag-and-drop move (e2-e5)', () => {
     const fixture = TestBed.createComponent(Chessboard);
     fixture.detectChanges();
