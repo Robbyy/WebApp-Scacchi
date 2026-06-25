@@ -5,6 +5,8 @@ import { VariantEditor } from './variant-editor';
 import { VariantService } from '../core/variant.service';
 import { CreateVariantRequest, Variant } from '../core/variant.model';
 import { MoveMade } from '../chessboard/chessboard';
+import { ConfirmService } from '../core/confirm.service';
+import { ToastService } from '../core/toast.service';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -18,6 +20,8 @@ function setup(service: Partial<VariantService>, routeId?: number) {
     providers: [
       provideRouter([]),
       { provide: VariantService, useValue: service },
+      { provide: ConfirmService, useValue: { ask: () => Promise.resolve(true) } },
+      { provide: ToastService, useValue: { success() {}, error() {}, info() {} } },
       {
         provide: ActivatedRoute,
         useValue: {
@@ -98,6 +102,19 @@ describe('VariantEditor', () => {
     cmp.cancelDelete();
     expect(cmp.confirmingDelete()).toBe(false);
     expect(cmp.tree()[0].children.length).toBe(1); // intatto
+  });
+
+  it('allows leaving when there are no unsaved changes', () => {
+    const { cmp } = setup({});
+    expect(cmp.canDeactivate()).toBe(true);
+  });
+
+  it('guards leaving when there are unsaved changes', async () => {
+    const { cmp } = setup({});
+    cmp.onMove(move('e4'));
+    expect(cmp.dirty()).toBe(true);
+    // lo stub di ConfirmService conferma l'uscita
+    await expect(Promise.resolve(cmp.canDeactivate())).resolves.toBe(true);
   });
 
   it('promotes a variation to mainline', () => {

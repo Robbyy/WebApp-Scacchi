@@ -82,14 +82,14 @@
         id="vname"
         name="name"
         [ngModel]="name()"
-        (ngModelChange)="name.set($event)"
+        (ngModelChange)="onNameChange($event)"
         placeholder="Es. Difesa Francese"
       />
     </div>
 
     <div class="form-field">
       <label for="vcolor">Lato da allenare</label>
-      <select id="vcolor" name="color" [ngModel]="color()" (ngModelChange)="color.set($event)">
+      <select id="vcolor" name="color" [ngModel]="color()" (ngModelChange)="onColorChange($event)">
         <option value="WHITE">Bianco</option>
         <option value="BLACK">Nero</option>
       </select>

@@ -44,6 +44,7 @@
             class="delete-btn"
             type="button"
             (click)="remove(v)"
+            [disabled]="deletingId() === v.id"
             [attr.aria-label]="'Elimina ' + v.name"
             title="Elimina"
           >

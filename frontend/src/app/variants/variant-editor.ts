@@ -3,6 +3,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Chessboard, MoveMade } from '../chessboard/chessboard';
 import { VariantService } from '../core/variant.service';
+import { ConfirmService } from '../core/confirm.service';
+import { ToastService } from '../core/toast.service';
+import { CanComponentDeactivate } from './can-deactivate.guard';
 import {
   CreateVariantRequest,
   MoveNode,
@@ -30,10 +33,15 @@ import {
   styleUrl: './variant-editor.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class VariantEditor {
+export class VariantEditor implements CanComponentDeactivate {
   private readonly service = inject(VariantService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly confirm = inject(ConfirmService);
+  private readonly toast = inject(ToastService);
+
+  /** true se ci sono modifiche non salvate (per il guard di uscita). */
+  protected readonly dirty = signal(false);
 
   protected readonly name = signal('');
   protected readonly color = signal<VariantColor>('WHITE');
@@ -99,6 +107,19 @@ export class VariantEditor {
     const { tree, index } = addChild(this.tree(), this.currentPath(), move.san);
     this.tree.set(tree);
     this.currentPath.update((p) => [...p, index]);
+    this.dirty.set(true);
+  }
+
+  /** Aggiornamento del nome dal form (marca le modifiche come non salvate). */
+  protected onNameChange(value: string): void {
+    this.name.set(value);
+    this.dirty.set(true);
+  }
+
+  /** Aggiornamento del lato da allenare dal form. */
+  protected onColorChange(value: VariantColor): void {
+    this.color.set(value);
+    this.dirty.set(true);
   }
 
   protected isCurrent(path: number[] | undefined): boolean {
@@ -138,6 +159,7 @@ export class VariantEditor {
     this.tree.set(promoteToMainline(this.tree(), path));
     // la stessa linea ora è il percorso di soli zeri
     this.currentPath.set(path.map(() => 0));
+    this.dirty.set(true);
   }
 
   /**
@@ -174,12 +196,27 @@ export class VariantEditor {
     }
     this.tree.set(removeNode(this.tree(), path));
     this.currentPath.update((p) => p.slice(0, -1));
+    this.dirty.set(true);
   }
 
   protected reset(): void {
     this.confirmingDelete.set(false);
     this.tree.set([]);
     this.currentPath.set([]);
+    this.dirty.set(true);
+  }
+
+  /** Guard di uscita: chiede conferma se ci sono modifiche non salvate. */
+  canDeactivate(): boolean | Promise<boolean> {
+    if (!this.dirty()) {
+      return true;
+    }
+    return this.confirm.ask({
+      title: 'Modifiche non salvate',
+      message: 'Hai modifiche non salvate. Vuoi uscire senza salvarle?',
+      confirmLabel: 'Esci senza salvare',
+      danger: true,
+    });
   }
 
   protected save(): void {
@@ -205,9 +242,15 @@ export class VariantEditor {
       ? this.service.updateVariant(id, request)
       : this.service.createVariant(request);
     save$.subscribe({
-      next: (saved) => this.router.navigate(['/variants', saved.id]),
+      next: (saved) => {
+        this.dirty.set(false);
+        this.toast.success(this.isEdit() ? 'Variante aggiornata.' : 'Variante salvata.');
+        this.router.navigate(['/variants', saved.id]);
+      },
       error: (err) => {
-        this.error.set(validationMessage(err) ?? 'Salvataggio non riuscito.');
+        const msg = validationMessage(err) ?? 'Salvataggio non riuscito.';
+        this.error.set(msg);
+        this.toast.error(msg);
         this.saving.set(false);
       },
     });

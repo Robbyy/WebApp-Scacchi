@@ -1,10 +1,12 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { ApiService } from './core/api.service';
+import { ToastHost } from './core/toast-host';
+import { ConfirmDialog } from './core/confirm-dialog';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink],
+  imports: [RouterOutlet, RouterLink, ToastHost, ConfirmDialog],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

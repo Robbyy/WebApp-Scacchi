@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Chess } from 'chess.js';
 import { VariantService } from '../core/variant.service';
 import { CreateVariantRequest, VariantColor, validationMessage } from '../core/variant.model';
+import { ToastService } from '../core/toast.service';
 
 interface MoveRow {
   number: number;
@@ -26,6 +27,7 @@ type Preview =
 export class PgnImport {
   private readonly service = inject(VariantService);
   private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
 
   protected readonly pgn = signal('');
   protected readonly color = signal<VariantColor>('WHITE');
@@ -91,9 +93,14 @@ export class PgnImport {
       sourcePgn: this.pgn().trim(),
     };
     this.service.createVariant(request).subscribe({
-      next: (created) => this.router.navigate(['/variants', created.id]),
+      next: (created) => {
+        this.toast.success('Variante importata.');
+        this.router.navigate(['/variants', created.id]);
+      },
       error: (err) => {
-        this.error.set(validationMessage(err) ?? 'Salvataggio non riuscito.');
+        const msg = validationMessage(err) ?? 'Salvataggio non riuscito.';
+        this.error.set(msg);
+        this.toast.error(msg);
         this.saving.set(false);
       },
     });
