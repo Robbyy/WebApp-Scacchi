@@ -3,12 +3,17 @@ import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { PgnImport } from './pgn-import';
 import { VariantService } from '../core/variant.service';
+import { StudyService } from '../core/study.service';
 import { CreateVariantRequest, Variant } from '../core/variant.model';
 
-function setup(service: Partial<VariantService>) {
+function setup(service: Partial<VariantService>, studyService: Partial<StudyService> = {}) {
   TestBed.configureTestingModule({
     imports: [PgnImport],
-    providers: [provideRouter([]), { provide: VariantService, useValue: service }],
+    providers: [
+      provideRouter([]),
+      { provide: VariantService, useValue: service },
+      { provide: StudyService, useValue: studyService },
+    ],
   });
   const fixture = TestBed.createComponent(PgnImport);
   fixture.detectChanges();

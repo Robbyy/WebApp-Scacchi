@@ -10,6 +10,7 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Chessboard } from '../chessboard/chessboard';
 import { VariantService } from '../core/variant.service';
+import { MoveSoundService } from '../core/move-sound.service';
 import { MoveNode, Variant } from '../core/variant.model';
 import {
   buildTokens,
@@ -30,6 +31,7 @@ import {
 export class VariantDetail implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(VariantService);
+  private readonly moveSound = inject(MoveSoundService);
 
   protected readonly variant = signal<Variant | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -90,8 +92,10 @@ export class VariantDetail implements OnDestroy {
   }
 
   protected next(): void {
-    if (childrenAt(this.tree(), this.currentPath()).length > 0) {
+    const kids = childrenAt(this.tree(), this.currentPath());
+    if (kids.length > 0) {
       this.currentPath.update((p) => [...p, 0]);
+      this.moveSound.play(soundKind(kids[0].san));
     }
   }
 
@@ -146,4 +150,8 @@ export class VariantDetail implements OnDestroy {
   ngOnDestroy(): void {
     this.stop();
   }
+}
+
+function soundKind(san: string): 'move' | 'capture' {
+  return san.includes('x') ? 'capture' : 'move';
 }

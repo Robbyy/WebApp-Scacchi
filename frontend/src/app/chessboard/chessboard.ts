@@ -3,11 +3,13 @@ import {
   Component,
   computed,
   effect,
+  inject,
   input,
   output,
   signal,
 } from '@angular/core';
 import { Chess, type Square as ChessSquare } from 'chess.js';
+import { MoveSoundService } from '../core/move-sound.service';
 
 /** Evento emesso a ogni mossa legale completata sulla scacchiera. */
 export interface MoveMade {
@@ -86,6 +88,8 @@ export class Chessboard {
   readonly orientation = input<'white' | 'black'>('white');
   /** Emesso a ogni mossa legale. */
   readonly moveMade = output<MoveMade>();
+
+  private readonly moveSound = inject(MoveSoundService);
 
   private readonly chess = new Chess();
   private readonly fen = signal<string>(this.chess.fen());
@@ -308,6 +312,7 @@ export class Chessboard {
         this.chess.undo();
       }
       this.fen.set(this.chess.fen());
+      this.moveSound.play(move.captured ? 'capture' : 'move');
       this.moveMade.emit({
         san: move.san,
         from: move.from,

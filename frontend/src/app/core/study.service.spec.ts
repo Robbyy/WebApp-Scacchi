@@ -67,4 +67,13 @@ describe('StudyService', () => {
     req.flush(null);
     expect(done).toBe(true);
   });
+
+  it('adds a variant to a study via POST /api/studies/:id/variants', () => {
+    const request = { name: 'Italiana', color: 'WHITE' as const, moves: ['e4', 'e5'] };
+    service.addVariant(5, request).subscribe();
+    const req = httpMock.expectOne('/api/studies/5/variants');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(request);
+    req.flush({ id: 11, name: 'Italiana', color: 'WHITE', moves: ['e4', 'e5'], studyId: 5 });
+  });
 });

@@ -1,0 +1,264 @@
+.study {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.crumbs a {
+  color: var(--wood-dark);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.crumbs a:hover {
+  text-decoration: underline;
+}
+
+.crumb-sep {
+  color: var(--text-muted);
+}
+
+.crumb-current {
+  color: var(--text-muted);
+}
+
+.study-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.study-title {
+  margin: 0;
+  font-size: 1.8rem;
+  color: var(--text-main);
+}
+
+.study-desc {
+  margin: 0.4rem 0 0;
+  color: var(--text-muted);
+}
+
+.study-tags {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+}
+
+.study-count {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.study-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.55rem;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  color: oklch(0.45 0.16 25);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.study-delete svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.study-delete:hover {
+  background: oklch(0.92 0.06 25);
+}
+
+.study-delete:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.new-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: 0.6rem;
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--board-light);
+  background: linear-gradient(135deg, var(--wood-medium), var(--wood-dark));
+  box-shadow: 0 2px 8px oklch(0.3 0.05 45 / 0.3);
+}
+
+.new-cta svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.new-cta:hover {
+  color: #fff;
+}
+
+.new-cta--ghost {
+  color: var(--wood-dark);
+  background: oklch(0.965 0.018 80);
+  border: 1px solid var(--panel-border);
+  box-shadow: none;
+}
+
+.new-cta--ghost svg {
+  fill: none;
+  stroke: currentColor;
+}
+
+.new-cta--ghost:hover {
+  color: var(--wood-dark);
+  background: var(--wood-light);
+}
+
+.list-muted {
+  color: var(--text-muted);
+}
+
+.detail-error {
+  max-width: 720px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+  color: oklch(0.45 0.16 25);
+}
+
+.detail-muted {
+  max-width: 720px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+  color: var(--text-muted);
+}
+
+.variant-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.variant-card {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.85rem;
+  box-shadow: 0 4px 14px oklch(0.4 0.05 50 / 0.08);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.variant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px oklch(0.4 0.05 50 / 0.16);
+}
+
+.variant-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0 1rem 1.25rem;
+  text-decoration: none;
+  color: var(--text-main);
+}
+
+.variant-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.variant-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.variant-count {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.badge {
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.badge--white {
+  background: var(--board-light);
+  color: var(--wood-dark);
+}
+
+.badge--black {
+  background: var(--wood-dark);
+  color: var(--board-light);
+}
+
+.badge--mixed {
+  background: linear-gradient(105deg, var(--board-light) 0 50%, var(--wood-dark) 50% 100%);
+  color: var(--wood-medium);
+  border: 1px solid var(--panel-border);
+}
+
+.delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  border: none;
+  border-left: 1px solid var(--panel-border);
+  border-radius: 0 0.85rem 0.85rem 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.delete-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.delete-btn:hover {
+  background: oklch(0.92 0.06 25);
+  color: oklch(0.45 0.16 25);
+}
+
+.delete-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

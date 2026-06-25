@@ -1,0 +1,99 @@
+@if (error()) {
+  <p class="detail-error">{{ error() }} — <a routerLink="/">torna agli studi</a></p>
+} @else if (study(); as s) {
+  <section class="study">
+    <nav class="crumbs">
+      <a routerLink="/">Studi</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb-current">{{ s.name }}</span>
+    </nav>
+
+    <header class="study-head">
+      <div class="study-head-main">
+        <h2 class="study-title">{{ s.name }}</h2>
+        @if (s.description) {
+          <p class="study-desc">{{ s.description }}</p>
+        }
+        <div class="study-tags">
+          @if (s.color) {
+            <span
+              class="badge"
+              [class.badge--white]="s.color === 'WHITE'"
+              [class.badge--black]="s.color === 'BLACK'"
+              [class.badge--mixed]="s.color === 'MIXED'"
+              >{{ colorLabel(s.color) }}</span
+            >
+          }
+          <span class="study-count"
+            >{{ s.variantCount }} variant{{ s.variantCount === 1 ? 'e' : 'i' }}</span
+          >
+        </div>
+      </div>
+      <button
+        class="study-delete"
+        type="button"
+        (click)="removeStudy()"
+        [disabled]="deletingStudy()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 3v1H4v2h16V4h-5V3H9zM6 8l1 12h10l1-12H6z" />
+        </svg>
+        Elimina studio
+      </button>
+    </header>
+
+    <div class="actions">
+      <a class="new-cta" [routerLink]="['/variants', 'new']" [queryParams]="{ studyId: s.id }">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" /></svg>
+        Nuova variante
+      </a>
+      <a
+        class="new-cta new-cta--ghost"
+        [routerLink]="['/variants', 'import']"
+        [queryParams]="{ studyId: s.id }"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3v10m0 0l-4-4m4 4l4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Importa PGN
+      </a>
+    </div>
+
+    @if (variants().length === 0) {
+      <p class="list-muted">Nessuna variante in questo studio. Aggiungine una con &laquo;Nuova variante&raquo;.</p>
+    } @else {
+      <ul class="variant-cards">
+        @for (v of variants(); track v.id) {
+          <li class="variant-card">
+            <a class="variant-main" [routerLink]="['/variants', v.id]">
+              <span class="variant-name">{{ v.name }}</span>
+              <span class="variant-meta">
+                <span
+                  class="badge"
+                  [class.badge--white]="v.color === 'WHITE'"
+                  [class.badge--black]="v.color === 'BLACK'"
+                  >{{ v.color === 'WHITE' ? 'Bianco' : 'Nero' }}</span
+                >
+                <span class="variant-count">{{ v.moves.length }} mosse</span>
+              </span>
+            </a>
+            <button
+              class="delete-btn"
+              type="button"
+              (click)="removeVariant(v)"
+              [disabled]="deletingId() === v.id"
+              [attr.aria-label]="'Elimina ' + v.name"
+              title="Elimina"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 3v1H4v2h16V4h-5V3H9zM6 8l1 12h10l1-12H6z" />
+              </svg>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+} @else {
+  <p class="detail-muted">Caricamento&#8230;</p>
+}

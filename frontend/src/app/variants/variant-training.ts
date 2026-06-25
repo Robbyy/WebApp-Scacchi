@@ -9,6 +9,7 @@ import {
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Chessboard, MoveMade } from '../chessboard/chessboard';
 import { VariantService } from '../core/variant.service';
+import { MoveSoundService } from '../core/move-sound.service';
 import { MoveNode, Variant } from '../core/variant.model';
 import { childrenAt, fenAt, fromLine, remainingMainline } from '../core/move-tree';
 
@@ -24,6 +25,7 @@ type TrainingStatus = 'loading' | 'playing' | 'opponent' | 'wrong' | 'completed'
 export class VariantTraining implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(VariantService);
+  private readonly moveSound = inject(MoveSoundService);
 
   protected readonly variant = signal<Variant | null>(null);
   protected readonly status = signal<TrainingStatus>('loading');
@@ -144,8 +146,10 @@ export class VariantTraining implements OnDestroy {
       this.status.set('completed');
       return;
     }
-    const path = [...this.currentPath(), this.pickChild(kids)];
+    const idx = this.pickChild(kids);
+    const path = [...this.currentPath(), idx];
     this.currentPath.set(path);
+    this.moveSound.play(soundKind(kids[idx].san));
     this.status.set(childrenAt(this.tree(), path).length === 0 ? 'completed' : 'playing');
   }
 
@@ -174,4 +178,8 @@ export class VariantTraining implements OnDestroy {
 function sameMove(a: string, b: string): boolean {
   const normalize = (s: string) => s.replace(/[+#!?]/g, '');
   return normalize(a) === normalize(b);
+}
+
+function soundKind(san: string): 'move' | 'capture' {
+  return san.includes('x') ? 'capture' : 'move';
 }

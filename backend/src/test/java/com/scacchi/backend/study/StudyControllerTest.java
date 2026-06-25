@@ -109,6 +109,48 @@ class StudyControllerTest {
     }
 
     @Test
+    void createsAVariantAlreadyAttachedToTheStudy() throws Exception {
+        int studyId = createStudy("""
+            {"name":"Con variante"}""");
+
+        String variant = """
+            {"name":"Italiana","color":"WHITE","moves":["e4","e5","Nf3"]}""";
+        mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(variant))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("Italiana"))
+            .andExpect(jsonPath("$.studyId").value(studyId));
+
+        // Compare anche nel dettaglio dello studio.
+        mockMvc.perform(get("/api/studies/" + studyId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.variantCount").value(1))
+            .andExpect(jsonPath("$.variants[0].name").value("Italiana"));
+    }
+
+    @Test
+    void creatingAVariantInAMissingStudyReturns404() throws Exception {
+        String variant = """
+            {"name":"X","color":"WHITE","moves":["e4"]}""";
+        mockMvc.perform(post("/api/studies/999999/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(variant))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void creatingAnIllegalVariantInAStudyReturns400() throws Exception {
+        int studyId = createStudy("""
+            {"name":"Studio"}""");
+        String variant = """
+            {"name":"Illegale","color":"WHITE","moves":["e4","e4"]}""";
+        mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(variant))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("moves"))
+            .andExpect(jsonPath("$.ply").value(2));
+    }
+
+    @Test
     void deleteAnEmptyStudyReturns204() throws Exception {
         int id = createStudy("""
             {"name":"Vuoto"}""");

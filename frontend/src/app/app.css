@@ -18,6 +18,43 @@
   color: transparent;
 }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 50%;
+  background: var(--wood-light);
+  color: var(--wood-dark);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.sound-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.sound-toggle:hover {
+  background: var(--brass);
+  color: #fff;
+}
+
+.sound-toggle[aria-pressed='false'] {
+  color: var(--text-muted);
+  background: transparent;
+}
+
 .conn {
   font-size: 0.75rem;
   font-weight: 600;

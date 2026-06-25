@@ -96,7 +96,9 @@
           </svg>
           Modifica variante
         </a>
-        <a class="back-link" routerLink="/">&#8592; Tutte le varianti</a>
+        <a class="back-link" [routerLink]="v.studyId ? ['/studies', v.studyId] : ['/']"
+          >&#8592; {{ v.studyId ? 'Torna allo studio' : 'Studi' }}</a
+        >
       </div>
     </aside>
   </div>

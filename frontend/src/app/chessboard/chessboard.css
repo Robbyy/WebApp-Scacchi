@@ -102,8 +102,8 @@
 }
 
 .piece {
-  width: 88%;
-  height: 88%;
+  width: 96%;
+  height: 96%;
   pointer-events: none;
   -webkit-user-drag: none;
   filter: drop-shadow(0 1px 1px oklch(0.2 0.03 40 / 0.35));

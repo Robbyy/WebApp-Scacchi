@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CreateStudyRequest, Study } from './study.model';
+import { CreateVariantRequest, Variant } from './variant.model';
 
 /** Accesso alle API degli studi (/api/studies) - Prototipo 11. */
 @Injectable({ providedIn: 'root' })
@@ -30,5 +31,10 @@ export class StudyService {
   /** Elimina lo studio e, a cascata, tutte le sue varianti. */
   deleteStudy(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  /** Crea una variante già agganciata allo studio (endpoint nidificato). */
+  addVariant(studyId: number, request: CreateVariantRequest): Observable<Variant> {
+    return this.http.post<Variant>(`${this.baseUrl}/${studyId}/variants`, request);
   }
 }

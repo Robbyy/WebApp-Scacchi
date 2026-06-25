@@ -207,3 +207,60 @@ vengono mai riassegnate ad altri studi.
 - Lo studio di colore puo' essere `MIXED` (oltre a `WHITE`/`BLACK`), a differenza
   della singola variante che resta `WHITE`/`BLACK`.
 - La UI degli studi (lista/dettaglio, crea/elimina) arriva in P12.
+
+---
+
+## 0006 — Import studio Lichess pubblico da URL (P14, R20)
+
+**Data:** 2026-06-25 · **Stato:** Pianificata · **Contesto:** Prototipo 14 (Parte 2), rischio R20.
+
+### Decisione
+L'app supportera' l'import di **studi pubblici Lichess** partendo dai link copiati
+dal browser:
+
+- `https://lichess.org/study/{studyId}` → importa tutti i capitoli pubblici
+  disponibili nello studio;
+- `https://lichess.org/study/{studyId}/{chapterId}` → importa solo il capitolo
+  corrente.
+
+Il recupero remoto usa gli endpoint PGN ufficiali Lichess:
+
+- `GET https://lichess.org/api/study/{studyId}.pgn`
+- `GET https://lichess.org/api/study/{studyId}/{chapterId}.pgn`
+
+In Parte 2 l'import e' **solo pubblico e senza OAuth**: niente token Lichess nel
+frontend e niente accesso a studi privati/unlisted. Il parser PGN avanzato di P13
+resta l'unica sorgente per costruire `MoveNode[]`.
+
+### Alternative valutate
+- **OAuth Lichess (`study:read`) gia' in P14:** rinviato. Aumenta molto il
+  perimetro (login, gestione token, sicurezza) e non serve per importare studi
+  pubblici.
+- **Proxy backend obbligatorio verso Lichess:** rinviato come fallback. Per il
+  primo rilascio si usa fetch frontend diretto verso l'API pubblica; se emergono
+  limiti CORS o requisiti infrastrutturali, il proxy puo' diventare una modifica
+  successiva.
+- **Import come sequenza `POST /studies` + molti `POST /variants`:** possibile
+  ma scartato come scelta principale per gli studi completi, per evitare import
+  parziali se un capitolo fallisce.
+
+### Note di implementazione
+- Il frontend valida il link e accetta solo path `/study/{studyId}` e
+  `/study/{studyId}/{chapterId}` (eventuali query/slash finali vengono ignorati).
+- Parametri Lichess consigliati: `comments=true`, `variations=true`,
+  `orientation=true`, `clocks=false`.
+- Lo studio Lichess completo restituisce un PGN multi-capitolo: il frontend lo
+  divide in capitoli e passa ogni blocco al parser di P13.
+- La persistenza locale consigliata e' `POST /api/studies/import`, endpoint
+  transazionale che crea uno studio locale e tutte le varianti gia' parse; se un
+  capitolo non supera la validazione backend, l'intero import viene annullato.
+- Il link al capitolo, quando usato dal dettaglio di uno studio locale, puo'
+  riusare `POST /api/studies/{id}/variants`.
+
+### Conseguenze
+- Gli studi Lichess diventano materiale allenabile locale senza introdurre
+  multiutente, cloud o autenticazione.
+- L'import e' una fotografia: non c'e' sincronizzazione con modifiche successive
+  dello studio su Lichess.
+- Errori remoti (`404`, studio non pubblico, `429` rate limit, rete) devono avere
+  messaggi espliciti e non lasciare dati parziali.

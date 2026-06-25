@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angul
 import { of } from 'rxjs';
 import { VariantEditor } from './variant-editor';
 import { VariantService } from '../core/variant.service';
+import { StudyService } from '../core/study.service';
 import { CreateVariantRequest, Variant } from '../core/variant.model';
 import { MoveMade } from '../chessboard/chessboard';
 import { ConfirmService } from '../core/confirm.service';
@@ -14,18 +15,27 @@ function move(san: string): MoveMade {
   return { san, from: '', to: '', fen: '' };
 }
 
-function setup(service: Partial<VariantService>, routeId?: number) {
+function setup(
+  service: Partial<VariantService>,
+  routeId?: number,
+  studyService: Partial<StudyService> = {},
+  queryParams: Record<string, string> = {},
+) {
   TestBed.configureTestingModule({
     imports: [VariantEditor],
     providers: [
       provideRouter([]),
       { provide: VariantService, useValue: service },
+      { provide: StudyService, useValue: studyService },
       { provide: ConfirmService, useValue: { ask: () => Promise.resolve(true) } },
       { provide: ToastService, useValue: { success() {}, error() {}, info() {} } },
       {
         provide: ActivatedRoute,
         useValue: {
-          snapshot: { paramMap: convertToParamMap(routeId ? { id: String(routeId) } : {}) },
+          snapshot: {
+            paramMap: convertToParamMap(routeId ? { id: String(routeId) } : {}),
+            queryParamMap: convertToParamMap(queryParams),
+          },
         },
       },
     ],
@@ -179,6 +189,30 @@ describe('VariantEditor', () => {
     expect(captured!.moves).toEqual(['e4', 'e5']);
     expect(captured!.tree?.[0].san).toBe('e4');
     expect(navTarget).toEqual(['/variants', 7]);
+  });
+
+  it('creates inside a study via the nested endpoint when studyId is present', () => {
+    const created: Variant = { id: 8, name: 'Italiana', color: 'WHITE', moves: ['e4'], startingFen: '', studyId: 3 };
+    let studyArg: number | null = null;
+    let createCalled = false;
+    const { cmp } = setup(
+      { createVariant: () => { createCalled = true; return of(created); } },
+      undefined,
+      { addVariant: (id: number) => { studyArg = id; return of(created); } },
+      { studyId: '3' },
+    );
+    const router = TestBed.inject(Router);
+    let navTarget: unknown[] | null = null;
+    router.navigate = ((c: unknown[]) => { navTarget = c; return Promise.resolve(true); }) as typeof router.navigate;
+
+    expect(cmp.studyId()).toBe(3);
+    cmp.onMove(move('e4'));
+    cmp.name.set('Italiana');
+    cmp.save();
+
+    expect(studyArg).toBe(3);
+    expect(createCalled).toBe(false);
+    expect(navTarget).toEqual(['/variants', 8]);
   });
 
   it('loads an existing variant in edit mode and updates it', () => {

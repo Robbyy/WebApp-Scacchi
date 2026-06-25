@@ -1,18 +1,39 @@
 <header class="topbar">
   <a class="brand" routerLink="/">{{ title() }}</a>
-  <span
-    class="conn"
-    [class.conn--ok]="online() === true"
-    [class.conn--off]="online() === false"
-  >
-    @if (online() === true) {
-      backend online
-    } @else if (online() === false) {
-      backend offline
-    } @else {
-      &#8230;
-    }
-  </span>
+  <div class="topbar-right">
+    <button
+      class="sound-toggle"
+      type="button"
+      (click)="toggleSound()"
+      [attr.aria-pressed]="soundEnabled()"
+      [attr.aria-label]="soundEnabled() ? 'Disattiva suono mosse' : 'Attiva suono mosse'"
+      [title]="soundEnabled() ? 'Suono mosse attivo' : 'Suono mosse disattivato'"
+    >
+      @if (soundEnabled()) {
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4.03v8.06A4.5 4.5 0 0 0 16.5 12zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54z" />
+        </svg>
+      } @else {
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 9v6h4l5 5V4L7 9H3z" />
+          <path d="M16 9l5 5m0-5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      }
+    </button>
+    <span
+      class="conn"
+      [class.conn--ok]="online() === true"
+      [class.conn--off]="online() === false"
+    >
+      @if (online() === true) {
+        backend online
+      } @else if (online() === false) {
+        backend offline
+      } @else {
+        &#8230;
+      }
+    </span>
+  </div>
 </header>
 
 <main class="content">

@@ -33,6 +33,15 @@ public class VariantService {
     }
 
     public VariantDto create(CreateVariantRequest request) {
+        return create(request, null);
+    }
+
+    /** Crea una variante già agganciata a uno studio (Prototipo 12, endpoint nidificato). */
+    public VariantDto createInStudy(Long studyId, CreateVariantRequest request) {
+        return create(request, studyId);
+    }
+
+    private VariantDto create(CreateVariantRequest request, Long studyId) {
         Variant entity = new Variant();
         entity.setName(request.name().trim());
         entity.setColor(Color.valueOf(request.color()));
@@ -41,6 +50,7 @@ public class VariantService {
         entity.setMoves(MoveNode.mainline(tree));
         entity.setStartingFen(START_FEN);
         entity.setSourcePgn(request.sourcePgn());
+        entity.setStudyId(studyId);
         return toDto(repository.save(entity));
     }
 

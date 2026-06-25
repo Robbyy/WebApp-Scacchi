@@ -1,5 +1,6 @@
 package com.scacchi.backend.study;
 
+import com.scacchi.backend.variant.CreateVariantRequest;
 import com.scacchi.backend.variant.ValidationError;
 import com.scacchi.backend.variant.VariantDto;
 import com.scacchi.backend.variant.VariantService;
@@ -48,6 +49,18 @@ public class StudyService {
         entity.setDescription(normalize(request.description()));
         entity.setColor(parseColor(request.color()));
         return toDto(repository.save(entity), 0, null);
+    }
+
+    /**
+     * Crea una variante già agganciata allo studio (Prototipo 12). Restituisce
+     * {@code empty} se lo studio non esiste (→ 404). La validazione scacchistica
+     * del payload resta a carico del controller.
+     */
+    public Optional<VariantDto> createVariant(Long studyId, CreateVariantRequest request) {
+        if (!repository.existsById(studyId)) {
+            return Optional.empty();
+        }
+        return Optional.of(variantService.createInStudy(studyId, request));
     }
 
     public Optional<StudyDto> update(Long id, CreateStudyRequest request) {

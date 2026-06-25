@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Chess } from 'chess.js';
 import { VariantService } from '../core/variant.service';
+import { StudyService } from '../core/study.service';
 import { CreateVariantRequest, VariantColor, validationMessage } from '../core/variant.model';
 import { ToastService } from '../core/toast.service';
 
@@ -26,14 +27,26 @@ type Preview =
 })
 export class PgnImport {
   private readonly service = inject(VariantService);
+  private readonly studyService = inject(StudyService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly toast = inject(ToastService);
+
+  /** Studio a cui agganciare la variante importata (da query param ?studyId), se presente. */
+  protected readonly studyId = signal<number | null>(null);
 
   protected readonly pgn = signal('');
   protected readonly color = signal<VariantColor>('WHITE');
   protected readonly name = signal('');
   protected readonly error = signal<string | null>(null);
   protected readonly saving = signal(false);
+
+  constructor() {
+    const studyParam = this.route.snapshot.queryParamMap.get('studyId');
+    if (studyParam) {
+      this.studyId.set(Number(studyParam));
+    }
+  }
 
   /** Risultato del parsing del PGN incollato (parsing lato client con chess.js). */
   protected readonly preview = computed<Preview>(() => {
@@ -92,7 +105,11 @@ export class PgnImport {
       moves: p.moves,
       sourcePgn: this.pgn().trim(),
     };
-    this.service.createVariant(request).subscribe({
+    const studyId = this.studyId();
+    const save$ = studyId !== null
+      ? this.studyService.addVariant(studyId, request)
+      : this.service.createVariant(request);
+    save$.subscribe({
       next: (created) => {
         this.toast.success('Variante importata.');
         this.router.navigate(['/variants', created.id]);

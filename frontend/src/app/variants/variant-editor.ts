@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Chessboard, MoveMade } from '../chessboard/chessboard';
 import { VariantService } from '../core/variant.service';
+import { StudyService } from '../core/study.service';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
 import { CanComponentDeactivate } from './can-deactivate.guard';
@@ -35,10 +36,14 @@ import {
 })
 export class VariantEditor implements CanComponentDeactivate {
   private readonly service = inject(VariantService);
+  private readonly studyService = inject(StudyService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
+
+  /** Studio a cui agganciare la nuova variante (da query param ?studyId), se presente. */
+  protected readonly studyId = signal<number | null>(null);
 
   /** true se ci sono modifiche non salvate (per il guard di uscita). */
   protected readonly dirty = signal(false);
@@ -78,6 +83,10 @@ export class VariantEditor implements CanComponentDeactivate {
   protected readonly confirmingDelete = signal(false);
 
   constructor() {
+    const studyParam = this.route.snapshot.queryParamMap.get('studyId');
+    if (studyParam) {
+      this.studyId.set(Number(studyParam));
+    }
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
       const id = Number(idParam);
@@ -238,9 +247,12 @@ export class VariantEditor implements CanComponentDeactivate {
       tree: this.tree(),
     };
     const id = this.editId();
+    const studyId = this.studyId();
     const save$ = id !== null
       ? this.service.updateVariant(id, request)
-      : this.service.createVariant(request);
+      : studyId !== null
+        ? this.studyService.addVariant(studyId, request)
+        : this.service.createVariant(request);
     save$.subscribe({
       next: (saved) => {
         this.dirty.set(false);

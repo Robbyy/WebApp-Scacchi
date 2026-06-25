@@ -718,12 +718,13 @@ Logica di fondo: arrivare a *"i miei repertori sono organizzati in studi, ogni m
 | 11 | **Modello Studi (backend)** | B · Studi | Entità `Study` + relazione 1-N con `Variant` + CRUD + **cancellazione a cascata** + studio di default | Raggruppamento varianti |
 | 12 | **UI Studi + audio mosse** | B · Studi | **Crea/elimina studio**; crea/elimina variante dentro lo studio; aggiunge suono mossa sulla scacchiera | Organizzazione tipo Lichess + feedback sonoro scacchistico |
 | 13 | **Import PGN avanzato** | C · PGN | Varianti annidate → `tree`; commenti/NAG di base | Import realistico |
-| 14 | **Persistenza sessioni di allenamento** | D · Progresso | Salva `TrainingSession`/`TrainingMove` | Base dati per stats e ripetizione |
-| 15 | **Statistiche e reportistica** | D · Progresso | Report errori/completamenti per variante e studio | Feedback sull'allenamento |
-| 16 | **Spaced repetition** | D · Progresso | Scheduling delle ripetizioni per variante | Memorizzazione efficace |
-| 17 | **Integrazione Stockfish** | E · Motore | Toggle motore + barra valutazione su dettaglio/editor; gioca vs computer in nuova tab | Analisi e aiuto allo studio |
+| 14 | **Import studio Lichess pubblico** | C · PGN | Da link studio/capitolo Lichess pubblico importa capitoli come varianti locali | Repertori esterni riusabili |
+| 15 | **Persistenza sessioni di allenamento** | D · Progresso | Salva `TrainingSession`/`TrainingMove` | Base dati per stats e ripetizione |
+| 16 | **Statistiche e reportistica** | D · Progresso | Report errori/completamenti per variante e studio | Feedback sull'allenamento |
+| 17 | **Spaced repetition** | D · Progresso | Scheduling delle ripetizioni per variante | Memorizzazione efficace |
+| 18 | **Integrazione Stockfish** | E · Motore | Toggle motore + barra valutazione su dettaglio/editor; gioca vs computer in nuova tab | Analisi e aiuto allo studio |
 
-Ordine consigliato di esecuzione: **7 → 8 → 9 → 10** (consolidamento), poi **11 → 12** (studi + audio mosse), poi **13** (import PGN), poi **14 → 15 → 16** (apprendimento), infine **17** (motore Stockfish) come **ultimo rilascio pianificato** della Parte 2. Le fasi C e D sono indipendenti tra loro e possono essere riordinate in base alle priorità del momento; la Fase E resta l'ultima.
+Ordine consigliato di esecuzione: **7 → 8 → 9 → 10** (consolidamento), poi **11 → 12** (studi + audio mosse), poi **13 → 14** (import PGN e import da studio Lichess pubblico), poi **15 → 16 → 17** (apprendimento), infine **18** (motore Stockfish) come **ultimo rilascio pianificato** della Parte 2. Le fasi C e D sono indipendenti tra loro e possono essere riordinate in base alle priorità del momento; la Fase E resta l'ultima.
 
 > **Fuori dai rilasci pianificati** (vedi sezione 19 · TODO da validare): l'**export PGN** e lo **spostamento di varianti tra studi** sono stati rimossi dalla roadmap e tenuti come note da validare quando emergerà il bisogno reale.
 
@@ -990,7 +991,66 @@ Niente PGN multi-partita in un file; niente import di file `.pgn` (solo incolla 
 
 ---
 
-### Prototipo 14 - Persistenza sessioni di allenamento
+### Prototipo 14 - Import studio Lichess pubblico
+
+#### Obiettivo
+Importare uno **studio pubblico Lichess** partendo da un link copiato dal browser:
+
+- link allo studio: `https://lichess.org/study/OR3CU5Je`
+- link al capitolo corrente: `https://lichess.org/study/OR3CU5Je/dUBaUslK`
+
+Il modello locale resta invariato: uno **Study** locale raggruppa più **Variant**, e ogni capitolo Lichess diventa una variante locale.
+
+#### Risultato funzionante atteso
+Incollo un link Lichess pubblico nell'app:
+
+- se il link è allo **studio**, l'app importa tutti i capitoli pubblici disponibili e crea uno studio locale con una variante per capitolo;
+- se il link è al **capitolo**, l'app importa solo quel capitolo come singola variante, agganciandola allo studio corrente oppure creando uno studio locale con un solo capitolo se il flusso parte dalla home.
+
+Le varianti importate conservano `sourcePgn` e `tree` come negli import PGN; sono quindi navigabili, modificabili e allenabili come le varianti create localmente.
+
+#### Backend workstream
+- Endpoint locale consigliato: `POST /api/studies/import`, transazionale, per creare uno studio e tutte le sue varianti in un'unica operazione. Payload: metadati dello studio + lista di varianti gia' parse dal frontend (`tree`, `moves`, `sourcePgn`, `color`, `startingFen`).
+- Riuso di `POST /api/studies/{id}/variants` quando si importa **un solo capitolo** dentro uno studio gia' aperto.
+- Riuso del `VariantValidator` (P7) per validare ogni variante importata prima del commit.
+- In caso di errore su un capitolo nel bulk import: rollback dell'intero import, con messaggio che indichi il capitolo problematico.
+
+#### Frontend workstream
+- Nuova azione **"Importa da Lichess"** nella home studi e nel dettaglio studio.
+- Parser URL robusto per accettare:
+  - `https://lichess.org/study/{studyId}`
+  - `https://lichess.org/study/{studyId}/{chapterId}`
+  - eventuale slash finale o query string, ignorate in modo sicuro.
+- Fetch PGN dagli endpoint pubblici Lichess:
+  - `GET https://lichess.org/api/study/{studyId}.pgn`
+  - `GET https://lichess.org/api/study/{studyId}/{chapterId}.pgn`
+- Query consigliate: `comments=true`, `variations=true`, `orientation=true`, `clocks=false`.
+- Split del PGN multi-capitolo restituito da Lichess in singoli capitoli; ogni blocco viene passato al parser PGN avanzato di P13.
+- Anteprima prima del salvataggio: nome studio, numero capitoli, lista capitoli/varianti, eventuali errori di parsing.
+- Stati UI: loading, progress import, errore `404`/non pubblico, errore `429` rate limit, errore di rete.
+
+#### Integration workstream
+- Dipendenza diretta da P13: l'import Lichess non introduce un secondo parser, ma riusa il parser PGN→`MoveNode[]`.
+- Nessun OAuth nella Parte 2: si importano **solo studi/capitoli pubblici** leggibili senza autenticazione. Studi privati o non pubblici restano fuori.
+- Le API Lichess vanno chiamate con parsimonia: una richiesta per volta; su `429` mostrare un messaggio e invitare a riprovare dopo.
+- Se in futuro emergessero limiti CORS o requisiti di autenticazione, valutare un proxy backend e/o OAuth in una tornata successiva; non sono necessari per il P14 pubblico.
+
+#### Validazione del prototipo
+1. Incollo `https://lichess.org/study/OR3CU5Je` → l'app recupera il PGN dello studio, mostra i capitoli in anteprima, salva uno studio locale con varianti multiple.
+2. Incollo `https://lichess.org/study/OR3CU5Je/dUBaUslK` da dentro uno studio locale → viene importata una sola variante nello studio corrente.
+3. Apro una variante importata → rami e mainline sono presenti; il training funziona.
+4. Link non valido o studio non pubblico → errore leggibile, nessun dato parziale salvato.
+5. Rate limit Lichess (`429`) → messaggio dedicato e nessun retry aggressivo.
+
+#### Criteri di completamento
+Uno studio Lichess pubblico o un suo capitolo possono essere importati da URL, trasformati in varianti locali ad albero e salvati in modo coerente e validato.
+
+#### Cosa non fare ancora
+Niente import di studi privati/unlisted tramite OAuth; niente sincronizzazione con Lichess dopo l'import; niente aggiornamento incrementale dei capitoli; niente export verso Lichess; niente gestione completa di commenti/NAG oltre quanto gia' previsto in P13.
+
+---
+
+### Prototipo 15 - Persistenza sessioni di allenamento
 
 #### Obiettivo
 Salvare l'esito degli allenamenti, creando la base dati per statistiche e ripetizione (entità già previste in sezione 7).
@@ -1004,9 +1064,9 @@ Completando un training, l'app registra la sessione (variante, esito, numero err
 
 #### Frontend workstream
 - Al termine del training, inviare la sessione al backend.
-- Stato/loading minimo; nessuna UI statistiche ancora (P15).
+- Stato/loading minimo; nessuna UI statistiche ancora (P16).
 
-> **Vincolo della modalità allenamento (invariante per tutta la Parte 2):** l'allenamento serve **solo a memorizzare le mosse**. In questa modalità **non** deve comparire la barra di valutazione e **non** deve esserci la possibilità di giocare la posizione contro il computer. Stockfish (P17) **non è mai disponibile** durante le sessioni di allenamento.
+> **Vincolo della modalità allenamento (invariante per tutta la Parte 2):** l'allenamento serve **solo a memorizzare le mosse**. In questa modalità **non** deve comparire la barra di valutazione e **non** deve esserci la possibilità di giocare la posizione contro il computer. Stockfish (P18) **non è mai disponibile** durante le sessioni di allenamento.
 
 #### Integration workstream
 - Nuovi endpoint `training-sessions` (sezione 15).
@@ -1019,14 +1079,14 @@ Completando un training, l'app registra la sessione (variante, esito, numero err
 Le sessioni di allenamento sono persistite e rileggibili.
 
 #### Cosa non fare ancora
-Niente aggregazioni/grafici (P15); niente scheduling ripetizioni (P16); nessun aiuto del motore in allenamento.
+Niente aggregazioni/grafici (P16); niente scheduling ripetizioni (P17); nessun aiuto del motore in allenamento.
 
 ---
 
-### Prototipo 15 - Statistiche e reportistica
+### Prototipo 16 - Statistiche e reportistica
 
 #### Obiettivo
-Mostrare all'utente come sta andando l'allenamento, per variante e per studio, derivando dai dati di P14.
+Mostrare all'utente come sta andando l'allenamento, per variante e per studio, derivando dai dati di P15.
 
 #### Risultato funzionante atteso
 Una vista con: completamenti, percentuale di errore, mosse più sbagliate, ultima esecuzione — per variante e aggregato per studio.
@@ -1053,7 +1113,7 @@ Niente analisi qualitativa con motore; niente confronto tra utenti (single-user)
 
 ---
 
-### Prototipo 16 - Spaced repetition
+### Prototipo 17 - Spaced repetition
 
 #### Obiettivo
 Programmare le ripetizioni delle varianti nel tempo, per favorire la memorizzazione (obiettivo storico del progetto, preanalisi).
@@ -1086,7 +1146,7 @@ Niente notifiche push/email; niente sincronizzazione multi-dispositivo (richiede
 
 ---
 
-### Prototipo 17 - Integrazione Stockfish
+### Prototipo 18 - Integrazione Stockfish
 
 > **Ultimo rilascio pianificato della Parte 2.** Aggiunge il motore come aiuto allo studio durante l'inserimento/navigazione delle varianti, **mai** in allenamento.
 
@@ -1117,7 +1177,7 @@ Nel **dettaglio/editor** di una variante posso accendere/spegnere Stockfish sull
 - La "seconda tab" passa lo stato via URL (FEN), così non serve stato condiviso tra tab.
 
 #### Vincolo: niente motore in allenamento
-- Stockfish **non deve mai** essere disponibile nelle **sessioni di allenamento**: niente toggle motore, **niente barra di valutazione**, **niente "gioca contro il computer"** in quella modalità (coerente col vincolo di P14).
+- Stockfish **non deve mai** essere disponibile nelle **sessioni di allenamento**: niente toggle motore, **niente barra di valutazione**, **niente "gioca contro il computer"** in quella modalità (coerente col vincolo di P15).
 
 #### Validazione del prototipo
 1. In dettaglio/editor accendo il motore → compare la valutazione sulla posizione corrente.
@@ -1136,7 +1196,7 @@ Niente suggerimento "mossa migliore", niente rilevamento blunder, niente *openin
 
 ## 14. Sequenza operativa dei task (Parte 2)
 
-Task piccoli (~1 ora), assegnabili ad agenti AI, sullo stesso modello della sezione 5 (Parte 1). Legenda area: **BE** backend, **FE** frontend, **INT** integrazione, **DOC** documentazione, **REV** review. La numerazione dei task segue quella dei prototipi (`T7.x` … `T17.x`). Le dipendenze tra prototipi rispettano l'ordine consigliato della sezione 12; i riferimenti a contratti/modello dati puntano alla sezione 15, ai rischi alla sezione 16.
+Task piccoli (~1 ora), assegnabili ad agenti AI, sullo stesso modello della sezione 5 (Parte 1). Legenda area: **BE** backend, **FE** frontend, **INT** integrazione, **DOC** documentazione, **REV** review. La numerazione dei task segue quella dei prototipi (`T7.x` … `T18.x`). Le dipendenze tra prototipi rispettano l'ordine consigliato della sezione 12; i riferimenti a contratti/modello dati puntano alla sezione 15, ai rischi alla sezione 16.
 
 ### Prototipo 7 - Validazione backend + fix scacchiera
 | ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
@@ -1215,44 +1275,56 @@ Task piccoli (~1 ora), assegnabili ad agenti AI, sullo stesso modello della sezi
 | T13.5 | Salvataggio `tree` da import | INT | Persistere l'import | T13.2, T11.3 | salvataggio | T13.4 | rami ritrovati | no |
 | T13.6 | Validazione manuale P13 | REV | Confermare prototipo | T13.* | esito | tutte | sez. 13 P13 | no |
 
-### Prototipo 14 - Persistenza sessioni di allenamento
+### Prototipo 14 - Import studio Lichess pubblico
 | ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
 |----|--------|------|-------|-------|--------|------------|-------------|-----------|
-| T14.1 | Entità `TrainingSession`/`TrainingMove` | BE | Persistere le sessioni | sez. 15 / sez. 7 | entità/repo | — | salva sessione | con T14.3 |
-| T14.2 | Endpoint `POST`/`GET /training-sessions` | BE | Registrare/leggere | T14.1 | endpoint | T14.1 | sessione rileggibile | no |
-| T14.3 | Invio sessione a fine training | FE | Registrare l'esito | T14.2 | chiamata FE | T14.2 | sessione creata | no |
-| T14.4 | Nota vincolo "niente motore in allenamento" | DOC | Allineare con P17 | — | nota | — | vincolo documentato | con T14.3 |
-| T14.5 | Validazione manuale P14 | REV | Confermare prototipo | T14.* | esito | tutte | sez. 13 P14 | no |
+| T14.1 | Parser URL Lichess study/chapter | FE | Estrarre `studyId` e `chapterId?` | link utente | parser + test | — | URL validi/invalidi | con T14.2 |
+| T14.2 | Fetch PGN pubblico da Lichess | FE | Scaricare PGN studio/capitolo | T14.1 | client fetch | T14.1 | PGN ricevuto / errori gestiti | no |
+| T14.3 | Split PGN multi-capitolo | FE | Separare capitoli dello studio | T13.2, T14.2 | lista capitoli | T13.2 | capitoli riconosciuti | no |
+| T14.4 | Anteprima import Lichess | FE | Mostrare studio/capitoli prima del salvataggio | T14.3 | preview | T14.3 | preview corretta | con T14.5 |
+| T14.5 | Endpoint `POST /studies/import` | BE | Salvare studio+varianti in transazione | sez. 15 | endpoint bulk | T11.3, T13.5 | rollback su errore | no |
+| T14.6 | Salvataggio studio/capitolo importato | INT | Persistenza locale dell'import | T14.4, T14.5 | studio/varianti locali | T14.5 | varianti agganciate | no |
+| T14.7 | Gestione errori Lichess (`404`/`429`/rete) | FE | Feedback chiaro | T14.2 | messaggi UI | T14.2 | errori leggibili | con T14.4 |
+| T14.8 | Validazione manuale P14 | REV | Confermare prototipo | T14.* | esito | tutte | sez. 13 P14 | no |
 
-### Prototipo 15 - Statistiche e reportistica
+### Prototipo 15 - Persistenza sessioni di allenamento
 | ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
 |----|--------|------|-------|-------|--------|------------|-------------|-----------|
-| T15.1 | Endpoint aggregazione `GET /stats/...` | BE | Metriche dalle sessioni | T14.2 | endpoint | T14.2 | dati corretti | con T15.2 |
-| T15.2 | Vista statistiche per variante | FE | Mostrare le metriche | T15.1 | vista | T15.1 | metriche viste | no |
-| T15.3 | Aggregato per studio | FE/BE | Somma per studio | T15.1 | aggregato | T15.1 | somma corretta | con T15.2 |
-| T15.4 | Evidenza mosse più sbagliate | FE | Insight di studio | T15.2 | UI evidenza | T15.2 | mosse evidenziate | no |
+| T15.1 | Entità `TrainingSession`/`TrainingMove` | BE | Persistere le sessioni | sez. 15 / sez. 7 | entità/repo | — | salva sessione | con T15.3 |
+| T15.2 | Endpoint `POST`/`GET /training-sessions` | BE | Registrare/leggere | T15.1 | endpoint | T15.1 | sessione rileggibile | no |
+| T15.3 | Invio sessione a fine training | FE | Registrare l'esito | T15.2 | chiamata FE | T15.2 | sessione creata | no |
+| T15.4 | Nota vincolo "niente motore in allenamento" | DOC | Allineare con P18 | — | nota | — | vincolo documentato | con T15.3 |
 | T15.5 | Validazione manuale P15 | REV | Confermare prototipo | T15.* | esito | tutte | sez. 13 P15 | no |
 
-### Prototipo 16 - Spaced repetition
+### Prototipo 16 - Statistiche e reportistica
 | ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
 |----|--------|------|-------|-------|--------|------------|-------------|-----------|
-| T16.1 | `ReviewSchedule` + algoritmo SM-2 semplificato | BE | Calcolo delle ripetizioni | sez. 7 | schema + algoritmo | T14.1 | intervallo calcolato | con T16.4 |
-| T16.2 | Aggiornare lo schedule a fine sessione | BE | Persistere la prossima review | T16.1, T14.2 | update | T16.1 | `nextReviewDate` impostata | no |
-| T16.3 | Endpoint `GET /reviews/due` | BE | Varianti dovute | T16.2 | endpoint | T16.2 | dovute corrette | con T16.4 |
-| T16.4 | Vista "Ripeti oggi" + avvio training | FE | Proporre le varianti dovute | T16.3 | vista | T16.3 | elenco dovute | no |
-| T16.5 | Indicatore prossima ripetizione nel dettaglio | FE | Visibilità dello schedule | T16.2 | indicatore | T16.2 | data mostrata | con T16.4 |
-| T16.6 | Validazione manuale P16 | REV | Confermare prototipo | T16.* | esito | tutte | sez. 13 P16 | no |
+| T16.1 | Endpoint aggregazione `GET /stats/...` | BE | Metriche dalle sessioni | T15.2 | endpoint | T15.2 | dati corretti | con T16.2 |
+| T16.2 | Vista statistiche per variante | FE | Mostrare le metriche | T16.1 | vista | T16.1 | metriche viste | no |
+| T16.3 | Aggregato per studio | FE/BE | Somma per studio | T16.1 | aggregato | T16.1 | somma corretta | con T16.2 |
+| T16.4 | Evidenza mosse più sbagliate | FE | Insight di studio | T16.2 | UI evidenza | T16.2 | mosse evidenziate | no |
+| T16.5 | Validazione manuale P16 | REV | Confermare prototipo | T16.* | esito | tutte | sez. 13 P16 | no |
 
-### Prototipo 17 - Integrazione Stockfish
+### Prototipo 17 - Spaced repetition
 | ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
 |----|--------|------|-------|-------|--------|------------|-------------|-----------|
-| T17.1 | Caricare `stockfish.wasm` in Web Worker + wrapper UCI | FE | Motore client-side | sez. 16 R18 | worker + wrapper | — | valutazione ottenuta | no |
-| T17.2 | Toggle motore on/off (dettaglio/editor) | FE | Attivare sulla posizione corrente | T17.1 | toggle | T17.1 | on/off ok | con T17.3 |
-| T17.3 | Barra di valutazione mostra/nascondi | FE | Visualizzare/nascondere l'eval | T17.1 | barra | T17.1 | barra toggle | con T17.2 |
-| T17.4 | "Gioca contro il computer" → nuova tab `/play?fen=` | FE | Giocare la posizione corrente | T17.1 | rotta + azione | T17.1 | nuova tab, prima intatta | no |
-| T17.5 | Garantire assenza del motore in allenamento | FE | Rispettare il vincolo | T17.2, T17.3, T17.4 | guardia UI | T14.4 | nessun motore in training | no |
-| T17.6 | Header COOP/COEP o fallback single-thread | INT | Far girare il WASM | T17.1 | config/fallback | T17.1 | motore funziona | con T17.5 |
-| T17.7 | Validazione manuale P17 | REV | Confermare prototipo | T17.* | esito | tutte | sez. 13 P17 | no |
+| T17.1 | `ReviewSchedule` + algoritmo SM-2 semplificato | BE | Calcolo delle ripetizioni | sez. 7 | schema + algoritmo | T15.1 | intervallo calcolato | con T17.4 |
+| T17.2 | Aggiornare lo schedule a fine sessione | BE | Persistere la prossima review | T17.1, T15.2 | update | T17.1 | `nextReviewDate` impostata | no |
+| T17.3 | Endpoint `GET /reviews/due` | BE | Varianti dovute | T17.2 | endpoint | T17.2 | dovute corrette | con T17.4 |
+| T17.4 | Vista "Ripeti oggi" + avvio training | FE | Proporre le varianti dovute | T17.3 | vista | T17.3 | elenco dovute | no |
+| T17.5 | Indicatore prossima ripetizione nel dettaglio | FE | Visibilità dello schedule | T17.2 | indicatore | T17.2 | data mostrata | con T17.4 |
+| T17.6 | Validazione manuale P17 | REV | Confermare prototipo | T17.* | esito | tutte | sez. 13 P17 | no |
+
+### Prototipo 18 - Integrazione Stockfish
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T18.1 | Caricare `stockfish.wasm` in Web Worker + wrapper UCI | FE | Motore client-side | sez. 16 R18 | worker + wrapper | — | valutazione ottenuta | no |
+| T18.2 | Toggle motore on/off (dettaglio/editor) | FE | Attivare sulla posizione corrente | T18.1 | toggle | T18.1 | on/off ok | con T18.3 |
+| T18.3 | Barra di valutazione mostra/nascondi | FE | Visualizzare/nascondere l'eval | T18.1 | barra | T18.1 | barra toggle | con T18.2 |
+| T18.4 | "Gioca contro il computer" → nuova tab `/play?fen=` | FE | Giocare la posizione corrente | T18.1 | rotta + azione | T18.1 | nuova tab, prima intatta | no |
+| T18.5 | Garantire assenza del motore in allenamento | FE | Rispettare il vincolo | T18.2, T18.3, T18.4 | guardia UI | T15.4 | nessun motore in training | no |
+| T18.6 | Header COOP/COEP o fallback single-thread | INT | Far girare il WASM | T18.1 | config/fallback | T18.1 | motore funziona | con T18.5 |
+| T18.7 | Validazione manuale P18 | REV | Confermare prototipo | T18.* | esito | tutte | sez. 13 P18 | no |
 
 **Task trasversali (ricorrenti):** `DOC.x` aggiornamento documentazione a fine prototipo; `REV.x` code review prima del merge. Non vanno svolti in parallelo con la modifica che revisionano. Come nella Parte 1, ogni prototipo si chiude solo quando la sua riga di validazione manuale (`REV`) passa.
 
@@ -1271,12 +1343,22 @@ Task piccoli (~1 ora), assegnabili ad agenti AI, sullo stesso modello della sezi
 | PUT | `/api/studies/{id}` | Aggiorna studio (nome/descrizione) | P11 |
 | DELETE | `/api/studies/{id}` | Elimina studio **e le sue varianti (cascata)** | P11 |
 | POST | `/api/studies/{id}/variants` | Crea variante dentro lo studio | P12 |
-| POST | `/api/training-sessions` | Registra una sessione di allenamento conclusa | P14 |
-| GET | `/api/training-sessions` | Storico sessioni (filtri per variante/studio) | P14 |
-| GET | `/api/stats/...` | Aggregazioni statistiche (variante/studio) | P15 |
-| GET | `/api/reviews/due` | Varianti dovute per spaced repetition | P16 |
+| POST | `/api/studies/import` | Crea uno studio con piu' varianti in transazione (import bulk) | P14 |
+| POST | `/api/training-sessions` | Registra una sessione di allenamento conclusa | P15 |
+| GET | `/api/training-sessions` | Storico sessioni (filtri per variante/studio) | P15 |
+| GET | `/api/stats/...` | Aggregazioni statistiche (variante/studio) | P16 |
+| GET | `/api/reviews/due` | Varianti dovute per spaced repetition | P17 |
 
-> Lo **spostamento di varianti tra studi** (`PUT /api/variants/{id}/study`) è stato **rimosso** dai rilasci: vedi sezione 19 · TODO da validare. Stockfish (P17) è client-side e non introduce endpoint.
+> Lo **spostamento di varianti tra studi** (`PUT /api/variants/{id}/study`) è stato **rimosso** dai rilasci: vedi sezione 19 · TODO da validare. Stockfish (P18) è client-side e non introduce endpoint.
+
+### Endpoint esterni Lichess usati in P14
+
+| Metodo | URL | Scopo | Note |
+|--------|-----|-------|------|
+| GET | `https://lichess.org/api/study/{studyId}.pgn` | Esporta tutti i capitoli pubblici di uno studio in PGN | Parametri consigliati: `comments=true`, `variations=true`, `orientation=true`, `clocks=false` |
+| GET | `https://lichess.org/api/study/{studyId}/{chapterId}.pgn` | Esporta un singolo capitolo pubblico in PGN | `studyId` e `chapterId` sono gli 8 caratteri letti dal link Lichess |
+
+> Le API Lichess sono usate **senza autenticazione** in Parte 2: quindi si importano solo studi/capitoli pubblici. Per studi privati/unlisted servirebbe OAuth (`study:read`), rinviato fuori dal P14.
 
 ### Nuovi DTO
 
@@ -1300,6 +1382,14 @@ color?: "WHITE" | "BLACK" | "MIXED"
 **`VariantDto` — campi aggiunti**
 ```
 studyId?: number | null               // studio di appartenenza (null solo per varianti legacy senza studio)
+```
+
+**`ImportStudyRequest`** (P14, richiesta)
+```
+name: string
+description?: string
+sourceUrl?: string                    // link Lichess originale, se presente
+variants: CreateVariantRequest[]      // varianti gia' parse; il backend valida e salva in transazione
 ```
 
 **Errore di validazione (P7)** — corpo del `400`
@@ -1326,7 +1416,7 @@ studyId: Long (FK -> Study, nullable)   // null solo per varianti legacy senza s
 ```
 > La relazione `Study → Variant` è configurata con **cancellazione a cascata**: eliminando lo `Study` si eliminano le sue `Variant` (es. `ON DELETE CASCADE` / `orphanRemoval`). Le varianti **non** vengono riassegnate.
 
-**Entità `TrainingSession` / `TrainingMove`** (P14, già abbozzate in sezione 7) e **`ReviewSchedule`** (P16, sezione 7): si attivano solo nelle rispettive fasi.
+**Entità `TrainingSession` / `TrainingMove`** (P15, già abbozzate in sezione 7) e **`ReviewSchedule`** (P17, sezione 7): si attivano solo nelle rispettive fasi.
 
 > Principio invariato (sezione 7): aggiungere colonne nullable è economico. `studyId` garantisce la retrocompatibilità; al deploy del modello Studi (P11) le varianti esistenti vengono agganciate a uno studio di default dal seed.
 
@@ -1340,9 +1430,10 @@ studyId: Long (FK -> Study, nullable)   // null solo per varianti legacy senza s
 | R14 | **Modello Studi e cancellazione** | Cardinalità Study↔Variant; cosa fare alla delete dello studio; migrazione esistenti | Medio | P11 | 1-N con `studyId`; **delete studio cancella a cascata le sue varianti** (non spostate); studio di default seedato in P11 con aggancio delle varianti esistenti. |
 | R15 | **Import PGN ramificato** | Mapping PGN → `tree` con varianti annidate, commenti, NAG | Medio | P13 | Parsing lato frontend con `chess.js`; commenti/NAG di base, resto rinviato. (L'export PGN è fuori dai rilasci: sezione 19.) |
 | R16 | **Scalabilità/responsive scacchiera** | La board resta 720px tra ~800-1280px e il pannello finisce sotto la piega (vedi sezione 17) | Medio (UX) | Trasversale | La correzione è una **proposta grafica da validare** (sezione 17), non un rilascio finché l'utente non approva. |
-| R17 | **Persistenza dati di apprendimento** | Sessioni/stats/scheduling fanno crescere lo schema H2 locale | Basso/Medio | P14-P16 | Tabelle dedicate, `userId` nullable inattivo; migrazioni versionate rinviate alla terza tornata. |
-| R18 | **Integrazione Stockfish** | Esecuzione del motore (WASM in Web Worker), threading/`SharedArrayBuffer` (header COOP/COEP), performance su client deboli | Medio | P17 | Stockfish **WASM client-side** in Web Worker; perimetro limitato (toggle motore, barra valutazione, gioca-vs-computer in nuova tab); **mai in allenamento**; versione **single-thread** se gli header cross-origin non sono disponibili. |
+| R17 | **Persistenza dati di apprendimento** | Sessioni/stats/scheduling fanno crescere lo schema H2 locale | Basso/Medio | P15-P17 | Tabelle dedicate, `userId` nullable inattivo; migrazioni versionate rinviate alla terza tornata. |
+| R18 | **Integrazione Stockfish** | Esecuzione del motore (WASM in Web Worker), threading/`SharedArrayBuffer` (header COOP/COEP), performance su client deboli | Medio | P18 | Stockfish **WASM client-side** in Web Worker; perimetro limitato (toggle motore, barra valutazione, gioca-vs-computer in nuova tab); **mai in allenamento**; versione **single-thread** se gli header cross-origin non sono disponibili. |
 | R19 | **Asset audio mossa** | Il suono richiesto deve avere target percettivo Fritz/ChessBase; l'asset originale potrebbe essere proprietario/non disponibile | Medio (licenza + fedeltà) | P12 | Usare asset originale solo se fornito con licenza/permesso d'uso; altrimenti creare/usare un effetto equivalente, breve e secco, senza copiare file proprietari. Audio locale frontend, default attivo e disattivabile. |
+| R20 | **Import studio Lichess pubblico** | URL non valido, studio non pubblico, rate limit `429`, CORS/API esterna, PGN multi-capitolo | Medio | P14 | Supportare solo link pubblici senza OAuth; usare endpoint PGN ufficiali Lichess; una richiesta alla volta; messaggi dedicati per `404`/`429`; salvataggio locale transazionale via `POST /api/studies/import`. |
 
 > I rischi R8/R9/R10 (Supabase DB, Auth, Docker) restano **aperti e rinviati** alla terza tornata per scelta esplicita.
 
@@ -1351,7 +1442,7 @@ studyId: Long (FK -> Study, nullable)   // null solo per varianti legacy senza s
 ## 17. Validazione UX e proposte grafiche — DA VALIDARE, fuori dai rilasci
 
 > Esito della validazione dell'apparenza grafica eseguita sul frontend in esecuzione (home, dettaglio, training; desktop 1400px, laptop 1024px, mobile 375px; nessun errore in console).
-> **Queste proposte NON sono inserite nei prototipi 7-17:** vanno approvate dall'utente prima di diventare task. Sono ordinate per priorità.
+> **Queste proposte NON sono inserite nei prototipi 7-18:** vanno approvate dall'utente prima di diventare task. Sono ordinate per priorità.
 
 ### Cosa funziona già bene
 - Palette pergamena/legno coerente col riferimento; scacchiera con cornice mogano e coordinate fedele.
@@ -1393,7 +1484,7 @@ studyId: Long (FK -> Study, nullable)   // null solo per varianti legacy senza s
 ### Altri spunti emersi (da valutare)
 - **Condivisione/esportazione studi** in stile Lichess (link/JSON/PGN di intero studio).
 - **Tag e ricerca** trasversali alle varianti/studi (full-text su nome e mosse).
-- **Import file `.pgn`** e PGN multi-partita; gestione NAG/commenti completa.
+- **Import file `.pgn` locale** e PGN multi-partita non proveniente da Lichess; gestione NAG/commenti completa.
 - **Backup/restore** del repertorio locale (export/import dell'intero DB applicativo).
 - **PWA/offline** e, più avanti, app mobile dedicata.
 - **Gamification leggera** (streak di ripetizione) a supporto della spaced repetition.
