@@ -716,14 +716,14 @@ Logica di fondo: arrivare a *"i miei repertori sono organizzati in studi, ogni m
 | 9 | **Robustezza interazioni e azioni distruttive** | A · Consolidamento | Conferme, guard "modifiche non salvate", feedback errori | Niente perdite dati accidentali |
 | 10 | **Suite test automatici + checklist E2E** | A · Consolidamento | Test su flussi completi, checklist ripetibile | Regressioni sotto controllo |
 | 11 | **Modello Studi (backend)** | B · Studi | Entità `Study` + relazione 1-N con `Variant` + CRUD + **cancellazione a cascata** + studio di default | Raggruppamento varianti |
-| 12 | **UI Studi** | B · Studi | **Crea/elimina studio**; crea/elimina variante dentro lo studio | Organizzazione tipo Lichess |
+| 12 | **UI Studi + audio mosse** | B · Studi | **Crea/elimina studio**; crea/elimina variante dentro lo studio; aggiunge suono mossa sulla scacchiera | Organizzazione tipo Lichess + feedback sonoro scacchistico |
 | 13 | **Import PGN avanzato** | C · PGN | Varianti annidate → `tree`; commenti/NAG di base | Import realistico |
 | 14 | **Persistenza sessioni di allenamento** | D · Progresso | Salva `TrainingSession`/`TrainingMove` | Base dati per stats e ripetizione |
 | 15 | **Statistiche e reportistica** | D · Progresso | Report errori/completamenti per variante e studio | Feedback sull'allenamento |
 | 16 | **Spaced repetition** | D · Progresso | Scheduling delle ripetizioni per variante | Memorizzazione efficace |
 | 17 | **Integrazione Stockfish** | E · Motore | Toggle motore + barra valutazione su dettaglio/editor; gioca vs computer in nuova tab | Analisi e aiuto allo studio |
 
-Ordine consigliato di esecuzione: **7 → 8 → 9 → 10** (consolidamento), poi **11 → 12** (studi), poi **13** (import PGN), poi **14 → 15 → 16** (apprendimento), infine **17** (motore Stockfish) come **ultimo rilascio pianificato** della Parte 2. Le fasi C e D sono indipendenti tra loro e possono essere riordinate in base alle priorità del momento; la Fase E resta l'ultima.
+Ordine consigliato di esecuzione: **7 → 8 → 9 → 10** (consolidamento), poi **11 → 12** (studi + audio mosse), poi **13** (import PGN), poi **14 → 15 → 16** (apprendimento), infine **17** (motore Stockfish) come **ultimo rilascio pianificato** della Parte 2. Le fasi C e D sono indipendenti tra loro e possono essere riordinate in base alle priorità del momento; la Fase E resta l'ultima.
 
 > **Fuori dai rilasci pianificati** (vedi sezione 19 · TODO da validare): l'**export PGN** e lo **spostamento di varianti tra studi** sono stati rimossi dalla roadmap e tenuti come note da validare quando emergerà il bisogno reale.
 
@@ -911,13 +911,13 @@ Niente UI studi (P12); niente **spostamento di varianti tra studi** (sezione 19 
 
 ---
 
-### Prototipo 12 - UI Studi
+### Prototipo 12 - UI Studi + audio mosse
 
 #### Obiettivo
-Portare gli studi nel frontend: navigare gli studi, **crearne** ed **eliminarne**, aprire uno studio e gestirne le varianti (crea/elimina) dall'interno, sul modello degli *studies* di Lichess.
+Portare gli studi nel frontend: navigare gli studi, **crearne** ed **eliminarne**, aprire uno studio e gestirne le varianti (crea/elimina) dall'interno, sul modello degli *studies* di Lichess. In questo stesso rilascio si introduce anche il **suono di mossa** della scacchiera, perché P12 è il primo rilascio frontend disponibile dopo i prototipi già completati fino al 10.
 
 #### Risultato funzionante atteso
-La home mostra gli **studi** e permette di **creare un nuovo studio** o **eliminarne** uno; aprendo uno studio vedo le sue varianti (i "capitoli"); dentro lo studio posso **creare una nuova variante** o **eliminarne** una esistente.
+La home mostra gli **studi** e permette di **creare un nuovo studio** o **eliminarne** uno; aprendo uno studio vedo le sue varianti (i "capitoli"); dentro lo studio posso **creare una nuova variante** o **eliminarne** una esistente. Quando una mossa viene eseguita sulla scacchiera, l'app riproduce un suono breve e secco, con target percettivo uguale a quello usato da Fritz/ChessBase.
 
 #### Backend workstream
 - `POST /api/studies/{id}/variants` (crea variante già agganciata allo studio) — oppure riuso di `POST /api/variants` con `studyId` nel body. Scelta consigliata: endpoint nidificato per chiarezza.
@@ -931,9 +931,13 @@ La home mostra gli **studi** e permette di **creare un nuovo studio** o **elimin
 - Da dentro lo studio: pulsante "Nuova variante" (apre l'editor pre-agganciato allo studio) e "Importa PGN" nello studio; azione "Elimina" per ogni variante.
 - Aggiornare routing: `/` → studi, `/studies/:id` → dettaglio studio; le rotte variante restano (`/variants/:id`, `/edit`, `/train`).
 - Breadcrumb Studio → Variante per orientarsi.
+- `MoveSoundService` o equivalente frontend centralizzato: riproduce il suono quando il componente scacchiera conferma una mossa legale, sia in editor/dettaglio/training sia nella futura pagina "gioca contro il computer".
+- Il suono deve essere disattivabile da impostazione frontend locale, con default **attivo**.
+- Target audio: suono di mossa stile Fritz/ChessBase. Se l'asset originale non è disponibile con licenza/permesso d'uso, produrre o usare un asset equivalente per timbro, durata e percezione, senza copiare file proprietari.
 
 #### Integration workstream
 - Endpoint studi (CRUD) + creazione variante nello studio.
+- Nessuna integrazione backend per l'audio: asset e preferenza locale restano frontend.
 
 #### Validazione del prototipo
 1. Apro la home → vedo gli studi.
@@ -942,12 +946,14 @@ La home mostra gli **studi** e permette di **creare un nuovo studio** o **elimin
 4. Creo una variante dentro lo studio → compare nello studio.
 5. Elimino una variante dello studio → conferma (da P9) → rimossa.
 6. **Elimino uno studio** → conferma (avviso cascata) → spariscono studio **e** sue varianti.
+7. Eseguo una mossa legale sulla scacchiera in dettaglio/editor/training → sento il suono mossa.
+8. Disattivo il suono dalle impostazioni locali → muovendo i pezzi non viene riprodotto audio.
 
 #### Criteri di completamento
-Gli studi si creano/eliminano e si gestiscono le varianti dall'interno, end-to-end; la delete dello studio rispetta la cascata.
+Gli studi si creano/eliminano e si gestiscono le varianti dall'interno, end-to-end; la delete dello studio rispetta la cascata. Il suono mossa è integrato in modo centralizzato sul componente scacchiera, attivo di default e disattivabile.
 
 #### Cosa non fare ancora
-Niente **spostamento di varianti tra studi** (sezione 19 · TODO da validare); niente riordino avanzato; niente condivisione.
+Niente **spostamento di varianti tra studi** (sezione 19 · TODO da validare); niente riordino avanzato; niente condivisione. Niente libreria audio complessa o mixer: serve solo un effetto mossa breve, locale e controllabile.
 
 ---
 
@@ -1186,7 +1192,7 @@ Task piccoli (~1 ora), assegnabili ad agenti AI, sullo stesso modello della sezi
 | T11.7 | Test CRUD studi + cascata | BE | Prevenire regressioni | T11.3, T11.4 | test verdi | T11.3 | cascade testata | no |
 | T11.8 | Validazione manuale P11 | REV | Confermare prototipo | T11.* | esito | tutte | sez. 13 P11 | no |
 
-### Prototipo 12 - UI Studi
+### Prototipo 12 - UI Studi + audio mosse
 | ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
 |----|--------|------|-------|-------|--------|------------|-------------|-----------|
 | T12.1 | Endpoint `POST /studies/{id}/variants` | BE | Crea variante nello studio | T11.3 | endpoint | T11.3 | variante agganciata | con T12.2 |
@@ -1194,8 +1200,10 @@ Task piccoli (~1 ora), assegnabili ad agenti AI, sullo stesso modello della sezi
 | T12.3 | `StudyDetail` + lista varianti + azioni | FE | Gestire varianti nello studio | T12.2 | componente | T12.2 | varianti gestibili | no |
 | T12.4 | Conferma elimina studio (avviso cascata) | FE | Protezione + chiarezza | T9.1, T12.2 | conferma con avviso | T12.2 | avviso cascata | no |
 | T12.5 | Routing `/`→studi, `/studies/:id` + breadcrumb | FE | Navigazione studi/varianti | T12.2, T12.3 | rotte | T12.3 | navigazione ok | no |
-| T12.6 | Integrazione home a studi (sostituire lista varianti) | INT | Reale end-to-end | T12.1, T12.5 | flusso completo | T12.5 | crea/elimina studio+variante | no |
-| T12.7 | Validazione manuale P12 | REV | Confermare prototipo | T12.* | esito | tutte | sez. 13 P12 | no |
+| T12.6 | `MoveSoundService` + asset suono mossa | FE | Riprodurre suono stile Fritz/ChessBase a ogni mossa legale | componente scacchiera + asset licenziato/equivalente | servizio audio + asset | T12.3 | suono udibile su mossa legale | con T12.5 |
+| T12.7 | Toggle/preferenza locale audio | FE | Rendere il suono disattivabile | T12.6 | impostazione locale | T12.6 | audio on/off persistente localmente | no |
+| T12.8 | Integrazione home a studi (sostituire lista varianti) | INT | Reale end-to-end | T12.1, T12.5, T12.7 | flusso completo | T12.5, T12.7 | crea/elimina studio+variante + audio verificato | no |
+| T12.9 | Validazione manuale P12 | REV | Confermare prototipo | T12.* | esito | tutte | sez. 13 P12 | no |
 
 ### Prototipo 13 - Import PGN avanzato
 | ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
@@ -1334,6 +1342,7 @@ studyId: Long (FK -> Study, nullable)   // null solo per varianti legacy senza s
 | R16 | **Scalabilità/responsive scacchiera** | La board resta 720px tra ~800-1280px e il pannello finisce sotto la piega (vedi sezione 17) | Medio (UX) | Trasversale | La correzione è una **proposta grafica da validare** (sezione 17), non un rilascio finché l'utente non approva. |
 | R17 | **Persistenza dati di apprendimento** | Sessioni/stats/scheduling fanno crescere lo schema H2 locale | Basso/Medio | P14-P16 | Tabelle dedicate, `userId` nullable inattivo; migrazioni versionate rinviate alla terza tornata. |
 | R18 | **Integrazione Stockfish** | Esecuzione del motore (WASM in Web Worker), threading/`SharedArrayBuffer` (header COOP/COEP), performance su client deboli | Medio | P17 | Stockfish **WASM client-side** in Web Worker; perimetro limitato (toggle motore, barra valutazione, gioca-vs-computer in nuova tab); **mai in allenamento**; versione **single-thread** se gli header cross-origin non sono disponibili. |
+| R19 | **Asset audio mossa** | Il suono richiesto deve avere target percettivo Fritz/ChessBase; l'asset originale potrebbe essere proprietario/non disponibile | Medio (licenza + fedeltà) | P12 | Usare asset originale solo se fornito con licenza/permesso d'uso; altrimenti creare/usare un effetto equivalente, breve e secco, senza copiare file proprietari. Audio locale frontend, default attivo e disattivabile. |
 
 > I rischi R8/R9/R10 (Supabase DB, Auth, Docker) restano **aperti e rinviati** alla terza tornata per scelta esplicita.
 
@@ -1366,7 +1375,7 @@ studyId: Long (FK -> Study, nullable)   // null solo per varianti legacy senza s
 
 7. **[BASSA] Tema scuro.** I token sono già variabili CSS: predisporre una variante dark con toggle, utile in sessioni serali.
 
-8. **[BASSA] Micro-interazioni.** Animazione morbida del movimento pezzo; transizioni coerenti; opzionale suono mossa (disattivabile).
+8. **[BASSA] Micro-interazioni residue.** Animazione morbida del movimento pezzo; transizioni coerenti. Il suono mossa non è più una proposta opzionale: è stato promosso a requisito del Prototipo 12.
 
 ---
 
