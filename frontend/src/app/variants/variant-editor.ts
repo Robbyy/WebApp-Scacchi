@@ -15,8 +15,11 @@ import {
   childrenAt,
   fenAt,
   fromLine,
+  isOnMainline,
+  lineSans,
   mainline,
   pathsEqual,
+  promoteToMainline,
   removeNode,
 } from '../core/move-tree';
 
@@ -57,6 +60,15 @@ export class VariantEditor {
   );
   protected readonly moveCount = computed(() => this.currentPath().length);
 
+  /** Sequenza SAN della linea corrente e stato del ramo (mainline o variante). */
+  protected readonly currentLine = computed(() => lineSans(this.tree(), this.currentPath()));
+  protected readonly onMainline = computed(() => isOnMainline(this.currentPath()));
+  protected readonly canPromote = computed(
+    () => this.currentPath().length > 0 && !this.onMainline(),
+  );
+  /** Conferma in sospeso per la cancellazione di un sottoalbero. */
+  protected readonly confirmingDelete = signal(false);
+
   constructor() {
     const idParam = this.route.snapshot.paramMap.get('id');
     if (idParam) {
@@ -77,6 +89,7 @@ export class VariantEditor {
 
   /** Mossa legale giocata: segue il figlio esistente o crea una nuova variante. */
   protected onMove(move: MoveMade): void {
+    this.confirmingDelete.set(false);
     const kids = childrenAt(this.tree(), this.currentPath());
     const existing = kids.findIndex((c) => c.san === move.san);
     if (existing >= 0) {
@@ -94,26 +107,67 @@ export class VariantEditor {
 
   protected goTo(path: number[] | undefined): void {
     if (path) {
+      this.confirmingDelete.set(false);
       this.currentPath.set([...path]);
     }
   }
 
   protected first(): void {
+    this.confirmingDelete.set(false);
     this.currentPath.set([]);
   }
 
   protected prev(): void {
+    this.confirmingDelete.set(false);
     this.currentPath.update((p) => p.slice(0, -1));
   }
 
   protected next(): void {
     if (childrenAt(this.tree(), this.currentPath()).length > 0) {
+      this.confirmingDelete.set(false);
       this.currentPath.update((p) => [...p, 0]);
     }
   }
 
-  /** Rimuove il nodo corrente (e il suo sottoalbero) e torna al precedente. */
+  /** Promuove la linea corrente a mainline (il ramo scelto diventa il principale). */
+  protected makeMainline(): void {
+    const path = this.currentPath();
+    if (path.length === 0 || isOnMainline(path)) {
+      return;
+    }
+    this.tree.set(promoteToMainline(this.tree(), path));
+    // la stessa linea ora è il percorso di soli zeri
+    this.currentPath.set(path.map(() => 0));
+  }
+
+  /**
+   * Richiede la cancellazione del nodo corrente. Se il nodo ha figli (sottoalbero)
+   * chiede conferma; una mossa-foglia viene rimossa direttamente.
+   */
   protected deleteCurrent(): void {
+    const path = this.currentPath();
+    if (path.length === 0) {
+      return;
+    }
+    if (childrenAt(this.tree(), path).length > 0) {
+      this.confirmingDelete.set(true);
+      return;
+    }
+    this.performDelete();
+  }
+
+  /** Conferma la cancellazione del sottoalbero. */
+  protected confirmDelete(): void {
+    this.confirmingDelete.set(false);
+    this.performDelete();
+  }
+
+  /** Annulla la cancellazione in sospeso. */
+  protected cancelDelete(): void {
+    this.confirmingDelete.set(false);
+  }
+
+  private performDelete(): void {
     const path = this.currentPath();
     if (path.length === 0) {
       return;
@@ -123,6 +177,7 @@ export class VariantEditor {
   }
 
   protected reset(): void {
+    this.confirmingDelete.set(false);
     this.tree.set([]);
     this.currentPath.set([]);
   }

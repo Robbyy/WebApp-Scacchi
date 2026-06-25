@@ -82,8 +82,19 @@ albero lineare da `moves` per compatibilita' con varianti gia' lineari.
 - `moves` non e' piu' il dato completo della variante: e' la mainline.
 - Il training puo' accettare piu' mosse corrette quando dal nodo corrente partono
   piu' figli.
-- Restano da consolidare validazione backend dell'intero albero, promozione di un
-  ramo a mainline, import/export PGN complesso e UX di editing avanzato.
+
+### Stato del consolidamento (P7-P8)
+- **Vincolo ufficiale confermato:** `children.get(0)` e' la mainline a ogni livello;
+  la derivazione di `moves` segue sempre il primo figlio (test `MoveNodeTest`).
+- **Round-trip garantito da test:** `tree -> DB (JSON text) -> DTO` con rami multipli e
+  profondi (test `VariantControllerTest.treeWithBranchesSurvivesRoundTrip`).
+- **Promozione di un ramo a mainline (P8):** risolta lato client riordinando i
+  `children` lungo il percorso corrente (`promoteToMainline` in `move-tree.ts`) e
+  ri-salvando con `PUT`; nessun nuovo endpoint.
+- **Validazione legalita' dell'intero albero (P7):** ora lato backend (vedi ADR 0004).
+- **Protezione cancellazioni (P8):** l'editor chiede conferma prima di eliminare un
+  nodo con figli (sottoalbero).
+- Restano da consolidare: import/export PGN complesso e UX di editing avanzato.
 
 ---
 

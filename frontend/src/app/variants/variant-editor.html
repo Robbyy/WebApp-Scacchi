@@ -22,7 +22,30 @@
 
     <p class="move-counter">Semimossa {{ moveCount() }} · gioca una mossa per continuare</p>
 
+    <div class="branch-info">
+      @if (currentLine().length > 0) {
+        <span
+          class="branch-badge"
+          [class.branch-badge--main]="onMainline()"
+          [class.branch-badge--var]="!onMainline()"
+          >{{ onMainline() ? 'mainline' : 'variante' }}</span
+        >
+        <span class="branch-line">{{ currentLine().join(' ') }}</span>
+      } @else {
+        <span class="branch-line branch-line--muted">posizione iniziale</span>
+      }
+    </div>
+
     <div class="editor-controls">
+      <button
+        type="button"
+        class="btn"
+        (click)="makeMainline()"
+        [disabled]="!canPromote()"
+        title="Rendi questa linea la principale"
+      >
+        &#9733; Rendi mainline
+      </button>
       <button type="button" class="btn" (click)="deleteCurrent()" [disabled]="atStart()">
         &#10005; Elimina mossa
       </button>
@@ -30,6 +53,21 @@
         Reset
       </button>
     </div>
+
+    @if (confirmingDelete()) {
+      <div class="confirm-box" role="alertdialog" aria-label="Conferma eliminazione sottoalbero">
+        <p class="confirm-text">
+          Eliminare <b>{{ currentLine()[currentLine().length - 1] }}</b> e tutto il suo
+          sottoalbero? L'operazione non è reversibile.
+        </p>
+        <div class="confirm-actions">
+          <button type="button" class="btn btn--danger" (click)="confirmDelete()">
+            Elimina sottoalbero
+          </button>
+          <button type="button" class="btn" (click)="cancelDelete()">Annulla</button>
+        </div>
+      </div>
+    }
   </div>
 
   <aside class="side">

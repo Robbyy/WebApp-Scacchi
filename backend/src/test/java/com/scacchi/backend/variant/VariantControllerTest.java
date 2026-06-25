@@ -160,6 +160,36 @@ class VariantControllerTest {
     }
 
     @Test
+    void treeWithBranchesSurvivesRoundTrip() throws Exception {
+        String body = """
+            {"name":"Round-trip","color":"WHITE","tree":[
+              {"san":"e4","children":[
+                {"san":"e5","children":[{"san":"Nf3","children":[{"san":"Nc6","children":[]}]}]},
+                {"san":"c5","children":[{"san":"Nf3","children":[]}]}
+              ]}
+            ]}""";
+        MvcResult result = mockMvc.perform(
+                post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andReturn();
+        int id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+
+        // Riletto dal DB: l'albero ramificato deve sopravvivere al round-trip.
+        mockMvc.perform(get("/api/variants/" + id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.tree[0].san").value("e4"))
+            .andExpect(jsonPath("$.tree[0].children.length()").value(2))
+            .andExpect(jsonPath("$.tree[0].children[0].san").value("e5"))
+            .andExpect(jsonPath("$.tree[0].children[0].children[0].san").value("Nf3"))
+            .andExpect(jsonPath("$.tree[0].children[0].children[0].children[0].san").value("Nc6"))
+            .andExpect(jsonPath("$.tree[0].children[1].san").value("c5"))
+            .andExpect(jsonPath("$.tree[0].children[1].children[0].san").value("Nf3"))
+            .andExpect(jsonPath("$.moves.length()").value(4))
+            .andExpect(jsonPath("$.moves[0]").value("e4"))
+            .andExpect(jsonPath("$.moves[3]").value("Nc6"));
+    }
+
+    @Test
     void updateReturns404WhenMissing() throws Exception {
         String body = """
             {"name":"X","color":"WHITE","moves":["e4"]}""";

@@ -64,13 +64,54 @@ describe('VariantEditor', () => {
     expect(cmp.currentPath()).toEqual([0]);
   });
 
-  it('deletes the current node', () => {
+  it('deletes a leaf node without confirmation', () => {
     const { cmp } = setup({});
     cmp.onMove(move('e4'));
     cmp.onMove(move('e5'));
     cmp.deleteCurrent();
+    expect(cmp.confirmingDelete()).toBe(false);
     expect(cmp.tree()[0].children.length).toBe(0);
     expect(cmp.currentPath()).toEqual([0]);
+  });
+
+  it('asks confirmation before deleting a subtree, then deletes on confirm', () => {
+    const { cmp } = setup({});
+    cmp.onMove(move('e4'));
+    cmp.onMove(move('e5'));
+    cmp.onMove(move('Nf3'));
+    cmp.goTo([0]); // su e4, che ha un sottoalbero
+    cmp.deleteCurrent();
+    expect(cmp.confirmingDelete()).toBe(true);
+    expect(cmp.tree().length).toBe(1); // non ancora cancellato
+    cmp.confirmDelete();
+    expect(cmp.confirmingDelete()).toBe(false);
+    expect(cmp.tree().length).toBe(0);
+  });
+
+  it('cancels a pending subtree deletion', () => {
+    const { cmp } = setup({});
+    cmp.onMove(move('e4'));
+    cmp.onMove(move('e5'));
+    cmp.goTo([0]);
+    cmp.deleteCurrent();
+    expect(cmp.confirmingDelete()).toBe(true);
+    cmp.cancelDelete();
+    expect(cmp.confirmingDelete()).toBe(false);
+    expect(cmp.tree()[0].children.length).toBe(1); // intatto
+  });
+
+  it('promotes a variation to mainline', () => {
+    const { cmp } = setup({});
+    cmp.onMove(move('e4'));
+    cmp.onMove(move('e5'));
+    cmp.goTo([0]); // dopo e4
+    cmp.onMove(move('c5')); // variante, path [0,1]
+    expect(cmp.onMainline()).toBe(false);
+    cmp.makeMainline();
+    expect(cmp.tree()[0].children[0].san).toBe('c5');
+    expect(cmp.tree()[0].children[1].san).toBe('e5');
+    expect(cmp.currentPath()).toEqual([0, 0]);
+    expect(cmp.onMainline()).toBe(true);
   });
 
   it('resets the tree', () => {

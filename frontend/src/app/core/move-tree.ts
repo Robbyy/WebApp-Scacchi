@@ -37,6 +37,45 @@ export function pathsEqual(a: number[], b: number[]): boolean {
   return a.length === b.length && a.every((x, i) => x === b[i]);
 }
 
+/** Un percorso è sulla mainline se sceglie sempre il primo figlio (tutti zeri). */
+export function isOnMainline(path: number[]): boolean {
+  return path.every((i) => i === 0);
+}
+
+/** Sequenza SAN delle mosse lungo il percorso (dalla radice al nodo corrente). */
+export function lineSans(tree: MoveNode[], path: number[]): string[] {
+  const sans: string[] = [];
+  let nodes = tree;
+  for (const idx of path) {
+    const node = nodes[idx];
+    if (!node) {
+      break;
+    }
+    sans.push(node.san);
+    nodes = node.children;
+  }
+  return sans;
+}
+
+/**
+ * Promuove la linea che passa per `path` a mainline: a ogni livello lungo il
+ * percorso il figlio scelto diventa il primo (`children[0]`). Dopo la promozione
+ * la stessa linea corrisponde al percorso di soli zeri.
+ */
+export function promoteToMainline(tree: MoveNode[], path: number[]): MoveNode[] {
+  if (path.length === 0) {
+    return tree;
+  }
+  const [head, ...rest] = path;
+  if (head < 0 || head >= tree.length) {
+    return tree;
+  }
+  const selected = tree[head];
+  const promotedChild = { ...selected, children: promoteToMainline(selected.children, rest) };
+  // Il figlio scelto passa in testa, gli altri mantengono l'ordine relativo.
+  return [promotedChild, ...tree.filter((_, i) => i !== head)];
+}
+
 /** Figli del nodo identificato dal percorso (radice se percorso vuoto). */
 export function childrenAt(tree: MoveNode[], path: number[]): MoveNode[] {
   let nodes = tree;

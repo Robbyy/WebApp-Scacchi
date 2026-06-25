@@ -29,4 +29,18 @@ class MoveNodeTest {
         assertEquals(List.of(), MoveNode.fromLine(List.of()));
         assertEquals(List.of(), MoveNode.mainline(List.of()));
     }
+
+    @Test
+    void reorderingChildrenChangesTheDerivedMainline() {
+        // Vincolo ufficiale (ADR 0002): children.get(0) è la mainline.
+        List<MoveNode> e5First = List.of(new MoveNode("e4", List.of(
+            new MoveNode("e5", List.of()),
+            new MoveNode("c5", List.of()))));
+        assertEquals(List.of("e4", "e5"), MoveNode.mainline(e5First));
+
+        List<MoveNode> c5First = List.of(new MoveNode("e4", List.of(
+            new MoveNode("c5", List.of()),
+            new MoveNode("e5", List.of()))));
+        assertEquals(List.of("e4", "c5"), MoveNode.mainline(c5First));
+    }
 }
