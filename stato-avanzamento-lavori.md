@@ -1,661 +1,167 @@
 # Stato avanzamento lavori - WebApp Scacchi
 
-> Fotografia operativa dello stato del progetto al 2026-06-24.
-> Fonti di riferimento: `planning-prototipi-webapp.md`, `decisioni-tecniche.md` e verifica locale end-to-end eseguita su frontend Angular e backend Spring Boot.
-> Questo documento non sostituisce planning e ADR: riassume cosa risulta implementato, cosa e' stato anticipato rispetto alla roadmap e cosa manca.
+> Fotografia operativa dello stato del progetto al **2026-06-25**.
+> Fonti di riferimento: `planning-prototipi-webapp.md` (Parte 1 e Parte 2), `decisioni-tecniche.md` (ADR), e verifica locale end-to-end su frontend Angular e backend Spring Boot.
+> Questo documento non sostituisce planning e ADR: riassume cosa risulta implementato e cosa manca.
 
 ---
 
 ## 1. Sintesi esecutiva
 
-I prototipi dal **0 al 6 risultano implementati e verificati** per il perimetro previsto dal planning. Il precedente difetto backend sul salvataggio di PGN piu' lunghi nel campo `sourcePgn` e' stato corretto: la colonna e' ora mappata come `text` e coperta da test automatico.
+- **Parte 1 (Prototipi 0-6) + estensioni anticipate**: completa e verificata (vedi sezione 2).
+- **Parte 2 pianificata**: roadmap P7-P17 + sezioni TODO/idee, descritta nel planning (sezioni 11-19). Fasi: A consolidamento, B studi, C import PGN, D apprendimento, E motore Stockfish.
+- **Parte 2 implementata finora**: **P7, P8, P9** (fase A · consolidamento, 3 prototipi su 4). Manca **P10** (suite test + checklist E2E) per chiudere la fase A.
 
-Rispetto al planning originale sono state anticipate alcune funzionalita' post-MVP:
-
-- modifica di una variante esistente;
-- modello ad albero per sotto-varianti;
-- rendering e navigazione di mainline + varianti;
-- training compatibile con rami multipli;
-- miglioramenti alla scacchiera: orientamento, modalita' read-only/controlled e scelta promozione.
-
-Il repository risulta strutturato correttamente con due progetti separati:
-
-- `backend/` - Spring Boot + Maven + H2/JPA;
-- `frontend/` - Angular + npm + `chess.js`.
-
-Alla verifica del 2026-06-24:
+Alla verifica del 2026-06-25:
 
 - `git status --short` pulito;
-- backend attivo su `http://localhost:8080`;
-- frontend attivo su `http://localhost:4200`;
-- test backend: **17 passati**;
-- test frontend: **42 passati**;
-- verifiche browser principali senza errori console.
+- backend attivo su `http://localhost:8080`, frontend su `http://localhost:4200`;
+- **test backend: 26 passati**; **test frontend: 49 passati**;
+- verifiche browser dei flussi principali senza errori console.
+
+Ultimi commit rilevanti: `b9bdd6d` (P7), `050f86c` (P8), `fa90ef7` (P9).
+
+Il repository resta strutturato con due progetti separati: `backend/` (Spring Boot + Maven + H2/JPA) e `frontend/` (Angular + npm + `chess.js`).
 
 ---
 
-## 2. Stato per prototipo
+## 2. Stato Parte 1 (Prototipi 0-6) e estensioni
 
-### Prototipo 0 - Scaffolding & hello-world
+Tutti completati e verificati. Sintesi:
 
-**Stato:** completato.
+| # | Prototipo | Stato | Note |
+|---|-----------|-------|------|
+| 0 | Scaffolding & hello-world | ✅ | `GET /api/ping`, proxy, CORS, H2 **su file** (`backend/data/`) |
+| 1 | Scacchiera renderizzata | ✅ | Componente custom + `chess.js`, pezzi SVG Staunton, click **e** drag-and-drop, promozione |
+| 2 | Variante visualizzata | ✅ | Lista/dettaglio, replay, navigazione tastiera (superato dalla persistenza) |
+| 3 | Training loop | ✅ | Validazione lato client, supporto rami multipli |
+| 4 | Persistenza CRUD (H2) | ✅ | `GET/POST/PUT/DELETE`, seed iniziale, converter JSON |
+| 5 | Editor mossa-per-mossa | ✅ | Creazione/modifica da scacchiera; alberi |
+| 6 | Import PGN base | ✅ | Parsing client `chess.js`, `sourcePgn` su colonna `text` |
 
-Implementato:
-
-- progetto backend Spring Boot in `backend/`;
-- progetto frontend Angular in `frontend/`;
-- endpoint `GET /api/ping`;
-- servizio frontend per chiamare il backend;
-- configurazione proxy Angular verso il backend;
-- CORS dev lato backend;
-- H2 configurato su file locale per l'ambiente di sviluppo;
-- separazione fisica frontend/backend rispettata.
-
-Verificato:
-
-- `GET http://localhost:8080/api/ping` risponde `{"status":"pong"}`;
-- frontend raggiungibile su `http://localhost:4200`;
-- pagina Angular mostra stato backend online.
-
-Note:
-
-- il planning iniziale parlava di H2 in memoria, ma la configurazione attuale usa H2 su file: `jdbc:h2:file:${H2_DB_PATH:./data/scacchi};AUTO_SERVER=TRUE`;
-- i test usano invece H2 in memoria separato, cosi' non modificano il DB locale di sviluppo.
+**Estensioni anticipate** (ora consolidate in Parte 2): modifica varianti (`PUT`), modello ad albero `MoveNode` (`children[0]` = mainline), training su rami, scacchiera evoluta (read-only/controlled, orientamento, promozione).
 
 ---
 
-### Prototipo 1 - Scacchiera renderizzata
+## 3. Parte 2 — avanzamento
 
-**Stato:** completato, con miglioramenti.
+### Prototipo 7 — Validazione scacchistica backend + fix scacchiera ✅
 
-Implementato:
+**Backend (R13):**
+- Integrata libreria **`chesslib`** via **JitPack** (non su Maven Central) come motore di regole (ADR 0004).
+- `VariantValidator`: valida la legalità di mainline e, ricorsivamente, di ogni ramo dell'albero dalla posizione iniziale. Nota: `loadFromSan` di chesslib non verifica la legalità, quindi si controlla con `board.legalMoves().contains(move)`.
+- `POST`/`PUT` rifiutano payload illegali con **400 strutturato** (`field`, `ply`, `branchPath`, `message`) via `@ExceptionHandler`.
 
-- componente Angular custom `Chessboard`;
-- motore regole `chess.js`;
-- rendering board 8x8 con 64 case;
-- pezzi SVG Staunton in `frontend/public/pieces`;
-- colori board coerenti con il riferimento: `#f0d9b5` e `#b58863`;
-- cornice effetto legno;
-- coordinate file/rank;
-- emissione evento `moveMade` con SAN, from, to e FEN;
-- movimento pezzi via click origine/destinazione;
-- movimento pezzi via drag and drop;
-- rifiuto mosse illegali;
-- input FEN tramite `position`;
-- modalita' non interattiva;
-- modalita' controlled per training;
-- orientamento bianco/nero;
-- scelta pezzo in promozione.
+**Frontend:**
+- Drag che trascina **solo il pezzo** (niente sfondo della casa).
+- Casa di partenza **vuota durante il trascinamento** (il pezzo si "solleva").
+- **Cornice della scacchiera più stretta** (padding 5px, gutter 1.25rem).
+- Editor e import PGN mostrano il **messaggio di validazione** del backend sul 400.
 
-Verificato:
+**Verifica:** API testata (`e4,e4` → 400 ply 2; ramo `Xx9` → 400 branchPath `[0,1]`; legale → 201); fix drag e cornice verificati live. Test backend 24, frontend 43 (al termine di P7).
 
-- scacchiera visibile con 64 case e 32 pezzi;
-- `e2-e4` accettata e produce SAN `e4`;
-- `e2-e4` accettata anche via drag and drop;
-- drag and drop illegale `e2-e5` rifiutato;
-- mossa illegale tipo `Re1-e3` rifiutata;
-- nessun errore console in browser.
+### Prototipo 8 — Consolidamento del modello ad albero ✅
 
-Scostamenti dal planning:
+- `promoteToMainline(tree, path)`: riordina i `children` lungo il percorso così che la linea scelta diventi `children[0]` a ogni livello.
+- Editor: pulsante **"Rendi mainline"** (promuove la variante corrente), **conferma prima di cancellare un sottoalbero**, **indicatore di ramo** (mainline/variante + SAN della linea).
+- Backend: test di **round-trip** `tree → DB → DTO` con rami multipli/profondi; test che ribadisce il vincolo `children[0] = mainline`.
+- Docs: **ADR 0002** aggiornato con lo stato di consolidamento.
 
-- il planning parlava di libreria scacchiera Angular-compatibile; la decisione effettiva, tracciata in `decisioni-tecniche.md`, e' un componente custom Angular/CSS + `chess.js`;
-- il planning menzionava drag/click: entrambe le interazioni sono ora implementate.
+**Verifica:** promozione, conferma cancellazione e annulla verificati live. Test backend 26, frontend 46 (al termine di P8).
 
-Nota documentale:
+### Prototipo 9 — Robustezza interazioni e azioni distruttive ✅
 
-- `decisioni-tecniche.md` e' stato riallineato: l'ADR 0001 ora indica l'uso di asset SVG Staunton.
+- **Dialog di conferma riusabile** (`ConfirmService` + `ConfirmDialog`, `ask()` → `Promise<boolean>`, montato a livello app).
+- **Toast/snackbar globale** (`ToastService` + `ToastHost`, success/error/info con auto-dismiss).
+- Lista: eliminazione variante con **conferma** + toast esito; pulsante disabilitato durante la chiamata.
+- Editor: flag `dirty` + **guard `canDeactivate`** che avvisa delle modifiche non salvate; toast su salvataggio.
+- Import PGN: toast su salvataggio.
+- Backend: nessuna modifica necessaria (P7 fornisce già messaggi strutturati).
 
----
+**Verifica:** dialog di eliminazione, guard "modifiche non salvate" (blocco + uscita) e toast "Variante eliminata." verificati live, zero errori console. Test backend 26, frontend **49**.
 
-### Prototipo 2 - Variante hardcoded visualizzata
+### Prototipi 10-17 — da fare
 
-**Stato:** completato e superato dall'implementazione persistente.
-
-Implementato:
-
-- modello `VariantDto` lato backend;
-- modello `Variant` lato frontend;
-- endpoint `GET /api/variants`;
-- endpoint `GET /api/variants/{id}`;
-- servizio Angular `VariantService`;
-- vista lista varianti;
-- vista dettaglio variante;
-- pannello mosse;
-- replay con controlli;
-- navigazione con tastiera nel dettaglio;
-- ricostruzione posizione via `chess.js`.
-
-Verificato:
-
-- lista varianti visibile in frontend;
-- dettaglio variante visibile;
-- scacchiera in sola visualizzazione;
-- controlli replay presenti;
-- dati provenienti dal backend reale.
-
-Scostamenti dal planning:
-
-- il prototipo prevedeva una variante hardcoded in memoria; l'implementazione corrente e' gia' passata a H2 con seed. Il valore del prototipo 2 e' comunque coperto.
-
----
-
-### Prototipo 3 - Training loop
-
-**Stato:** completato, con supporto anticipato a sotto-varianti.
-
-Implementato:
-
-- componente `VariantTraining`;
-- caricamento variante da backend;
-- gestione stato sessione;
-- riconoscimento lato da allenare (`WHITE`/`BLACK`);
-- orientamento board coerente col lato;
-- confronto mossa giocata vs mosse attese;
-- feedback mossa errata;
-- contatore errori;
-- suggerimento;
-- risposta automatica dell'avversario;
-- riconoscimento completamento;
-- riavvio training;
-- compatibilita' con rami multipli: se ci sono piu' figli validi, sono accettate piu' mosse.
-
-Verificato:
-
-- vista training raggiungibile da dettaglio;
-- board presente;
-- stato "Tocca a te";
-- testo lato allenato coerente;
-- nessun errore console.
-
-Decisione coerente con planning:
-
-- la validazione training e' lato frontend. L'endpoint opzionale `POST /api/variants/{id}/training/check` non risulta necessario e non e' implementato.
-
----
-
-### Prototipo 4 - Persistenza varianti (CRUD)
-
-**Stato:** completato, con update aggiunto oltre planning.
-
-Implementato:
-
-- entita' JPA `Variant`;
-- repository `VariantRepository`;
-- persistenza H2;
-- seed iniziale tramite `VariantDataInitializer`;
-- converter JSON/stringa per `moves`;
-- converter per `tree`;
-- validazione minima request lato controller;
-- `GET /api/variants`;
-- `GET /api/variants/{id}`;
-- `POST /api/variants`;
-- `DELETE /api/variants/{id}`;
-- UI lista varianti;
-- azione elimina lato UI;
-- creazione varianti via backend.
-
-Extra implementato:
-
-- `PUT /api/variants/{id}` per modificare una variante esistente.
-
-Verificato:
-
-- creazione variante temporanea via API;
-- aggiornamento variante temporanea via API;
-- cancellazione variante temporanea via API con `204`;
-- seed presenti in lista;
-- test repository/controller backend passati.
-
-Scostamenti dal planning:
-
-- `PUT` non era previsto nel Prototipo 4. E' una funzionalita' utile e coerente, ora documentata nel contratto API aggiornato.
-
----
-
-### Prototipo 5 - Inserimento variante mossa-per-mossa
-
-**Stato:** completato, con editing avanzato anticipato.
-
-Implementato:
-
-- rotta `/variants/new`;
-- componente `VariantEditor`;
-- input nome variante;
-- scelta lato da allenare;
-- creazione mosse giocando sulla scacchiera;
-- accumulo mosse in struttura `tree`;
-- visualizzazione mosse in formato PGN-like;
-- reset;
-- cancellazione mossa corrente;
-- salvataggio via `POST /api/variants`;
-- rotta `/variants/:id/edit`;
-- caricamento di una variante esistente nell'editor;
-- salvataggio modifica via `PUT /api/variants/{id}`;
-- navigazione all'interno dell'albero tramite path.
-
-Verificato:
-
-- apertura editor nuova variante;
-- mosse `e4 e5 Nf3` giocate sulla scacchiera;
-- pannello mosse aggiornato;
-- contatore semimossa aggiornato;
-- nessun errore console.
-
-Scostamenti dal planning:
-
-- il planning escludeva editing avanzato e sotto-varianti nel Prototipo 5;
-- il codice ha gia' introdotto alberi e modifica variante preesistente.
-
-Valutazione:
-
-- la funzionalita' anticipata e' coerente con una direzione futura del planning, ma aumenta complessita' e necessita test manuali piu' ampi.
-
----
-
-### Prototipo 6 - Import PGN base
-
-**Stato:** completato per il perimetro base previsto dal planning.
-
-Implementato:
-
-- rotta `/variants/import`;
-- componente `PgnImport`;
-- textarea per PGN;
-- parsing client-side con `chess.js`;
-- anteprima mosse;
-- gestione errore PGN non valido;
-- suggerimento nome da tag PGN (`White`/`Black` o `Event`);
-- scelta lato da allenare;
-- salvataggio variante importata via `POST /api/variants`;
-- valorizzazione `sourcePgn`.
-
-Verificato:
-
-- PGN semplice incollato in UI;
-- anteprima mosse corretta: `e4 e5 Nf3 Nc6 Bb5 a6`;
-- nessun errore console nella UI;
-- salvataggio API con `sourcePgn` corto funzionante;
-- salvataggio API con `sourcePgn` lungo corretto dopo la modifica del mapping a `text`;
-- test backend dedicato per PGN lungo passato.
-
-Correzione eseguita:
-
-- in `Variant.java`, `sourcePgn` e' ora mappato con `@Column(name = "source_pgn", columnDefinition = "text")`;
-- in `VariantControllerTest` e' stato aggiunto il test `createAcceptsLongSourcePgn`;
-- la suite backend passa con **17 test**.
-
-Limite ancora previsto dal planning:
-
-- l'import PGN resta "base": gestisce la linea principale. PGN complessi con varianti annidate, commenti e NAG restano fuori perimetro e sono trattati come evoluzione successiva.
-
----
-
-## 3. Funzionalita' extra anticipate
-
-### 3.1 Modifica variante esistente
-
-Non era prevista nei prototipi 0-6, ma risulta implementata.
-
-Elementi presenti:
-
-- rotta frontend `/variants/:id/edit`;
-- link "Modifica variante" nel dettaglio;
-- caricamento dati esistenti nell'editor;
-- metodo frontend `updateVariant`;
-- endpoint backend `PUT /api/variants/{id}`;
-- metodo service `update`.
-
-Cosa manca per renderla solida:
-
-- test manuale completo via browser: modifica nome, mosse, colore, salva, riapri, allena;
-- conferma UX per modifiche non salvate;
-- gestione errore 404/400 piu' visibile;
-- eventuale conferma prima di cancellare una mossa o un sottoalbero;
-- documentazione nel contratto API.
-
-### 3.2 Sotto-varianti / albero mosse
-
-Il planning rimandava il modello ad albero a una fase post-MVP. Il codice lo ha gia' introdotto.
-
-Elementi presenti:
-
-- `MoveNode` backend;
-- `MoveNode` frontend;
-- campo `tree` in `VariantDto` e `CreateVariantRequest`;
-- converter JPA `TreeConverter`;
-- utility frontend `move-tree.ts`;
-- visualizzazione di varianti tra parentesi;
-- navigazione per path;
-- training che accetta piu' mosse attese se il nodo corrente ha piu' figli.
-
-Cosa manca per considerarlo editing avanzato completo:
-
-- specifica formale del modello albero;
-- test con rami multipli creati da UI e poi riaperti;
-- validazione di legalita' dell'intero albero, non solo delle mosse giocate tramite UI;
-- gestione PGN con varianti annidate;
-- UX piu' chiara per distinguere mainline e varianti;
-- comandi espliciti per promuovere un ramo a mainline;
-- protezione da cancellazione accidentale di sottoalberi;
-- decisione su compatibilita' futura con PGN complessi.
-
-### 3.3 Scacchiera evoluta
-
-Sono state aggiunte capacita' oltre il Prototipo 1:
-
-- modalita' interactive/read-only;
-- modalita' controlled;
-- orientamento nero;
-- promozione con scelta pezzo;
-- asset SVG Staunton.
-
-Cosa manca:
-
-- verifica esplicita del flusso promozione in UI;
-- controllo visuale desktop dei layout principali;
-- revisione documentale dell'ADR 0001.
+- **P10** Suite test automatici + checklist E2E (chiude la fase A).
+- **P11-P12** Studi (modello backend con cancellazione a cascata + UI crea/elimina studio e varianti).
+- **P13** Import PGN avanzato (varianti annidate → `tree`).
+- **P14-P16** Persistenza sessioni → statistiche → spaced repetition.
+- **P17** Integrazione Stockfish (toggle motore, barra valutazione, gioca-vs-computer in nuova tab; mai in allenamento).
 
 ---
 
 ## 4. Verifiche eseguite
 
 ### Backend
-
-Comando eseguito:
-
-```powershell
-.\mvnw.cmd test
-```
-
-Esito:
-
-- build success;
-- 16 test passati;
-- nessun failure/error.
-
-Copertura funzionale osservata:
-
-- contesto Spring;
-- ping controller;
-- repository varianti;
-- controller varianti;
-- `MoveNode`.
+Comando: `.\mvnw.cmd test` (con `MAVEN_OPTS=-Djavax.net.ssl.trustStoreType=Windows-ROOT`).
+Esito: **26 test passati**. Copertura: contesto Spring, ping, repository varianti, controller varianti (CRUD + validazione + round-trip albero), `MoveNode`, `VariantValidator`.
 
 ### Frontend
+Comando: `npm test -- --watch=false` (fuori sandbox per evitare `spawn EPERM` su esbuild).
+Esito: **49 test passati** (7 file).
 
-Comando eseguito:
-
-```powershell
-npm test -- --watch=false
-```
-
-Nota:
-
-- in sandbox il comando fallisce con `spawn EPERM` su esbuild;
-- rilanciato fuori sandbox, passa correttamente.
-
-Esito:
-
-- 7 test file passati;
-- 42 test passati.
-
-### Verifiche HTTP/API
-
-Verificato:
-
-- `GET /api/ping`;
-- `GET /api/variants`;
-- `POST /api/variants`;
-- `PUT /api/variants/{id}`;
-- `DELETE /api/variants/{id}`;
-- salvataggio `tree`;
-- salvataggio `sourcePgn` corto;
-- salvataggio `sourcePgn` lungo dopo correzione.
-
-### Verifiche browser
-
-Verificato:
-
-- lista varianti;
-- dettaglio variante;
-- replay/detail controls;
-- training;
-- editor nuova variante;
-- import PGN;
-- anteprima mosse PGN;
-- gioco mosse in editor;
-- assenza di errori console durante i flussi osservati.
-
-### Documentazione tecnica
-
-Aggiornato:
-
-- sezione 6 di `planning-prototipi-webapp.md` con `PUT /api/variants/{id}`, `tree`, `MoveNode` e `moves` come mainline derivata;
-- sezione modello dati del planning con `tree` persistito e `sourcePgn` su colonna `text`;
-- ADR 0001 in `decisioni-tecniche.md`, ora coerente con gli asset SVG Staunton;
-- ADR 0002 sul modello mosse ad albero;
-- ADR 0003 sulla modifica di varianti esistenti via `PUT`.
+### Verifiche browser (live)
+Lista, dettaglio, training, editor (rami, promozione, conferma cancellazione, guard modifiche non salvate), import PGN, dialog di conferma e toast: tutti senza errori console.
 
 ---
 
-## 5. Cosa manca - approfondimento
+## 5. Cosa manca — approfondimento (aggiornato)
 
-### 5.1 Validazione backend delle mosse e dell'albero
+### 5.1 Validazione mosse/albero lato backend — ✅ RISOLTO (P7)
+La legalità di mainline e albero è ora validata lato server con `chesslib`; errori `400` strutturati. Resta fuori la validazione "semantica" (qualità della linea), non prevista.
 
-Priorita': medio-alta.
+### 5.2 Consolidamento modello ad albero — ✅ in gran parte (P8)
+Vincolo `children[0] = mainline` ufficiale e testato; round-trip garantito; promozione a mainline e protezione cancellazione sottoalbero implementate. Restano: import/export PGN ramificato (P13 / TODO export) e UX avanzata ulteriore.
 
-Motivo:
+### 5.3 Import PGN oltre la linea principale — ⏳ pianificato (P13)
+Varianti annidate, commenti, NAG. Export PGN spostato a TODO (sezione 19 del planning).
 
-- il frontend impedisce molte mosse illegali quando l'utente crea da scacchiera;
-- le API pero' possono ricevere payload arbitrari con `moves` o `tree`;
-- al momento il backend valida struttura minima, non legalita' scacchistica.
+### 5.4 UX e sicurezza azioni distruttive — ✅ RISOLTO (P9)
+Conferma su elimina variante e su elimina sottoalbero; guard modifiche non salvate; feedback errori via toast; stati loading/saving. Resta margine per skeleton di caricamento ed empty-state curati (proposte UX sezione 17 del planning).
 
-Rischi:
+### 5.5 Test E2E formalizzati — ⏳ pianificato (P10)
+Suite automatica sui flussi completi + checklist ripetibile.
 
-- varianti con SAN illegali salvate via API;
-- albero non coerente con la posizione;
-- mainline derivata da un `tree` non valido;
-- training/detail possono produrre FEN parziali o incoerenti.
+### 5.6 Responsive e qualità visiva — ⏳ proposte da validare
+Il difetto responsive principale (board fissa a 720px tra ~800-1280px, pannello sotto la piega) e le altre proposte grafiche sono in **sezione 17 del planning**, subordinate a validazione dell'utente (non nei rilasci).
 
-Intervento possibile:
+### 5.7 Persistenza e migrazioni — invariato
+H2 su file in sviluppo. Migrazioni versionate (Liquibase) e Supabase restano gli **ultimissimi passi** (terza tornata, sezione 18 del planning).
 
-- introdurre validazione della mainline almeno lato backend;
-- per `tree`, validare ricorsivamente ogni ramo;
-- decidere se usare una libreria Java per scacchi o mantenere la validazione piena lato frontend e limitare le API;
-- restituire errori 400 con messaggi utili.
+### 5.8 Studi / raggruppamento varianti — ⏳ pianificato (P11-P12)
+Entità `Study` 1-N con `Variant`, **cancellazione a cascata**, studio di default, UI crea/elimina studio e varianti.
 
-### 5.2 Consolidare il modello ad albero
-
-Priorita': media.
-
-Motivo:
-
-- l'albero e' stato anticipato rispetto al planning;
-- la semantica base e' ora documentata nelle ADR, ma prima di costruire altre funzionalita' sopra serve stabilizzare test e UX.
-
-Decisioni aperte:
-
-- `children[0]` e' sempre mainline: confermare come vincolo ufficiale;
-- come promuovere una variante a mainline;
-- come rappresentare commenti/NAG in futuro;
-- se `moves[]` resta campo persistito o diventa solo derivato;
-- come gestire import PGN con varianti annidate;
-- come esportare l'albero in PGN.
-
-Lavori mancanti:
-
-- test di round-trip `tree -> DB -> DTO -> UI`;
-- test con piu' rami allo stesso nodo;
-- test con rami profondi;
-- test training su ramo alternativo;
-- UX esplicita per creare ramo alternativo senza confondere l'utente.
-
-### 5.3 Completare import PGN oltre la linea principale
-
-Priorita': media.
-
-Nel planning il Prototipo 6 escludeva PGN complessi. Ora che l'albero e' stato anticipato, il tema diventa piu' rilevante.
-
-Manca:
-
-- parsing di varianti annidate;
-- gestione commenti;
-- gestione NAG;
-- gestione header piu' ampia;
-- validazione di PGN malformati con messaggi specifici;
-- eventuale anteprima ad albero;
-- salvataggio `tree` da PGN complesso;
-- test con PGN reali.
-
-Scelta da fare:
-
-- mantenere P6 come "solo linea principale" e documentarlo chiaramente;
-- oppure aprire un nuovo prototipo dedicato a import PGN completo.
-
-### 5.4 Migliorare UX e sicurezza delle azioni distruttive
-
-Priorita': media.
-
-Manca:
-
-- conferma prima di eliminare una variante;
-- conferma prima di eliminare una mossa/sottoalbero nell'editor;
-- protezione da perdita modifiche non salvate quando si cambia pagina;
-- feedback piu' specifico sugli errori API;
-- stato loading/saving piu' robusto;
-- gestione retry per errori rete/backend.
-
-### 5.5 Test manuali end-to-end da formalizzare
-
-Priorita': media.
-
-Il planning richiede validazione manuale a ogni prototipo. Molti flussi sono stati verificati, ma conviene trasformarli in checklist ripetibili.
-
-Checklist consigliata:
-
-1. Creare variante lineare da scacchiera.
-2. Verificarla in lista.
-3. Aprirla in dettaglio.
-4. Usare replay avanti/indietro/autoplay.
-5. Allenarla fino a completamento.
-6. Giocare mossa errata e verificare feedback.
-7. Modificarla e salvare.
-8. Aggiungere sotto-variante.
-9. Allenare una variante con rami.
-10. Importare PGN breve.
-11. Importare PGN lungo.
-12. Eliminare variante.
-
-### 5.6 Responsive e qualita' visiva
-
-Priorita': medio-bassa, ma importante prima di uso reale.
-
-Manca:
-
-- controllo sovrapposizioni nei pannelli;
-- controllo dimensione scacchiera su viewport stretti;
-- accessibilita' tastiera oltre replay;
-- focus states coerenti;
-- labels/aria per controlli complessi;
-- affinamento visuale del drag and drop se durante l'uso emergono esigenze specifiche.
-
-### 5.7 Persistenza locale e migrazioni
-
-Priorita': media.
-
-Stato attuale:
-
-- in sviluppo il backend usa H2 su file, non H2 in memoria;
-- il path e' parametrizzabile con `H2_DB_PATH`;
-- il default e' `./data/scacchi` nella working directory del modulo backend;
-- `ddl-auto: update` mantiene lo schema aggiornato automaticamente durante lo sviluppo;
-- i dati sono quindi persistenti almeno su questa macchina di sviluppo;
-- i test restano isolati su H2 in memoria con `create-drop`.
-
-Manca:
-
-- sistema di migrazioni versionate tipo Flyway/Liquibase;
-- schema versionato e ripetibile per ambienti diversi dalla macchina locale;
-- decisione operativa sul passaggio H2 file -> PostgreSQL/Supabase, gia' previsto da planning e decisioni tecniche;
-- verifica compatibilita' PostgreSQL dei campi `text`, dei converter JSON e del modello `tree`;
-- strategia per migrare i dati locali H2 verso il database online, se si vuole conservarli;
-- strategia per evoluzione futura di `tree`;
-- eventuale export/import o backup del repertorio locale.
-
-### 5.8 Funzionalita' post-MVP ancora non implementate
-
-Come da planning, restano fuori:
-
-- spaced repetition;
-- statistiche/reportistica;
-- storico sessioni training;
-- storico mosse errate;
-- multi-utente;
-- autenticazione Supabase;
-- migrazione a Supabase PostgreSQL;
-- Docker/containerizzazione;
-- gestione repertori/aperture come aggregati;
-- import PGN robusto completo;
-- esportazione PGN;
-- ricerca/filtro varianti.
+### 5.9 Post-MVP ancora fuori
+Spaced repetition (P16) e statistiche (P15) sono pianificate; multiutente, Supabase Auth, Supabase PostgreSQL, Docker restano per la terza tornata.
 
 ---
 
 ## 6. Rischi aggiornati
 
-### R1/R12 - Rendering scacchiera
-
-Ridotto. La scelta custom funziona, supporta click e drag and drop, e i test passano. Resta solo da monitorare se in futuro serviranno interazioni piu' avanzate.
-
-### R2 - Rappresentazione mosse
-
-Parzialmente aperto. SAN resta il formato principale; il rapporto tra `tree` e `moves` e' stato formalizzato (`tree` fonte completa, `moves` mainline derivata). Resta da consolidare validazione e round-trip su casi ramificati.
-
-### R3 - Validazione mosse legali
-
-Ancora aperto lato backend. Il frontend e' buono, ma l'API accetta payload potenzialmente non validi.
-
-### R4 - Validazione training
-
-Gestita lato frontend, coerente con MVP. Con albero e rami multipli la logica e' piu' complessa ma implementata.
-
-### R5 - Import PGN
-
-Parzialmente aperto. Parsing base e salvataggio di `sourcePgn` lungo funzionano; PGN complessi con varianti annidate, commenti e NAG restano esclusi.
-
-### R7 - Sincronizzazione FE/BE
-
-Ridotto. Il contratto nel planning e' stato riallineato a `tree`, `MoveNode` e `PUT`; resta da mantenerlo aggiornato a ogni evoluzione del modello.
-
-### R11 - Modello ad albero
-
-Anticipato. Non e' piu' solo rischio futuro: ora e' parte del codice e va consolidato con test, documentazione e UX.
+| ID | Rischio | Stato |
+|----|---------|-------|
+| R1/R12 | Rendering scacchiera | Chiuso (board custom + chess.js; click/drag/promozione) |
+| R2 | Rappresentazione mosse | Gestito (SAN + `tree` JSON; mainline derivata) |
+| R3 | Validazione mosse legali (backend) | **Chiuso (P7)**: validazione server con chesslib |
+| R11 | Modello ad albero | **Consolidato (P8)**: vincolo ufficiale, round-trip, promozione, protezione delete |
+| R13 | Libreria scacchi Java | Chiuso: `chesslib` via JitPack (ADR 0004) |
+| R14 | Modello Studi / cancellazione | Aperto → P11 (delete a cascata deciso) |
+| R15 | Import PGN ramificato | Aperto → P13 |
+| R16 | Responsive scacchiera | Aperto (proposta UX da validare) |
+| R8/R9/R10 | Supabase DB / Auth / Docker | Rinviati (terza tornata) |
 
 ---
 
 ## 7. Prossimi passi consigliati
 
-Ordine consigliato:
-
-1. Formalizzare checklist manuale end-to-end.
-2. Testare da browser il flusso completo: crea -> dettaglio -> training -> modifica -> ramo -> import -> delete.
-3. Consolidare validazione e round-trip del modello ad albero.
-4. Decidere se il prossimo prototipo deve consolidare albero/PGN o passare a funzioni post-MVP.
+1. **P10** — formalizzare suite test automatici + checklist E2E (chiude la fase A · consolidamento).
+2. **P11-P12** — introdurre gli **Studi** (backend con cascata + UI).
+3. **P13** — import PGN avanzato (varianti annidate).
+4. Proseguire con apprendimento (P14-P16) e infine **Stockfish (P17)**.
+5. Quando opportuno, sottoporre all'utente le **proposte grafiche** (sezione 17 del planning), a partire dal fix responsive della scacchiera.
 
 ---
 
 ## 8. Stato finale
 
-La webapp ha superato la fase di prototipi lineari ed e' gia' entrata in un primo MVP esteso:
-
-- si possono visualizzare varianti;
-- si possono allenare;
-- si possono creare a mano;
-- si possono importare da PGN semplice;
-- si possono modificare;
-- si possono rappresentare sotto-varianti.
-
-Prima di costruire funzionalita' nuove, conviene fare una breve fase di consolidamento tecnico:
-
-- validare e testare meglio il modello ad albero;
-- rafforzare test e checklist manuali sui flussi completi.
+La webapp ha completato la Parte 1 ed è entrata nella **fase A di consolidamento della Parte 2**: il backend ora valida la legalità delle mosse, il modello ad albero è consolidato (promozione, protezione, round-trip) e le interazioni distruttive sono protette (conferme, toast, guard). Manca solo **P10** per chiudere il consolidamento prima di passare all'organizzazione in **studi**.
