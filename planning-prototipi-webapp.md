@@ -50,7 +50,7 @@ Sequenza ordinata. Ogni prototipo è un passo piccolo che abilita il successivo.
 | 4 | **Persistenza varianti (CRUD)** | Creare/elencare/cancellare varianti su H2 | Varianti non più hardcoded, gestione dati reale |
 | 5 | **Inserimento variante mossa-per-mossa** | Creare una variante muovendo sulla scacchiera | Input manuale delle aperture |
 | 6 | **Import PGN base** | Creare una variante da una stringa PGN | Secondo metodo di input previsto dal progetto |
-| 7+ | **Consolidamento + Studi + Apprendimento** | Validazione albero, studi/gruppi, statistiche, spaced repetition | Pianificati nella **Parte 2** (sezioni 11-17) |
+| 7+ | **Consolidamento + Studi + Apprendimento + Motore** | Validazione albero, studi/gruppi, statistiche, spaced repetition, Stockfish | Pianificati nella **Parte 2** (sezioni 11-18) |
 
 **Dettaglio per prototipo:**
 
@@ -715,17 +715,17 @@ Logica di fondo: arrivare a *"i miei repertori sono organizzati in studi, ogni m
 | 8 | **Consolidamento del modello ad albero** | A · Consolidamento | Round-trip `tree`, "promuovi a mainline", protezione sottoalberi | Albero affidabile e usabile |
 | 9 | **Robustezza interazioni e azioni distruttive** | A · Consolidamento | Conferme, guard "modifiche non salvate", feedback errori | Niente perdite dati accidentali |
 | 10 | **Suite test automatici + checklist E2E** | A · Consolidamento | Test su flussi completi, checklist ripetibile | Regressioni sotto controllo |
-| 11 | **Modello Studi (backend)** | B · Studi | Entità `Study` + relazione 1-N con `Variant` + CRUD | Raggruppamento varianti |
-| 12 | **UI Studi** | B · Studi | Lista/dettaglio studio; crea/elimina variante dentro lo studio | Organizzazione tipo Lichess |
-| 13 | **Assegnazione e migrazione varianti** | B · Studi | Sposta varianti tra studi; studio di default per le esistenti | Repertori ordinati |
-| 14 | **Import PGN avanzato** | C · PGN | Varianti annidate → `tree`; commenti/NAG di base | Import realistico |
-| 15 | **Export PGN** | C · PGN | Esporta mainline + varianti in PGN | Portabilità del repertorio |
-| 16 | **Persistenza sessioni di allenamento** | D · Progresso | Salva `TrainingSession`/`TrainingMove` | Base dati per stats e ripetizione |
-| 17 | **Statistiche e reportistica** | D · Progresso | Report errori/completamenti per variante e studio | Feedback sull'allenamento |
-| 18 | **Spaced repetition** | D · Progresso | Scheduling delle ripetizioni per variante | Memorizzazione efficace |
-| 19 | **Integrazione Stockfish** | E · Motore | Valutazione, mossa migliore, rilevamento errori | Analisi e aiuto allo studio |
+| 11 | **Modello Studi (backend)** | B · Studi | Entità `Study` + relazione 1-N con `Variant` + CRUD + **cancellazione a cascata** + studio di default | Raggruppamento varianti |
+| 12 | **UI Studi** | B · Studi | **Crea/elimina studio**; crea/elimina variante dentro lo studio | Organizzazione tipo Lichess |
+| 13 | **Import PGN avanzato** | C · PGN | Varianti annidate → `tree`; commenti/NAG di base | Import realistico |
+| 14 | **Persistenza sessioni di allenamento** | D · Progresso | Salva `TrainingSession`/`TrainingMove` | Base dati per stats e ripetizione |
+| 15 | **Statistiche e reportistica** | D · Progresso | Report errori/completamenti per variante e studio | Feedback sull'allenamento |
+| 16 | **Spaced repetition** | D · Progresso | Scheduling delle ripetizioni per variante | Memorizzazione efficace |
+| 17 | **Integrazione Stockfish** | E · Motore | Toggle motore + barra valutazione su dettaglio/editor; gioca vs computer in nuova tab | Analisi e aiuto allo studio |
 
-Ordine consigliato di esecuzione: **7 → 8 → 9 → 10** (consolidamento), poi **11 → 12 → 13** (studi), poi **14 → 15** (PGN), poi **16 → 17 → 18** (apprendimento), infine **19** (motore Stockfish) come **ultimo rilascio pianificato** della Parte 2. Le fasi C e D sono indipendenti tra loro e possono essere riordinate in base alle priorità del momento; la Fase E resta l'ultima.
+Ordine consigliato di esecuzione: **7 → 8 → 9 → 10** (consolidamento), poi **11 → 12** (studi), poi **13** (import PGN), poi **14 → 15 → 16** (apprendimento), infine **17** (motore Stockfish) come **ultimo rilascio pianificato** della Parte 2. Le fasi C e D sono indipendenti tra loro e possono essere riordinate in base alle priorità del momento; la Fase E resta l'ultima.
+
+> **Fuori dai rilasci pianificati** (vedi sezione 18 · TODO da validare): l'**export PGN** e lo **spostamento di varianti tra studi** sono stati rimossi dalla roadmap e tenuti come note da validare quando emergerà il bisogno reale.
 
 ---
 
@@ -808,7 +808,7 @@ Posso creare rami multipli dall'editor, salvare, riaprire e ritrovarli identici;
 Albero stabile, round-trip garantito da test, gestione rami esplicita e protetta.
 
 #### Cosa non fare ancora
-Niente import/export PGN dei rami (arriva in P14/P15); niente commenti/NAG.
+Niente import PGN dei rami (arriva in P13); l'export PGN è rinviato (sezione 18 · TODO da validare); niente commenti/NAG.
 
 ---
 
@@ -885,10 +885,10 @@ Introdurre l'entità **Study** che raggruppa più varianti, con CRUD completo, m
 
 #### Backend workstream
 - Entità `Study` (sezione 14): `id`, `name`, `description?`, `color?` (WHITE/BLACK/MIXED, opzionale), `createdAt`.
-- Relazione **1-N** `Study → Variant`: su `Variant` si aggiunge `studyId` (FK **nullable**) e `orderIndex` (posizione nello studio).
+- Relazione **1-N** `Study → Variant`: su `Variant` si aggiunge `studyId` (FK **nullable**, per eventuali varianti legacy create fuori da uno studio).
 - `StudyRepository`, `StudyService`, `StudyController`: `GET` lista/dettaglio, `POST`, `PUT`, `DELETE`.
-- Politica di cancellazione studio (R14): scelta consigliata **non distruttiva** — eliminando uno studio le sue varianti tornano "senza studio" (`studyId = null`), non vengono cancellate. (Alternativa cascade da decidere.)
-- Seed: uno studio di default "Repertorio" a cui agganciare le varianti esistenti.
+- **Politica di cancellazione studio (R14): cancellazione a cascata.** Eliminando uno studio si eliminano **automaticamente anche le varianti associate**; le varianti **non** vengono spostate altrove.
+- **Studio di default deployato in questo prototipo:** il seed crea uno studio di default "Repertorio" e vi **aggancia le varianti esistenti** (questa è la migrazione delle varianti preesistenti — non c'è un prototipo separato dedicato).
 
 #### Frontend workstream
 - Modello TS `Study`; `StudyService` con i metodi CRUD.
@@ -898,89 +898,60 @@ Introdurre l'entità **Study** che raggruppa più varianti, con CRUD completo, m
 - Nuovi endpoint `/api/studies` (sezione 14). `VariantDto` arricchito con `studyId` (nullable).
 
 #### Validazione del prototipo
-1. `GET /api/studies` → studio di default con le varianti seed.
+1. `GET /api/studies` → studio di default con le varianti seed agganciate.
 2. `POST` nuovo studio → `201`.
-3. `DELETE` studio non vuoto → le varianti diventano "senza studio", non spariscono.
-4. Test backend su CRUD studi e relazione.
+3. `DELETE` di uno studio non vuoto → lo studio **e tutte le sue varianti** vengono eliminati (cascata); nessuna variante resta orfana o spostata.
+4. Test backend su CRUD studi, relazione e cancellazione a cascata.
 
 #### Criteri di completamento
-Gli studi vivono in DB, il CRUD funziona, nessuna variante esistente è persa.
+Gli studi vivono in DB, il CRUD funziona, lo studio di default raccoglie le varianti esistenti, la delete cancella a cascata.
 
 #### Cosa non fare ancora
-Niente UI studi (P12); niente condivisione/esportazione studi (terza tornata).
+Niente UI studi (P12); niente **spostamento di varianti tra studi** (sezione 18 · TODO da validare); niente condivisione/esportazione studi (terza tornata).
 
 ---
 
 ### Prototipo 12 - UI Studi
 
 #### Obiettivo
-Portare gli studi nel frontend: navigare gli studi, aprire uno studio e gestirne le varianti (crea/elimina) dall'interno, sul modello degli *studies* di Lichess.
+Portare gli studi nel frontend: navigare gli studi, **crearne** ed **eliminarne**, aprire uno studio e gestirne le varianti (crea/elimina) dall'interno, sul modello degli *studies* di Lichess.
 
 #### Risultato funzionante atteso
-La home mostra gli **studi**; aprendo uno studio vedo le sue varianti (i "capitoli"); dentro lo studio posso **creare una nuova variante** o **eliminarne** una esistente.
+La home mostra gli **studi** e permette di **creare un nuovo studio** o **eliminarne** uno; aprendo uno studio vedo le sue varianti (i "capitoli"); dentro lo studio posso **creare una nuova variante** o **eliminarne** una esistente.
 
 #### Backend workstream
 - `POST /api/studies/{id}/variants` (crea variante già agganciata allo studio) — oppure riuso di `POST /api/variants` con `studyId` nel body. Scelta consigliata: endpoint nidificato per chiarezza.
+- `POST`/`DELETE /api/studies/{id}` già esistenti (P11), riusati dalla UI.
 - `DELETE /api/variants/{id}` già esistente (riuso).
 
 #### Frontend workstream
-- Nuova `StudyList` (home a studi) e `StudyDetail` (intestazione studio + lista varianti/capitoli + azioni).
+- Nuova `StudyList` (home a studi) con azione **"Nuovo studio"** ed **"Elimina studio"**, e `StudyDetail` (intestazione studio + lista varianti/capitoli + azioni).
+- **Crea studio:** form/modale con nome (e descrizione/colore opzionali).
+- **Elimina studio:** azione con **conferma esplicita** che avvisa che verranno eliminate **anche tutte le varianti dello studio** (cascata da P11).
 - Da dentro lo studio: pulsante "Nuova variante" (apre l'editor pre-agganciato allo studio) e "Importa PGN" nello studio; azione "Elimina" per ogni variante.
 - Aggiornare routing: `/` → studi, `/studies/:id` → dettaglio studio; le rotte variante restano (`/variants/:id`, `/edit`, `/train`).
 - Breadcrumb Studio → Variante per orientarsi.
 
 #### Integration workstream
-- Endpoint studi + creazione variante nello studio.
+- Endpoint studi (CRUD) + creazione variante nello studio.
 
 #### Validazione del prototipo
 1. Apro la home → vedo gli studi.
-2. Apro uno studio → vedo le sue varianti.
-3. Creo una variante dentro lo studio → compare nello studio.
-4. Elimino una variante dello studio → conferma (da P9) → rimossa.
+2. **Creo un nuovo studio** → compare nella home.
+3. Apro uno studio → vedo le sue varianti.
+4. Creo una variante dentro lo studio → compare nello studio.
+5. Elimino una variante dello studio → conferma (da P9) → rimossa.
+6. **Elimino uno studio** → conferma (avviso cascata) → spariscono studio **e** sue varianti.
 
 #### Criteri di completamento
-Gli studi sono navigabili e si gestiscono le varianti dall'interno, end-to-end.
+Gli studi si creano/eliminano e si gestiscono le varianti dall'interno, end-to-end; la delete dello studio rispetta la cascata.
 
 #### Cosa non fare ancora
-Niente drag-and-drop di riordino avanzato (può arrivare in P13); niente condivisione.
+Niente **spostamento di varianti tra studi** (sezione 18 · TODO da validare); niente riordino avanzato; niente condivisione.
 
 ---
 
-### Prototipo 13 - Assegnazione e migrazione varianti
-
-#### Obiettivo
-Permettere di spostare varianti tra studi e riordinarle, e garantire che le varianti preesistenti finiscano in uno studio sensato.
-
-#### Risultato funzionante atteso
-Posso spostare una variante da uno studio a un altro; posso riordinare le varianti dentro uno studio; le varianti "senza studio" sono raggiungibili e assegnabili.
-
-#### Backend workstream
-- `PUT /api/variants/{id}/study` (o campo `studyId` in `PUT /api/variants/{id}`) per riassegnare lo studio.
-- Gestione `orderIndex` per il riordino dentro lo studio.
-- Migrazione dati seed/esistenti verso lo studio di default (idempotente).
-
-#### Frontend workstream
-- UI "sposta in studio" (select) dal dettaglio/lista variante.
-- Riordino varianti dentro lo studio (frecce su/giù o drag-and-drop — riusa il pattern drag già presente sulla board come esperienza, ma su lista).
-- Sezione "Senza studio" per le varianti orfane.
-
-#### Integration workstream
-- Endpoint riassegnazione/riordino.
-
-#### Validazione del prototipo
-1. Sposto una variante in un altro studio → si aggiorna in entrambi.
-2. Riordino le varianti di uno studio → ordine persistito.
-3. Una variante orfana è visibile e assegnabile.
-
-#### Criteri di completamento
-Le varianti si organizzano liberamente tra e dentro gli studi, con ordine persistito.
-
-#### Cosa non fare ancora
-Niente sotto-studi/cartelle annidate; niente tag trasversali (idee per la terza tornata).
-
----
-
-### Prototipo 14 - Import PGN avanzato
+### Prototipo 13 - Import PGN avanzato
 
 #### Obiettivo
 Superare l'import "solo linea principale": leggere PGN con **varianti annidate** e mapparle sull'albero `tree`; gestire commenti/NAG di base.
@@ -1013,37 +984,7 @@ Niente PGN multi-partita in un file; niente import di file `.pgn` (solo incolla 
 
 ---
 
-### Prototipo 15 - Export PGN
-
-#### Obiettivo
-Esportare una variante (mainline + sotto-varianti) come stringa PGN standard, per portabilità e backup.
-
-#### Risultato funzionante atteso
-Da una variante/studio ottengo un PGN copiabile che, reimportato, ricostruisce lo stesso albero (round-trip P14↔P15).
-
-#### Backend workstream
-- (Opzionale) endpoint export server-side; consigliato lato frontend per riuso di `chess.js`.
-
-#### Frontend workstream
-- Generazione PGN dall'albero (`tree` → PGN con varianti tra parentesi).
-- Pulsante "Esporta PGN" (copia negli appunti / mostra in textarea) su variante e, opzionale, su intero studio (multi-partita).
-
-#### Integration workstream
-- Nessun nuovo endpoint se lato frontend.
-
-#### Validazione del prototipo
-1. Esporto una variante con rami → PGN valido.
-2. Reimporto il PGN esportato (P14) → stesso albero.
-
-#### Criteri di completamento
-Round-trip import/export verificato su varianti ramificate.
-
-#### Cosa non fare ancora
-Niente esportazione in formati non-PGN; niente download file (solo copia/testo) finché non serve.
-
----
-
-### Prototipo 16 - Persistenza sessioni di allenamento
+### Prototipo 14 - Persistenza sessioni di allenamento
 
 #### Obiettivo
 Salvare l'esito degli allenamenti, creando la base dati per statistiche e ripetizione (entità già previste in sezione 7).
@@ -1057,7 +998,9 @@ Completando un training, l'app registra la sessione (variante, esito, numero err
 
 #### Frontend workstream
 - Al termine del training, inviare la sessione al backend.
-- Stato/loading minimo; nessuna UI statistiche ancora (P17).
+- Stato/loading minimo; nessuna UI statistiche ancora (P15).
+
+> **Vincolo della modalità allenamento (invariante per tutta la Parte 2):** l'allenamento serve **solo a memorizzare le mosse**. In questa modalità **non** deve comparire la barra di valutazione e **non** deve esserci la possibilità di giocare la posizione contro il computer. Stockfish (P17) **non è mai disponibile** durante le sessioni di allenamento.
 
 #### Integration workstream
 - Nuovi endpoint `training-sessions` (sezione 14).
@@ -1070,14 +1013,14 @@ Completando un training, l'app registra la sessione (variante, esito, numero err
 Le sessioni di allenamento sono persistite e rileggibili.
 
 #### Cosa non fare ancora
-Niente aggregazioni/grafici (P17); niente scheduling ripetizioni (P18).
+Niente aggregazioni/grafici (P15); niente scheduling ripetizioni (P16); nessun aiuto del motore in allenamento.
 
 ---
 
-### Prototipo 17 - Statistiche e reportistica
+### Prototipo 15 - Statistiche e reportistica
 
 #### Obiettivo
-Mostrare all'utente come sta andando l'allenamento, per variante e per studio, derivando dai dati di P16.
+Mostrare all'utente come sta andando l'allenamento, per variante e per studio, derivando dai dati di P14.
 
 #### Risultato funzionante atteso
 Una vista con: completamenti, percentuale di errore, mosse più sbagliate, ultima esecuzione — per variante e aggregato per studio.
@@ -1104,7 +1047,7 @@ Niente analisi qualitativa con motore; niente confronto tra utenti (single-user)
 
 ---
 
-### Prototipo 18 - Spaced repetition
+### Prototipo 16 - Spaced repetition
 
 #### Obiettivo
 Programmare le ripetizioni delle varianti nel tempo, per favorire la memorizzazione (obiettivo storico del progetto, preanalisi).
@@ -1137,41 +1080,51 @@ Niente notifiche push/email; niente sincronizzazione multi-dispositivo (richiede
 
 ---
 
-### Prototipo 19 - Integrazione Stockfish
+### Prototipo 17 - Integrazione Stockfish
 
-> **Ultimo rilascio pianificato della Parte 2.** Aggiunge il motore di analisi come aiuto allo studio, non come avversario.
+> **Ultimo rilascio pianificato della Parte 2.** Aggiunge il motore come aiuto allo studio durante l'inserimento/navigazione delle varianti, **mai** in allenamento.
 
 #### Obiettivo
-Integrare **Stockfish** per fornire valutazione della posizione, mossa migliore e (opzionale) rilevamento degli errori grossolani durante l'allenamento.
+Integrare **Stockfish** con un perimetro **strettamente limitato** alle sole funzionalità seguenti:
+
+1. **attivare/disattivare il motore** sulla posizione corrente durante l'**inserimento** o la **navigazione** delle varianti;
+2. **mostrare/nascondere la barra di valutazione**;
+3. **giocare la posizione corrente contro il computer aprendo una seconda tab del browser**, così da non perdere nella prima tab la situazione corrente.
+
+Nessun'altra integrazione del motore è prevista in questa tornata.
 
 #### Risultato funzionante atteso
-Nel dettaglio/training compaiono una **valutazione** (barra e/o centipawn) e, su richiesta, la **mossa migliore** suggerita dal motore. Opzionale: durante il training, segnalazione se la mossa giocata è un errore grave rispetto al motore.
+Nel **dettaglio/editor** di una variante posso accendere/spegnere Stockfish sulla posizione corrente, mostrare/nascondere la barra di valutazione, e lanciare "gioca contro il computer" che apre una **nuova tab** con la posizione corrente, lasciando intatta la tab originale.
 
 #### Backend workstream
-- Decisione (R18): eseguire Stockfish **client-side via WebAssembly** (`stockfish.wasm` in un Web Worker) — **consigliato**: nessuna dipendenza server, coerente col principio "regole/motore lato client" e con la separazione FE/BE. Alternativa: processo Stockfish **lato backend** con endpoint `POST /api/analysis` (utile solo se in futuro si vorrà condividere l'analisi o alleggerire i client deboli).
-- Se client-side: nessun lavoro backend obbligatorio. Se backend: gestione del processo UCI, profondità/timeout, mappatura richiesta/risposta.
+- Decisione (R18): eseguire Stockfish **client-side via WebAssembly** (`stockfish.wasm` in un Web Worker) — **consigliato**: nessuna dipendenza server, coerente col principio "regole/motore lato client" e con la separazione FE/BE.
+- **Nessun lavoro backend obbligatorio** (motore interamente client-side).
 
 #### Frontend workstream
-- Caricamento di `stockfish.wasm` in un **Web Worker**; wrapper minimale del protocollo **UCI** (`position fen ...`, `go depth/movetime`, parsing di `bestmove` e `info score cp/mate`).
-- **Barra di valutazione** e/o testo in centipawn nel dettaglio/training.
-- Pulsante "**mossa migliore**" on-demand (nessun calcolo automatico continuo, per non rallentare l'interfaccia).
-- (Opzionale) in training: confronto della mossa utente con la valutazione del motore per evidenziare i **blunder**.
+- Caricamento di `stockfish.wasm` in un **Web Worker**; wrapper minimale del protocollo **UCI** (`position fen ...`, `go depth/movetime`, parsing di `info score cp/mate`).
+- **Toggle "Motore on/off"** sulla posizione corrente in **dettaglio/editor** (non in allenamento).
+- **Toggle "Barra di valutazione"** (mostra/nascondi).
+- Azione **"Gioca contro il computer"**: apre una **seconda tab** (es. una rotta dedicata `/play?fen=...`) inizializzata con la FEN corrente; la tab originale resta invariata.
 
 #### Integration workstream
-- Client-side: **nessun endpoint nuovo**. Attenzione: la versione **multi-thread** di Stockfish WASM richiede `SharedArrayBuffer` e quindi gli header di **cross-origin isolation** (COOP/COEP) sul dev server e in produzione; se non configurabili, usare la versione **single-thread** (più lenta ma senza vincoli sugli header).
-- Se backend: contratto `POST /api/analysis` `{ fen, depth? }` → `{ bestMove, scoreCp?, mate? }`.
+- Client-side: **nessun endpoint nuovo**. Attenzione: la versione **multi-thread** di Stockfish WASM richiede `SharedArrayBuffer` e quindi gli header di **cross-origin isolation** (COOP/COEP); se non configurabili, usare la versione **single-thread** (più lenta ma senza vincoli sugli header).
+- La "seconda tab" passa lo stato via URL (FEN), così non serve stato condiviso tra tab.
+
+#### Vincolo: niente motore in allenamento
+- Stockfish **non deve mai** essere disponibile nelle **sessioni di allenamento**: niente toggle motore, **niente barra di valutazione**, **niente "gioca contro il computer"** in quella modalità (coerente col vincolo di P14).
 
 #### Validazione del prototipo
-1. Apro una posizione → la barra mostra una valutazione plausibile.
-2. Chiedo la mossa migliore → il motore risponde entro pochi secondi.
-3. (Opzionale) Gioco un errore grave in training → segnalazione.
-4. La separazione `backend/` ↔ `frontend/` resta invariata.
+1. In dettaglio/editor accendo il motore → compare la valutazione sulla posizione corrente.
+2. Mostro/nascondo la barra di valutazione → funziona.
+3. "Gioca contro il computer" → si apre una **nuova tab** con la posizione corrente; la prima tab resta com'era.
+4. Avvio un allenamento → **nessuna** funzione del motore è presente.
+5. La separazione `backend/` ↔ `frontend/` resta invariata.
 
 #### Criteri di completamento
-Il motore fornisce valutazione e mossa migliore in locale, senza rompere la separazione FE/BE.
+Le tre funzioni previste (toggle motore, barra valutazione, gioca-vs-computer in nuova tab) funzionano in dettaglio/editor; in allenamento il motore è del tutto assente.
 
 #### Cosa non fare ancora
-Niente *opening explorer*/database online; niente analisi multi-PV pesante di default; nessuna dipendenza dal cloud.
+Niente suggerimento "mossa migliore", niente rilevamento blunder, niente *opening explorer*/database online, niente analisi multi-PV. **Eventuali ulteriori integrazioni Stockfish saranno valutate dopo questa tornata**, quando l'app sarà stata usata con costanza e saranno emerse necessità reali.
 
 ---
 
@@ -1186,13 +1139,14 @@ Niente *opening explorer*/database online; niente analisi multi-PV pesante di de
 | GET | `/api/studies/{id}` | Dettaglio studio + sue varianti | P11 |
 | POST | `/api/studies` | Crea studio | P11 |
 | PUT | `/api/studies/{id}` | Aggiorna studio (nome/descrizione) | P11 |
-| DELETE | `/api/studies/{id}` | Elimina studio (varianti → "senza studio") | P11 |
+| DELETE | `/api/studies/{id}` | Elimina studio **e le sue varianti (cascata)** | P11 |
 | POST | `/api/studies/{id}/variants` | Crea variante dentro lo studio | P12 |
-| PUT | `/api/variants/{id}/study` | Riassegna la variante a un altro studio | P13 |
-| POST | `/api/training-sessions` | Registra una sessione di allenamento conclusa | P16 |
-| GET | `/api/training-sessions` | Storico sessioni (filtri per variante/studio) | P16 |
-| GET | `/api/stats/...` | Aggregazioni statistiche (variante/studio) | P17 |
-| GET | `/api/reviews/due` | Varianti dovute per spaced repetition | P18 |
+| POST | `/api/training-sessions` | Registra una sessione di allenamento conclusa | P14 |
+| GET | `/api/training-sessions` | Storico sessioni (filtri per variante/studio) | P14 |
+| GET | `/api/stats/...` | Aggregazioni statistiche (variante/studio) | P15 |
+| GET | `/api/reviews/due` | Varianti dovute per spaced repetition | P16 |
+
+> Lo **spostamento di varianti tra studi** (`PUT /api/variants/{id}/study`) è stato **rimosso** dai rilasci: vedi sezione 18 · TODO da validare. Stockfish (P17) è client-side e non introduce endpoint.
 
 ### Nuovi DTO
 
@@ -1215,8 +1169,7 @@ color?: "WHITE" | "BLACK" | "MIXED"
 
 **`VariantDto` — campi aggiunti**
 ```
-studyId?: number | null               // studio di appartenenza (null = senza studio)
-orderIndex?: number                   // posizione dentro lo studio
+studyId?: number | null               // studio di appartenenza (null solo per varianti legacy senza studio)
 ```
 
 **Errore di validazione (P7)** — corpo del `400`
@@ -1239,13 +1192,13 @@ Study {
 
 **Entità `Variant`** — campi aggiunti
 ```
-studyId: Long (FK -> Study, nullable)   // null = senza studio
-orderIndex: int (default 0)             // ordinamento dentro lo studio
+studyId: Long (FK -> Study, nullable)   // null solo per varianti legacy senza studio
 ```
+> La relazione `Study → Variant` è configurata con **cancellazione a cascata**: eliminando lo `Study` si eliminano le sue `Variant` (es. `ON DELETE CASCADE` / `orphanRemoval`). Le varianti **non** vengono riassegnate.
 
-**Entità `TrainingSession` / `TrainingMove`** (P16, già abbozzate in sezione 7) e **`ReviewSchedule`** (P18, sezione 7): si attivano solo nelle rispettive fasi.
+**Entità `TrainingSession` / `TrainingMove`** (P14, già abbozzate in sezione 7) e **`ReviewSchedule`** (P16, sezione 7): si attivano solo nelle rispettive fasi.
 
-> Principio invariato (sezione 7): aggiungere colonne nullable è economico. `studyId` nullable garantisce la retrocompatibilità; le varianti esistenti restano valide e vengono assegnate a uno studio di default dal seed.
+> Principio invariato (sezione 7): aggiungere colonne nullable è economico. `studyId` garantisce la retrocompatibilità; al deploy del modello Studi (P11) le varianti esistenti vengono agganciate a uno studio di default dal seed.
 
 ---
 
@@ -1254,11 +1207,11 @@ orderIndex: int (default 0)             // ordinamento dentro lo studio
 | ID | Rischio | Descrizione | Impatto | Quando | Decisione minima |
 |----|---------|-------------|---------|--------|------------------|
 | R13 | **Validazione scacchistica lato backend** | Servono regole scacchistiche in Java per validare albero/mainline | Medio | P7 | Valutare libreria Java (es. `chesslib`); alternativa: legalità solo client e API "best effort". Consigliato: libreria. |
-| R14 | **Modello Studi e cancellazione** | Cardinalità Study↔Variant, cosa fare alla delete dello studio, migrazione esistenti | Medio | P11 | 1-N con `studyId` nullable; delete studio **non** cancella le varianti (orfane); seed studio di default. |
-| R15 | **Import/Export PGN ramificato** | Mapping bidirezionale `tree` ↔ PGN con varianti annidate, commenti, NAG | Medio | P14/P15 | Parsing/serializzazione lato frontend con `chess.js`; commenti/NAG di base, resto rinviato. |
+| R14 | **Modello Studi e cancellazione** | Cardinalità Study↔Variant; cosa fare alla delete dello studio; migrazione esistenti | Medio | P11 | 1-N con `studyId`; **delete studio cancella a cascata le sue varianti** (non spostate); studio di default seedato in P11 con aggancio delle varianti esistenti. |
+| R15 | **Import PGN ramificato** | Mapping PGN → `tree` con varianti annidate, commenti, NAG | Medio | P13 | Parsing lato frontend con `chess.js`; commenti/NAG di base, resto rinviato. (L'export PGN è fuori dai rilasci: sezione 18.) |
 | R16 | **Scalabilità/responsive scacchiera** | La board resta 720px tra ~800-1280px e il pannello finisce sotto la piega (vedi sezione 16) | Medio (UX) | Trasversale | La correzione è una **proposta grafica da validare** (sezione 16), non un rilascio finché l'utente non approva. |
-| R17 | **Persistenza dati di apprendimento** | Sessioni/stats/scheduling fanno crescere lo schema H2 locale | Basso/Medio | P16-P18 | Tabelle dedicate, `userId` nullable inattivo; migrazioni versionate rinviate alla terza tornata. |
-| R18 | **Integrazione Stockfish** | Esecuzione del motore (WASM in Web Worker vs processo backend), threading/`SharedArrayBuffer` (header COOP/COEP), performance su client deboli | Medio | P19 | Consigliato Stockfish **WASM client-side** in Web Worker; usare la versione **single-thread** se gli header di cross-origin isolation non sono disponibili; backend solo se serve condivisione dell'analisi. |
+| R17 | **Persistenza dati di apprendimento** | Sessioni/stats/scheduling fanno crescere lo schema H2 locale | Basso/Medio | P14-P16 | Tabelle dedicate, `userId` nullable inattivo; migrazioni versionate rinviate alla terza tornata. |
+| R18 | **Integrazione Stockfish** | Esecuzione del motore (WASM in Web Worker), threading/`SharedArrayBuffer` (header COOP/COEP), performance su client deboli | Medio | P17 | Stockfish **WASM client-side** in Web Worker; perimetro limitato (toggle motore, barra valutazione, gioca-vs-computer in nuova tab); **mai in allenamento**; versione **single-thread** se gli header cross-origin non sono disponibili. |
 
 > I rischi R8/R9/R10 (Supabase DB, Auth, Docker) restano **aperti e rinviati** alla terza tornata per scelta esplicita.
 
@@ -1267,7 +1220,7 @@ orderIndex: int (default 0)             // ordinamento dentro lo studio
 ## 16. Validazione UX e proposte grafiche — DA VALIDARE, fuori dai rilasci
 
 > Esito della validazione dell'apparenza grafica eseguita sul frontend in esecuzione (home, dettaglio, training; desktop 1400px, laptop 1024px, mobile 375px; nessun errore in console).
-> **Queste proposte NON sono inserite nei prototipi 7-18:** vanno approvate dall'utente prima di diventare task. Sono ordinate per priorità.
+> **Queste proposte NON sono inserite nei prototipi 7-17:** vanno approvate dall'utente prima di diventare task. Sono ordinate per priorità.
 
 ### Cosa funziona già bene
 - Palette pergamena/legno coerente col riferimento; scacchiera con cornice mogano e coordinate fedele.
@@ -1281,7 +1234,7 @@ orderIndex: int (default 0)             // ordinamento dentro lo studio
 
 2. **[MEDIA] Composizione e spazi vuoti su schermi larghi.** *Problema:* il blocco dettaglio/training è ancorato in alto a sinistra, con ampie aree vuote a destra e sotto. *Proposta:* centrare orizzontalmente (e bilanciare verticalmente) il contenuto; valutare un cap della board (~560-640px) per equilibrarla col pannello, o arricchire il pannello (commento mossa corrente, mini-statistiche della variante).
 
-3. **[MEDIA] Densità e gerarchia della lista.** *Problema:* lista a colonna singola, `max-width 720px`, percepita sparsa; poca gerarchia oltre nome+badge. *Proposta:* griglia di card responsive con anteprima delle prime mosse; (si integra naturalmente con il raggruppamento per **studio** dei prototipi P11-P13); badge colore con contrasto verificato.
+3. **[MEDIA] Densità e gerarchia della lista.** *Problema:* lista a colonna singola, `max-width 720px`, percepita sparsa; poca gerarchia oltre nome+badge. *Proposta:* griglia di card responsive con anteprima delle prime mosse; (si integra naturalmente con il raggruppamento per **studio** dei prototipi P11-P12); badge colore con contrasto verificato.
 
 4. **[MEDIA] Accessibilità e focus da tastiera.** *Proposta:* stati `:focus-visible` evidenti su move-buttons e controlli replay; verifica contrasto del testo "muted" su pergamena (target WCAG AA); `aria-live` per il feedback del training (mossa giusta/sbagliata); etichette aria sui controlli complessi.
 
@@ -1317,4 +1270,13 @@ orderIndex: int (default 0)             // ordinamento dentro lo studio
 
 ---
 
-*Fine del planning. Documento di sola pianificazione: nessun codice applicativo incluso. I file `preanalisi-progetto.md` e `CLAUDE.md` restano la fonte autorevole per obiettivo, stack e versioni. La Parte 2 (sezioni 11-17) estende la Parte 1 senza sostituirla; le proposte grafiche della sezione 16 restano subordinate alla validazione dell'utente.*
+## 18. TODO da validare (fuori dai rilasci pianificati)
+
+> Funzionalità **rimosse dalla roadmap della Parte 2** e tenute solo come nota: non è chiaro se serviranno davvero. Vanno **validate dall'utente** prima di rientrare in un eventuale rilascio. Non sono task attivi.
+
+- **Export PGN** (di una variante e/o di un intero studio). *Motivo del rinvio:* non è una feature rilevante al momento. *Se servirà:* generazione lato frontend dell'albero `tree` → PGN con varianti tra parentesi, con verifica di round-trip rispetto all'import avanzato (P13).
+- **Spostamento di varianti tra studi** (riassegnazione `studyId`, es. `PUT /api/variants/{id}/study`, + eventuale riordino dentro lo studio). *Motivo del rinvio:* incertezza sull'effettiva utilità. *Se servirà:* UI "sposta in studio" dal dettaglio/lista variante e relativo endpoint; valutare anche il riordino (`orderIndex`).
+
+---
+
+*Fine del planning. Documento di sola pianificazione: nessun codice applicativo incluso. I file `preanalisi-progetto.md` e `CLAUDE.md` restano la fonte autorevole per obiettivo, stack e versioni. La Parte 2 (sezioni 11-18) estende la Parte 1 senza sostituirla; le proposte grafiche della sezione 16 e i TODO della sezione 18 restano subordinati alla validazione dell'utente.*
