@@ -50,7 +50,7 @@ Sequenza ordinata. Ogni prototipo è un passo piccolo che abilita il successivo.
 | 4 | **Persistenza varianti (CRUD)** | Creare/elencare/cancellare varianti su H2 | Varianti non più hardcoded, gestione dati reale |
 | 5 | **Inserimento variante mossa-per-mossa** | Creare una variante muovendo sulla scacchiera | Input manuale delle aperture |
 | 6 | **Import PGN base** | Creare una variante da una stringa PGN | Secondo metodo di input previsto dal progetto |
-| 7+ | **Consolidamento + Studi + Apprendimento + Motore** | Validazione albero, studi/gruppi, statistiche, spaced repetition, Stockfish | Pianificati nella **Parte 2** (sezioni 11-18) |
+| 7+ | **Consolidamento + Studi + Apprendimento + Motore** | Validazione albero, studi/gruppi, statistiche, spaced repetition, Stockfish | Pianificati nella **Parte 2** (sezioni 11-19) |
 
 **Dettaglio per prototipo:**
 
@@ -685,7 +685,7 @@ Bozze sintetiche, da espandere al momento dell'uso.
 
 > Seconda tornata di pianificazione. Riprende lo stile e i principi della Parte 1 (prototipi piccoli, verificabili, validati a mano).
 > Fonti: `stato-avanzamento-lavori.md` (cosa risulta mancante, sezione 5), questo planning (sezioni 1-10), `preanalisi-progetto.md`.
-> **Esclusioni esplicite di questa Parte 2** (rinviate alla terza tornata, sezione 17): multiutente, autenticazione Supabase, migrazioni versionate (Liquibase/Flyway), Supabase PostgreSQL, Docker. Restano gli ultimissimi passi.
+> **Esclusioni esplicite di questa Parte 2** (rinviate alla terza tornata, sezione 18): multiutente, autenticazione Supabase, migrazioni versionate (Liquibase/Flyway), Supabase PostgreSQL, Docker. Restano gli ultimissimi passi.
 > **Precedenza:** prima il **consolidamento** dell'applicativo (Fase A), poi gli **studi/gruppi** (Fase B), poi import/export e apprendimento (Fasi C-D).
 
 ---
@@ -725,7 +725,7 @@ Logica di fondo: arrivare a *"i miei repertori sono organizzati in studi, ogni m
 
 Ordine consigliato di esecuzione: **7 → 8 → 9 → 10** (consolidamento), poi **11 → 12** (studi), poi **13** (import PGN), poi **14 → 15 → 16** (apprendimento), infine **17** (motore Stockfish) come **ultimo rilascio pianificato** della Parte 2. Le fasi C e D sono indipendenti tra loro e possono essere riordinate in base alle priorità del momento; la Fase E resta l'ultima.
 
-> **Fuori dai rilasci pianificati** (vedi sezione 18 · TODO da validare): l'**export PGN** e lo **spostamento di varianti tra studi** sono stati rimossi dalla roadmap e tenuti come note da validare quando emergerà il bisogno reale.
+> **Fuori dai rilasci pianificati** (vedi sezione 19 · TODO da validare): l'**export PGN** e lo **spostamento di varianti tra studi** sono stati rimossi dalla roadmap e tenuti come note da validare quando emergerà il bisogno reale.
 
 ---
 
@@ -756,10 +756,10 @@ Tre difetti visivi del componente `Chessboard` rilevati durante l'uso, da correg
 2. **Il pezzo non deve restare nella casa di partenza durante il trascinamento.** Oggi, mentre si trascina, il pezzo resta visibile anche sulla casa d'origine (evidenza gialla nello screenshot, casa e2). Durante il drag il pezzo d'origine va **nascosto** (la casa di partenza resta vuota finché la mossa non è confermata o annullata). *Indirizzo tecnico:* nascondere il pezzo sulla casa con `dragging() === square` (classe/stile dedicato), ripristinandolo su `dragend`/drop annullato.
 3. **Cornice della scacchiera più stretta.** Ridurre lo spessore della cornice/bordo legno (oggi `padding` 10px + gutter coordinate 1.6rem in `chessboard.css`), per una cornice un po' più sottile mantenendo la leggibilità delle coordinate.
 
-> Queste correzioni sono **decise** (non semplici proposte): vanno implementate nel rilascio. Le restanti idee estetiche restano nella sezione 16, subordinate a validazione.
+> Queste correzioni sono **decise** (non semplici proposte): vanno implementate nel rilascio. Le restanti idee estetiche restano nella sezione 17, subordinate a validazione.
 
 #### Integration workstream
-- Contratto `400` arricchito (sezione 14). DTO di richiesta invariati.
+- Contratto `400` arricchito (sezione 15). DTO di richiesta invariati.
 
 #### Validazione del prototipo
 1. Creo via API una variante con SAN illegale → `400` con messaggio.
@@ -808,7 +808,7 @@ Posso creare rami multipli dall'editor, salvare, riaprire e ritrovarli identici;
 Albero stabile, round-trip garantito da test, gestione rami esplicita e protetta.
 
 #### Cosa non fare ancora
-Niente import PGN dei rami (arriva in P13); l'export PGN è rinviato (sezione 18 · TODO da validare); niente commenti/NAG.
+Niente import PGN dei rami (arriva in P13); l'export PGN è rinviato (sezione 19 · TODO da validare); niente commenti/NAG.
 
 ---
 
@@ -841,7 +841,7 @@ Eliminare una variante o una mossa chiede conferma; uscire dall'editor con modif
 Nessuna azione distruttiva senza conferma; ogni errore ha feedback visibile.
 
 #### Cosa non fare ancora
-Niente restyle grafico complessivo (le proposte estetiche restano nella sezione 16, da validare a parte).
+Niente restyle grafico complessivo (le proposte estetiche restano nella sezione 17, da validare a parte).
 
 ---
 
@@ -884,7 +884,7 @@ Introdurre l'entità **Study** che raggruppa più varianti, con CRUD completo, m
 `GET /api/studies` elenca gli studi con il conteggio varianti; `GET /api/studies/{id}` restituisce lo studio con le sue varianti; creo/rinomino/elimino studi via API.
 
 #### Backend workstream
-- Entità `Study` (sezione 14): `id`, `name`, `description?`, `color?` (WHITE/BLACK/MIXED, opzionale), `createdAt`.
+- Entità `Study` (sezione 15): `id`, `name`, `description?`, `color?` (WHITE/BLACK/MIXED, opzionale), `createdAt`.
 - Relazione **1-N** `Study → Variant`: su `Variant` si aggiunge `studyId` (FK **nullable**, per eventuali varianti legacy create fuori da uno studio).
 - `StudyRepository`, `StudyService`, `StudyController`: `GET` lista/dettaglio, `POST`, `PUT`, `DELETE`.
 - **Politica di cancellazione studio (R14): cancellazione a cascata.** Eliminando uno studio si eliminano **automaticamente anche le varianti associate**; le varianti **non** vengono spostate altrove.
@@ -895,7 +895,7 @@ Introdurre l'entità **Study** che raggruppa più varianti, con CRUD completo, m
 - (UI vera e propria in P12.)
 
 #### Integration workstream
-- Nuovi endpoint `/api/studies` (sezione 14). `VariantDto` arricchito con `studyId` (nullable).
+- Nuovi endpoint `/api/studies` (sezione 15). `VariantDto` arricchito con `studyId` (nullable).
 
 #### Validazione del prototipo
 1. `GET /api/studies` → studio di default con le varianti seed agganciate.
@@ -907,7 +907,7 @@ Introdurre l'entità **Study** che raggruppa più varianti, con CRUD completo, m
 Gli studi vivono in DB, il CRUD funziona, lo studio di default raccoglie le varianti esistenti, la delete cancella a cascata.
 
 #### Cosa non fare ancora
-Niente UI studi (P12); niente **spostamento di varianti tra studi** (sezione 18 · TODO da validare); niente condivisione/esportazione studi (terza tornata).
+Niente UI studi (P12); niente **spostamento di varianti tra studi** (sezione 19 · TODO da validare); niente condivisione/esportazione studi (terza tornata).
 
 ---
 
@@ -947,7 +947,7 @@ La home mostra gli **studi** e permette di **creare un nuovo studio** o **elimin
 Gli studi si creano/eliminano e si gestiscono le varianti dall'interno, end-to-end; la delete dello studio rispetta la cascata.
 
 #### Cosa non fare ancora
-Niente **spostamento di varianti tra studi** (sezione 18 · TODO da validare); niente riordino avanzato; niente condivisione.
+Niente **spostamento di varianti tra studi** (sezione 19 · TODO da validare); niente riordino avanzato; niente condivisione.
 
 ---
 
@@ -1003,7 +1003,7 @@ Completando un training, l'app registra la sessione (variante, esito, numero err
 > **Vincolo della modalità allenamento (invariante per tutta la Parte 2):** l'allenamento serve **solo a memorizzare le mosse**. In questa modalità **non** deve comparire la barra di valutazione e **non** deve esserci la possibilità di giocare la posizione contro il computer. Stockfish (P17) **non è mai disponibile** durante le sessioni di allenamento.
 
 #### Integration workstream
-- Nuovi endpoint `training-sessions` (sezione 14).
+- Nuovi endpoint `training-sessions` (sezione 15).
 
 #### Validazione del prototipo
 1. Completo un training → la sessione compare via `GET`.
@@ -1128,7 +1128,129 @@ Niente suggerimento "mossa migliore", niente rilevamento blunder, niente *openin
 
 ---
 
-## 14. Contratti e modello dati della Parte 2
+## 14. Sequenza operativa dei task (Parte 2)
+
+Task piccoli (~1 ora), assegnabili ad agenti AI, sullo stesso modello della sezione 5 (Parte 1). Legenda area: **BE** backend, **FE** frontend, **INT** integrazione, **DOC** documentazione, **REV** review. La numerazione dei task segue quella dei prototipi (`T7.x` … `T17.x`). Le dipendenze tra prototipi rispettano l'ordine consigliato della sezione 12; i riferimenti a contratti/modello dati puntano alla sezione 15, ai rischi alla sezione 16.
+
+### Prototipo 7 - Validazione backend + fix scacchiera
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T7.1 | Decisione validazione (R13) + libreria scacchi Java | REV/DOC | Scegliere libreria (es. `chesslib`) o legalità solo client | sez. 16 R13 | decisione scritta | — | decisione approvata | con T7.5 |
+| T7.2 | `VariantValidator` mainline + albero | BE | Validare legalità ricostruendo la posizione | T7.1 | validatore + unit test | T7.1 | mossa illegale rifiutata | no |
+| T7.3 | Errori `400` strutturati | BE | Messaggi utili su payload non validi | T7.2 | corpo `{field,ply,message}` | T7.2 | `400` con dettaglio | no |
+| T7.4 | Gestione `400` in editor/import | FE | Mostrare l'errore in UI | T7.3 | messaggio leggibile | T7.3 | errore visibile | no |
+| T7.5 | Fix drag ghost: trascinare solo il pezzo | FE | Niente sfondo della casa nel drag | bug (screenshot) | drag image custom | — | trascina solo pezzo | con T7.1 |
+| T7.6 | Nascondere il pezzo sulla casa d'origine durante il drag | FE | Casa di partenza vuota nel drag | bug (screenshot) | stile/classe `dragging` | T7.5 | origine vuota nel drag | no |
+| T7.7 | Cornice scacchiera più stretta | FE | Bordo più sottile, coordinate leggibili | `chessboard.css` | cornice ridotta | — | cornice più stretta | con T7.6 |
+| T7.8 | Validazione manuale P7 | REV | Confermare prototipo | T7.4, T7.6, T7.7 | checklist passata | tutte | sez. 13 P7 | no |
+
+### Prototipo 8 - Consolidamento del modello ad albero
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T8.1 | Test round-trip `tree` (DB↔DTO↔UI) | BE | Garantire integrità dell'albero | sez. 15 | test verdi | T7.2 | round-trip ok | con T8.3 |
+| T8.2 | Formalizzare `children[0]=mainline` + derivazione `moves` | BE/DOC | Vincolo ufficiale e coerenza | ADR 0002 | regola + test | — | mainline coerente | no |
+| T8.3 | Comando "promuovi a mainline" | FE | Riordinare i `children` del nodo | T8.2 | azione editor | T8.2 | ramo promosso | con T8.1 |
+| T8.4 | Conferma cancellazione sottoalbero | FE | Evitare perdite accidentali | T8.3 | conferma su nodo con figli | T8.3 | conferma richiesta | no |
+| T8.5 | Visualizzazione path/ramo corrente | FE | Distinguere mainline/varianti | — | UI ramo esplicita | — | ramo evidente | con T8.4 |
+| T8.6 | Validazione manuale P8 | REV | Confermare prototipo | T8.* | checklist passata | tutte | sez. 13 P8 | no |
+
+### Prototipo 9 - Robustezza interazioni e azioni distruttive
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T9.1 | Dialog di conferma riusabile | FE | Conferme uniformi | — | componente | — | dialog funziona | con T9.4 |
+| T9.2 | Conferme su delete variante/mossa | FE | Azioni distruttive protette | T9.1 | conferme collegate | T9.1 | annulla/conferma ok | no |
+| T9.3 | Route guard `canDeactivate` sull'editor | FE | Avviso modifiche non salvate | — | guard | — | avviso all'uscita | con T9.1 |
+| T9.4 | Servizio toast/snackbar | FE | Feedback esiti/errori | — | servizio toast | — | toast mostrato | con T9.1 |
+| T9.5 | Stati loading/saving | FE | Disabilitare durante le chiamate | T9.4 | stati UI | T9.4 | niente doppio invio | no |
+| T9.6 | Rifinire messaggi d'errore BE | BE | `400`/`404` chiari | — | messaggi | — | messaggi utili | con T9.5 |
+| T9.7 | Validazione manuale P9 | REV | Confermare prototipo | T9.* | checklist passata | tutte | sez. 13 P9 | no |
+
+### Prototipo 10 - Suite test automatici + checklist E2E
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T10.1 | Test integrazione controller `Variant` | BE | Coprire CRUD/validazione/round-trip | T7-T9 | test verdi | T8 | suite passa | con T10.2 |
+| T10.2 | Test flussi editor/training con rami | FE | Coprire i percorsi critici | T8 | test verdi | T8 | flussi coperti | con T10.1 |
+| T10.3 | Checklist E2E scritta | INT/DOC | Verifiche ripetibili | sez. 5.5 stato avanz. | checklist | — | checklist eseguibile | no |
+| T10.4 | (Opz.) runner E2E leggero | FE | Automatizzare i percorsi | T10.3 | smoke E2E | T10.3 | percorso verde | no |
+| T10.5 | Validazione manuale P10 | REV | Confermare prototipo | T10.* | esito | tutte | sez. 13 P10 | no |
+
+### Prototipo 11 - Modello Studi (backend)
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T11.1 | Entità `Study` + repository | BE | Persistenza studi | sez. 15 | entità/repo | — | salva/legge | con T11.5 |
+| T11.2 | Relazione `Study→Variant` + `studyId` + cascata | BE | 1-N con delete a cascata | T11.1 | mapping + cascade | T11.1 | cascade ok | no |
+| T11.3 | `StudyService`/`StudyController` CRUD | BE | API studi | T11.2 | GET/POST/PUT/DELETE | T11.2 | CRUD ok | con T11.4 |
+| T11.4 | Seed studio default + aggancio varianti esistenti | BE | Migrazione retrocompatibile | T11.2 | seed idempotente | T11.2 | varianti agganciate | con T11.3 |
+| T11.5 | Modello TS `Study` + `StudyService` (FE) | FE | Consumare API studi | sez. 15 | servizio/modello | — | metodi CRUD | con T11.1 |
+| T11.6 | Contratto studi documentato | INT/DOC | Allineare FE/BE | sez. 15 | contratto aggiornato | T11.3 | contratto approvato | no |
+| T11.7 | Test CRUD studi + cascata | BE | Prevenire regressioni | T11.3, T11.4 | test verdi | T11.3 | cascade testata | no |
+| T11.8 | Validazione manuale P11 | REV | Confermare prototipo | T11.* | esito | tutte | sez. 13 P11 | no |
+
+### Prototipo 12 - UI Studi
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T12.1 | Endpoint `POST /studies/{id}/variants` | BE | Crea variante nello studio | T11.3 | endpoint | T11.3 | variante agganciata | con T12.2 |
+| T12.2 | `StudyList` (home) + crea/elimina studio | FE | Navigare e gestire studi | T11.5 | componente | T11.5 | studi listati, crea/elimina | con T12.1 |
+| T12.3 | `StudyDetail` + lista varianti + azioni | FE | Gestire varianti nello studio | T12.2 | componente | T12.2 | varianti gestibili | no |
+| T12.4 | Conferma elimina studio (avviso cascata) | FE | Protezione + chiarezza | T9.1, T12.2 | conferma con avviso | T12.2 | avviso cascata | no |
+| T12.5 | Routing `/`→studi, `/studies/:id` + breadcrumb | FE | Navigazione studi/varianti | T12.2, T12.3 | rotte | T12.3 | navigazione ok | no |
+| T12.6 | Integrazione home a studi (sostituire lista varianti) | INT | Reale end-to-end | T12.1, T12.5 | flusso completo | T12.5 | crea/elimina studio+variante | no |
+| T12.7 | Validazione manuale P12 | REV | Confermare prototipo | T12.* | esito | tutte | sez. 13 P12 | no |
+
+### Prototipo 13 - Import PGN avanzato
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T13.1 | Decisione parsing PGN avanzato (R15) | REV/DOC | FE vs BE | sez. 16 R15 | decisione | — | decisione approvata | no |
+| T13.2 | Parser PGN→`MoveNode[]` (varianti annidate) | FE | Costruire l'albero dai rami | T13.1 | parser + test | T13.1 | rami corretti | con T13.3 |
+| T13.3 | Gestione commenti `{}`/NAG `$n` di base | FE | Non rompere il parsing | T13.2 | parsing robusto | T13.2 | nessun crash | no |
+| T13.4 | Anteprima ad albero del PGN | FE | Verifica pre-salvataggio | T13.2 | anteprima | T13.2 | albero mostrato | con T13.3 |
+| T13.5 | Salvataggio `tree` da import | INT | Persistere l'import | T13.2, T11.3 | salvataggio | T13.4 | rami ritrovati | no |
+| T13.6 | Validazione manuale P13 | REV | Confermare prototipo | T13.* | esito | tutte | sez. 13 P13 | no |
+
+### Prototipo 14 - Persistenza sessioni di allenamento
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T14.1 | Entità `TrainingSession`/`TrainingMove` | BE | Persistere le sessioni | sez. 15 / sez. 7 | entità/repo | — | salva sessione | con T14.3 |
+| T14.2 | Endpoint `POST`/`GET /training-sessions` | BE | Registrare/leggere | T14.1 | endpoint | T14.1 | sessione rileggibile | no |
+| T14.3 | Invio sessione a fine training | FE | Registrare l'esito | T14.2 | chiamata FE | T14.2 | sessione creata | no |
+| T14.4 | Nota vincolo "niente motore in allenamento" | DOC | Allineare con P17 | — | nota | — | vincolo documentato | con T14.3 |
+| T14.5 | Validazione manuale P14 | REV | Confermare prototipo | T14.* | esito | tutte | sez. 13 P14 | no |
+
+### Prototipo 15 - Statistiche e reportistica
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T15.1 | Endpoint aggregazione `GET /stats/...` | BE | Metriche dalle sessioni | T14.2 | endpoint | T14.2 | dati corretti | con T15.2 |
+| T15.2 | Vista statistiche per variante | FE | Mostrare le metriche | T15.1 | vista | T15.1 | metriche viste | no |
+| T15.3 | Aggregato per studio | FE/BE | Somma per studio | T15.1 | aggregato | T15.1 | somma corretta | con T15.2 |
+| T15.4 | Evidenza mosse più sbagliate | FE | Insight di studio | T15.2 | UI evidenza | T15.2 | mosse evidenziate | no |
+| T15.5 | Validazione manuale P15 | REV | Confermare prototipo | T15.* | esito | tutte | sez. 13 P15 | no |
+
+### Prototipo 16 - Spaced repetition
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T16.1 | `ReviewSchedule` + algoritmo SM-2 semplificato | BE | Calcolo delle ripetizioni | sez. 7 | schema + algoritmo | T14.1 | intervallo calcolato | con T16.4 |
+| T16.2 | Aggiornare lo schedule a fine sessione | BE | Persistere la prossima review | T16.1, T14.2 | update | T16.1 | `nextReviewDate` impostata | no |
+| T16.3 | Endpoint `GET /reviews/due` | BE | Varianti dovute | T16.2 | endpoint | T16.2 | dovute corrette | con T16.4 |
+| T16.4 | Vista "Ripeti oggi" + avvio training | FE | Proporre le varianti dovute | T16.3 | vista | T16.3 | elenco dovute | no |
+| T16.5 | Indicatore prossima ripetizione nel dettaglio | FE | Visibilità dello schedule | T16.2 | indicatore | T16.2 | data mostrata | con T16.4 |
+| T16.6 | Validazione manuale P16 | REV | Confermare prototipo | T16.* | esito | tutte | sez. 13 P16 | no |
+
+### Prototipo 17 - Integrazione Stockfish
+| ID | Titolo | Area | Scopo | Input | Output | Dipendenze | Validazione | Parallelo |
+|----|--------|------|-------|-------|--------|------------|-------------|-----------|
+| T17.1 | Caricare `stockfish.wasm` in Web Worker + wrapper UCI | FE | Motore client-side | sez. 16 R18 | worker + wrapper | — | valutazione ottenuta | no |
+| T17.2 | Toggle motore on/off (dettaglio/editor) | FE | Attivare sulla posizione corrente | T17.1 | toggle | T17.1 | on/off ok | con T17.3 |
+| T17.3 | Barra di valutazione mostra/nascondi | FE | Visualizzare/nascondere l'eval | T17.1 | barra | T17.1 | barra toggle | con T17.2 |
+| T17.4 | "Gioca contro il computer" → nuova tab `/play?fen=` | FE | Giocare la posizione corrente | T17.1 | rotta + azione | T17.1 | nuova tab, prima intatta | no |
+| T17.5 | Garantire assenza del motore in allenamento | FE | Rispettare il vincolo | T17.2, T17.3, T17.4 | guardia UI | T14.4 | nessun motore in training | no |
+| T17.6 | Header COOP/COEP o fallback single-thread | INT | Far girare il WASM | T17.1 | config/fallback | T17.1 | motore funziona | con T17.5 |
+| T17.7 | Validazione manuale P17 | REV | Confermare prototipo | T17.* | esito | tutte | sez. 13 P17 | no |
+
+**Task trasversali (ricorrenti):** `DOC.x` aggiornamento documentazione a fine prototipo; `REV.x` code review prima del merge. Non vanno svolti in parallelo con la modifica che revisionano. Come nella Parte 1, ogni prototipo si chiude solo quando la sua riga di validazione manuale (`REV`) passa.
+
+---
+
+## 15. Contratti e modello dati della Parte 2
 
 > Estende la sezione 6 (contratto attuale) e la sezione 7 (modello dati). Base URL `/api`.
 
@@ -1146,7 +1268,7 @@ Niente suggerimento "mossa migliore", niente rilevamento blunder, niente *openin
 | GET | `/api/stats/...` | Aggregazioni statistiche (variante/studio) | P15 |
 | GET | `/api/reviews/due` | Varianti dovute per spaced repetition | P16 |
 
-> Lo **spostamento di varianti tra studi** (`PUT /api/variants/{id}/study`) è stato **rimosso** dai rilasci: vedi sezione 18 · TODO da validare. Stockfish (P17) è client-side e non introduce endpoint.
+> Lo **spostamento di varianti tra studi** (`PUT /api/variants/{id}/study`) è stato **rimosso** dai rilasci: vedi sezione 19 · TODO da validare. Stockfish (P17) è client-side e non introduce endpoint.
 
 ### Nuovi DTO
 
@@ -1202,14 +1324,14 @@ studyId: Long (FK -> Study, nullable)   // null solo per varianti legacy senza s
 
 ---
 
-## 15. Rischi aggiornati (Parte 2)
+## 16. Rischi aggiornati (Parte 2)
 
 | ID | Rischio | Descrizione | Impatto | Quando | Decisione minima |
 |----|---------|-------------|---------|--------|------------------|
 | R13 | **Validazione scacchistica lato backend** | Servono regole scacchistiche in Java per validare albero/mainline | Medio | P7 | Valutare libreria Java (es. `chesslib`); alternativa: legalità solo client e API "best effort". Consigliato: libreria. |
 | R14 | **Modello Studi e cancellazione** | Cardinalità Study↔Variant; cosa fare alla delete dello studio; migrazione esistenti | Medio | P11 | 1-N con `studyId`; **delete studio cancella a cascata le sue varianti** (non spostate); studio di default seedato in P11 con aggancio delle varianti esistenti. |
-| R15 | **Import PGN ramificato** | Mapping PGN → `tree` con varianti annidate, commenti, NAG | Medio | P13 | Parsing lato frontend con `chess.js`; commenti/NAG di base, resto rinviato. (L'export PGN è fuori dai rilasci: sezione 18.) |
-| R16 | **Scalabilità/responsive scacchiera** | La board resta 720px tra ~800-1280px e il pannello finisce sotto la piega (vedi sezione 16) | Medio (UX) | Trasversale | La correzione è una **proposta grafica da validare** (sezione 16), non un rilascio finché l'utente non approva. |
+| R15 | **Import PGN ramificato** | Mapping PGN → `tree` con varianti annidate, commenti, NAG | Medio | P13 | Parsing lato frontend con `chess.js`; commenti/NAG di base, resto rinviato. (L'export PGN è fuori dai rilasci: sezione 19.) |
+| R16 | **Scalabilità/responsive scacchiera** | La board resta 720px tra ~800-1280px e il pannello finisce sotto la piega (vedi sezione 17) | Medio (UX) | Trasversale | La correzione è una **proposta grafica da validare** (sezione 17), non un rilascio finché l'utente non approva. |
 | R17 | **Persistenza dati di apprendimento** | Sessioni/stats/scheduling fanno crescere lo schema H2 locale | Basso/Medio | P14-P16 | Tabelle dedicate, `userId` nullable inattivo; migrazioni versionate rinviate alla terza tornata. |
 | R18 | **Integrazione Stockfish** | Esecuzione del motore (WASM in Web Worker), threading/`SharedArrayBuffer` (header COOP/COEP), performance su client deboli | Medio | P17 | Stockfish **WASM client-side** in Web Worker; perimetro limitato (toggle motore, barra valutazione, gioca-vs-computer in nuova tab); **mai in allenamento**; versione **single-thread** se gli header cross-origin non sono disponibili. |
 
@@ -1217,7 +1339,7 @@ studyId: Long (FK -> Study, nullable)   // null solo per varianti legacy senza s
 
 ---
 
-## 16. Validazione UX e proposte grafiche — DA VALIDARE, fuori dai rilasci
+## 17. Validazione UX e proposte grafiche — DA VALIDARE, fuori dai rilasci
 
 > Esito della validazione dell'apparenza grafica eseguita sul frontend in esecuzione (home, dettaglio, training; desktop 1400px, laptop 1024px, mobile 375px; nessun errore in console).
 > **Queste proposte NON sono inserite nei prototipi 7-17:** vanno approvate dall'utente prima di diventare task. Sono ordinate per priorità.
@@ -1248,7 +1370,7 @@ studyId: Long (FK -> Study, nullable)   // null solo per varianti legacy senza s
 
 ---
 
-## 17. Idee per la terza tornata di analisi
+## 18. Idee per la terza tornata di analisi
 
 > Da pianificare in una sessione futura, **dopo** la Parte 2. Comprende gli "ultimissimi passi" esplicitamente rinviati e ulteriori spunti emersi.
 
@@ -1270,7 +1392,7 @@ studyId: Long (FK -> Study, nullable)   // null solo per varianti legacy senza s
 
 ---
 
-## 18. TODO da validare (fuori dai rilasci pianificati)
+## 19. TODO da validare (fuori dai rilasci pianificati)
 
 > Funzionalità **rimosse dalla roadmap della Parte 2** e tenute solo come nota: non è chiaro se serviranno davvero. Vanno **validate dall'utente** prima di rientrare in un eventuale rilascio. Non sono task attivi.
 
@@ -1279,4 +1401,4 @@ studyId: Long (FK -> Study, nullable)   // null solo per varianti legacy senza s
 
 ---
 
-*Fine del planning. Documento di sola pianificazione: nessun codice applicativo incluso. I file `preanalisi-progetto.md` e `CLAUDE.md` restano la fonte autorevole per obiettivo, stack e versioni. La Parte 2 (sezioni 11-18) estende la Parte 1 senza sostituirla; le proposte grafiche della sezione 16 e i TODO della sezione 18 restano subordinati alla validazione dell'utente.*
+*Fine del planning. Documento di sola pianificazione: nessun codice applicativo incluso. I file `preanalisi-progetto.md` e `CLAUDE.md` restano la fonte autorevole per obiettivo, stack e versioni. La Parte 2 (sezioni 11-19) estende la Parte 1 senza sostituirla; le proposte grafiche della sezione 17 e i TODO della sezione 19 restano subordinati alla validazione dell'utente.*
