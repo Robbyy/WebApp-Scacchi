@@ -204,4 +204,22 @@ class VariantControllerTest {
         mockMvc.perform(put("/api/variants/1").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void updateRejectsAnIllegalMove() throws Exception {
+        String create = """
+            {"name":"Da modificare","color":"WHITE","moves":["e4","e5"]}""";
+        MvcResult result = mockMvc.perform(
+                post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(create))
+            .andExpect(status().isCreated())
+            .andReturn();
+        int id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+
+        String update = """
+            {"name":"Modificata","color":"WHITE","moves":["e4","e4"]}""";
+        mockMvc.perform(put("/api/variants/" + id).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("moves"))
+            .andExpect(jsonPath("$.ply").value(2));
+    }
 }

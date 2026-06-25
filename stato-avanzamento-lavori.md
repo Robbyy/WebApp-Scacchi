@@ -10,16 +10,17 @@
 
 - **Parte 1 (Prototipi 0-6) + estensioni anticipate**: completa e verificata (vedi sezione 2).
 - **Parte 2 pianificata**: roadmap P7-P17 + sezioni TODO/idee, descritta nel planning (sezioni 11-19). Fasi: A consolidamento, B studi, C import PGN, D apprendimento, E motore Stockfish.
-- **Parte 2 implementata finora**: **P7, P8, P9** (fase A · consolidamento, 3 prototipi su 4). Manca **P10** (suite test + checklist E2E) per chiudere la fase A.
+- **Parte 2 implementata finora**: **P7, P8, P9, P10** — **fase A · consolidamento completata**. Prossimo: fase B · Studi (P11).
 
 Alla verifica del 2026-06-25:
 
 - `git status --short` pulito;
 - backend attivo su `http://localhost:8080`, frontend su `http://localhost:4200`;
-- **test backend: 26 passati**; **test frontend: 49 passati**;
+- **test backend: 27 passati**; **test frontend: 67 passati**;
+- checklist manuale E2E formalizzata in `checklist-e2e.md`;
 - verifiche browser dei flussi principali senza errori console.
 
-Ultimi commit rilevanti: `b9bdd6d` (P7), `050f86c` (P8), `fa90ef7` (P9).
+Ultimi commit rilevanti: `b9bdd6d` (P7), `050f86c` (P8), `fa90ef7` (P9); P10 nel commit corrente.
 
 Il repository resta strutturato con due progetti separati: `backend/` (Spring Boot + Maven + H2/JPA) e `frontend/` (Angular + npm + `chess.js`).
 
@@ -80,9 +81,16 @@ Tutti completati e verificati. Sintesi:
 
 **Verifica:** dialog di eliminazione, guard "modifiche non salvate" (blocco + uscita) e toast "Variante eliminata." verificati live, zero errori console. Test backend 26, frontend **49**.
 
-### Prototipi 10-17 — da fare
+### Prototipo 10 — Suite test automatici + checklist E2E ✅ (chiude la fase A)
 
-- **P10** Suite test automatici + checklist E2E (chiude la fase A).
+- Backend: test aggiuntivo che il `PUT` rifiuta una mossa illegale (`400` con `field`/`ply`).
+- Frontend: nuovo `move-tree.spec.ts` con test unit delle utilità dell'albero (mainline, `addChild`/`removeNode`, `promoteToMainline`, `isOnMainline`, `lineSans`, `fenAt`, `buildTokens`, `remainingMainline`).
+- Documentazione: **`checklist-e2e.md`** — checklist manuale ripetibile (18 flussi: 12 core + 6 Parte 2) con sezione di copertura automatica; runner E2E browser (Playwright/Cypress) **rinviato** per non introdurre tooling pesante ora.
+
+**Esito:** test backend **27**, frontend **67**, tutti verdi. Fase A · consolidamento **completata**.
+
+### Prototipi 11-17 — da fare
+
 - **P11-P12** Studi (modello backend con cancellazione a cascata + UI crea/elimina studio e varianti).
 - **P13** Import PGN avanzato (varianti annidate → `tree`).
 - **P14-P16** Persistenza sessioni → statistiche → spaced repetition.
@@ -94,11 +102,14 @@ Tutti completati e verificati. Sintesi:
 
 ### Backend
 Comando: `.\mvnw.cmd test` (con `MAVEN_OPTS=-Djavax.net.ssl.trustStoreType=Windows-ROOT`).
-Esito: **26 test passati**. Copertura: contesto Spring, ping, repository varianti, controller varianti (CRUD + validazione + round-trip albero), `MoveNode`, `VariantValidator`.
+Esito: **27 test passati**. Copertura: contesto Spring, ping, repository varianti, controller varianti (CRUD + validazione legalità su `POST` e `PUT` + round-trip albero), `MoveNode`, `VariantValidator`.
 
 ### Frontend
 Comando: `npm test -- --watch=false` (fuori sandbox per evitare `spawn EPERM` su esbuild).
-Esito: **49 test passati** (7 file).
+Esito: **67 test passati** (8 file), incluse le utilità `move-tree`.
+
+### Checklist manuale E2E
+`checklist-e2e.md` — 18 flussi ripetibili (creazione, lista, dettaglio, replay, training, rami, import PGN, eliminazione + validazione/drag/promozione/conferme/guard/toast della Parte 2).
 
 ### Verifiche browser (live)
 Lista, dettaglio, training, editor (rami, promozione, conferma cancellazione, guard modifiche non salvate), import PGN, dialog di conferma e toast: tutti senza errori console.
@@ -119,8 +130,8 @@ Varianti annidate, commenti, NAG. Export PGN spostato a TODO (sezione 19 del pla
 ### 5.4 UX e sicurezza azioni distruttive — ✅ RISOLTO (P9)
 Conferma su elimina variante e su elimina sottoalbero; guard modifiche non salvate; feedback errori via toast; stati loading/saving. Resta margine per skeleton di caricamento ed empty-state curati (proposte UX sezione 17 del planning).
 
-### 5.5 Test E2E formalizzati — ⏳ pianificato (P10)
-Suite automatica sui flussi completi + checklist ripetibile.
+### 5.5 Test E2E formalizzati — ✅ in gran parte (P10)
+Suite automatica ampliata (backend 27, frontend 67, incluse le utilità `move-tree`) e **checklist manuale** in `checklist-e2e.md`. Resta rinviato il solo runner E2E browser (Playwright/Cypress).
 
 ### 5.6 Responsive e qualità visiva — ⏳ proposte da validare
 Il difetto responsive principale (board fissa a 720px tra ~800-1280px, pannello sotto la piega) e le altre proposte grafiche sono in **sezione 17 del planning**, subordinate a validazione dell'utente (non nei rilasci).
@@ -154,14 +165,13 @@ Spaced repetition (P16) e statistiche (P15) sono pianificate; multiutente, Supab
 
 ## 7. Prossimi passi consigliati
 
-1. **P10** — formalizzare suite test automatici + checklist E2E (chiude la fase A · consolidamento).
-2. **P11-P12** — introdurre gli **Studi** (backend con cascata + UI).
-3. **P13** — import PGN avanzato (varianti annidate).
-4. Proseguire con apprendimento (P14-P16) e infine **Stockfish (P17)**.
-5. Quando opportuno, sottoporre all'utente le **proposte grafiche** (sezione 17 del planning), a partire dal fix responsive della scacchiera.
+1. **P11-P12** — introdurre gli **Studi** (backend con cascata + UI crea/elimina studio e varianti).
+2. **P13** — import PGN avanzato (varianti annidate).
+3. Proseguire con apprendimento (P14-P16) e infine **Stockfish (P17)**.
+4. Quando opportuno, sottoporre all'utente le **proposte grafiche** (sezione 17 del planning), a partire dal fix responsive della scacchiera.
 
 ---
 
 ## 8. Stato finale
 
-La webapp ha completato la Parte 1 ed è entrata nella **fase A di consolidamento della Parte 2**: il backend ora valida la legalità delle mosse, il modello ad albero è consolidato (promozione, protezione, round-trip) e le interazioni distruttive sono protette (conferme, toast, guard). Manca solo **P10** per chiudere il consolidamento prima di passare all'organizzazione in **studi**.
+La webapp ha completato la Parte 1 e l'intera **fase A di consolidamento della Parte 2**: il backend valida la legalità delle mosse, il modello ad albero è consolidato (promozione, protezione, round-trip), le interazioni distruttive sono protette (conferme, toast, guard) e i flussi sono coperti da test automatici (backend 27, frontend 67) più una checklist E2E ripetibile. Il progetto è pronto per la **fase B · Studi** (P11).
