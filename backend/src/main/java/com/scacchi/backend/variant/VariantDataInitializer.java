@@ -2,13 +2,18 @@ package com.scacchi.backend.variant;
 
 import java.util.List;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
  * Popola il database con alcune varianti di default al primo avvio (quando è
  * vuoto). Con H2 in memoria il seed viene rieseguito a ogni avvio.
+ *
+ * <p>Gira prima di {@code StudyDataInitializer} ({@link Order}) così che lo studio
+ * di default possa agganciare a sé le varianti appena seminate (Prototipo 11).
  */
 @Component
+@Order(1)
 public class VariantDataInitializer implements CommandLineRunner {
 
     private final VariantRepository repository;

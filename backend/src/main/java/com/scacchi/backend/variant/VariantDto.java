@@ -17,6 +17,7 @@ public record VariantDto(
     List<MoveNode> tree, // albero completo (mainline + varianti)
     String startingFen,
     String sourcePgn,
+    Long studyId,        // studio di appartenenza (null per varianti legacy) - Prototipo 11
     String createdAt
 ) {
 }

@@ -164,3 +164,46 @@ persistere una variante. La libreria scelta e' **`chesslib`**
   `MAVEN_OPTS=-Djavax.net.ssl.trustStoreType=Windows-ROOT` resta necessario in locale).
 - Le varianti partono dalla posizione iniziale standard; per future posizioni di
   partenza custom (`startingFen`) la validazione andra' estesa a partire da quella FEN.
+
+---
+
+## 0005 — Modello Studi e cancellazione a cascata (P11, R14)
+
+**Data:** 2026-06-25 · **Stato:** Accettata · **Contesto:** Prototipo 11 (Parte 2), rischio R14.
+
+### Decisione
+Le varianti si raggruppano in **Studi** (sul modello degli *studies* di Lichess).
+La relazione `Study → Variant` e' **1-N** modellata con una colonna
+`study_id` **nullable** sulla `Variant` (FK verso `study`). L'eliminazione di uno
+studio e' **a cascata**: cancella anche tutte le sue varianti; le varianti **non**
+vengono mai riassegnate ad altri studi.
+
+### Alternative valutate
+- **Relazione JPA bidirezionale** (`@OneToMany`/`@ManyToOne` con `orphanRemoval`):
+  scartata per non accoppiare l'entita' `Variant` (e il suo DTO/serializzazione
+  gia' consolidati in P4-P8) al ciclo di vita dello studio. Si e' preferita una
+  **FK semplice** + cascata **esplicita** nel service, piu' leggibile e testabile.
+- **Riassegnazione delle varianti** a uno studio "orfani" all'eliminazione:
+  scartata — l'utente si aspetta che eliminare uno studio elimini il suo contenuto
+  (comportamento Lichess); evita accumulo di varianti senza contesto.
+- **Spostamento varianti tra studi** in questo giro: rinviato (sezione 19 · TODO
+  del planning).
+
+### Note di implementazione
+- `study_id` nullable garantisce retrocompatibilita': le varianti legacy senza
+  studio restano valide. Il seed (`StudyDataInitializer`, `@Order(2)` dopo
+  `VariantDataInitializer`) crea lo studio di default **"Repertorio"** e vi
+  aggancia (idempotente) tutte le varianti con `study_id == null`.
+- La cascata e' implementata in `StudyService.delete` (`@Transactional`):
+  `variantService.deleteByStudyId(id)` e poi `studyRepository.deleteById(id)`.
+- `StudyDto` espone `variantCount` in lista e l'elenco completo `variants` nel
+  dettaglio. `VariantDto` espone `studyId` (nullable).
+- Errori di payload (es. nome vuoto, colore non valido) → `400` riusando il
+  formato `ValidationError` gia' adottato in P7, via `InvalidStudyException`.
+
+### Conseguenze
+- Un'unica fonte per il raggruppamento; nessuna variante "orfana" inattesa dopo
+  una delete di studio.
+- Lo studio di colore puo' essere `MIXED` (oltre a `WHITE`/`BLACK`), a differenza
+  della singola variante che resta `WHITE`/`BLACK`.
+- La UI degli studi (lista/dettaglio, crea/elimina) arriva in P12.

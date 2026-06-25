@@ -15,6 +15,7 @@ export interface Variant {
   tree?: MoveNode[];
   startingFen: string;
   sourcePgn?: string | null;
+  studyId?: number | null;
   createdAt?: string | null;
 }
 

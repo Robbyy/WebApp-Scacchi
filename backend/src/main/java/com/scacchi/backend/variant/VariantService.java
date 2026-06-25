@@ -73,6 +73,23 @@ public class VariantService {
         return true;
     }
 
+    /** Varianti appartenenti a uno studio (Prototipo 11), ordinate per id. */
+    public List<VariantDto> findByStudyId(Long studyId) {
+        return repository.findByStudyIdOrderByIdAsc(studyId).stream()
+            .map(VariantService::toDto)
+            .toList();
+    }
+
+    /** Numero di varianti in uno studio (per il conteggio in lista, Prototipo 11). */
+    public long countByStudyId(Long studyId) {
+        return repository.countByStudyId(studyId);
+    }
+
+    /** Cancella in blocco tutte le varianti di uno studio: cascata di {@code StudyService}. */
+    public void deleteByStudyId(Long studyId) {
+        repository.deleteByStudyId(studyId);
+    }
+
     private static VariantDto toDto(Variant v) {
         // Righe legacy senza albero: lo si deriva dalla linea principale.
         List<MoveNode> tree = v.getTree() != null && !v.getTree().isEmpty()
@@ -86,6 +103,7 @@ public class VariantService {
             tree,
             v.getStartingFen(),
             v.getSourcePgn(),
+            v.getStudyId(),
             v.getCreatedAt() == null ? null : v.getCreatedAt().toString()
         );
     }

@@ -44,6 +44,13 @@ public class Variant {
     @Column(name = "source_pgn", columnDefinition = "text")
     private String sourcePgn;
 
+    /**
+     * Studio di appartenenza (Prototipo 11). FK verso {@code study}, nullable per
+     * le varianti legacy create fuori da uno studio.
+     */
+    @Column(name = "study_id")
+    private Long studyId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -104,6 +111,14 @@ public class Variant {
 
     public void setSourcePgn(String sourcePgn) {
         this.sourcePgn = sourcePgn;
+    }
+
+    public Long getStudyId() {
+        return studyId;
+    }
+
+    public void setStudyId(Long studyId) {
+        this.studyId = studyId;
     }
 
     public Instant getCreatedAt() {

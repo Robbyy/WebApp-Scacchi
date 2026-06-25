@@ -1,0 +1,156 @@
+package com.scacchi.backend.study;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+class StudyControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Test
+    void listReturnsTheDefaultStudyWithItsSeededVariants() throws Exception {
+        // Il seed crea lo studio di default "Repertorio" e vi aggancia le 2 varianti seed.
+        mockMvc.perform(get("/api/studies"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].name").value("Repertorio"))
+            .andExpect(jsonPath("$[0].variantCount").value(2))
+            .andExpect(jsonPath("$[0].variants").doesNotExist());
+    }
+
+    @Test
+    void detailReturnsTheStudyWithTheVariantList() throws Exception {
+        int defaultId = defaultStudyId();
+        mockMvc.perform(get("/api/studies/" + defaultId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Repertorio"))
+            .andExpect(jsonPath("$.variantCount").value(2))
+            .andExpect(jsonPath("$.variants.length()").value(2))
+            .andExpect(jsonPath("$.variants[0].studyId").value(defaultId));
+    }
+
+    @Test
+    void getByIdReturns404WhenMissing() throws Exception {
+        mockMvc.perform(get("/api/studies/999999"))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void createPersistsAndReturns201() throws Exception {
+        String body = """
+            {"name":"Siciliana","description":"Repertorio col Nero","color":"BLACK"}""";
+        mockMvc.perform(post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").isNumber())
+            .andExpect(jsonPath("$.name").value("Siciliana"))
+            .andExpect(jsonPath("$.description").value("Repertorio col Nero"))
+            .andExpect(jsonPath("$.color").value("BLACK"))
+            .andExpect(jsonPath("$.variantCount").value(0))
+            .andExpect(jsonPath("$.createdAt").isNotEmpty());
+    }
+
+    @Test
+    void createRejectsABlankName() throws Exception {
+        String body = """
+            {"name":"  ","color":"MIXED"}""";
+        mockMvc.perform(post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("name"))
+            .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    void createRejectsAnInvalidColor() throws Exception {
+        String body = """
+            {"name":"Strano","color":"GREEN"}""";
+        mockMvc.perform(post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("color"));
+    }
+
+    @Test
+    void updateChangesNameDescriptionAndColor() throws Exception {
+        int id = createStudy("""
+            {"name":"Da rinominare","color":"WHITE"}""");
+
+        String update = """
+            {"name":"Rinominato","description":"aggiornata","color":"MIXED"}""";
+        mockMvc.perform(put("/api/studies/" + id).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(id))
+            .andExpect(jsonPath("$.name").value("Rinominato"))
+            .andExpect(jsonPath("$.description").value("aggiornata"))
+            .andExpect(jsonPath("$.color").value("MIXED"));
+    }
+
+    @Test
+    void updateReturns404WhenMissing() throws Exception {
+        String body = """
+            {"name":"X"}""";
+        mockMvc.perform(put("/api/studies/999999").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteAnEmptyStudyReturns204() throws Exception {
+        int id = createStudy("""
+            {"name":"Vuoto"}""");
+        mockMvc.perform(delete("/api/studies/" + id)).andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/studies/" + id)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteReturns404WhenMissing() throws Exception {
+        mockMvc.perform(delete("/api/studies/999999")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deletingTheDefaultStudyCascadesToItsVariants() throws Exception {
+        int defaultId = defaultStudyId();
+
+        // Prima della cancellazione le 2 varianti seed esistono.
+        mockMvc.perform(get("/api/variants"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2));
+
+        // Cancellazione a cascata: spariscono studio e varianti associate.
+        mockMvc.perform(delete("/api/studies/" + defaultId)).andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/studies/" + defaultId)).andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/variants"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    private int defaultStudyId() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/studies"))
+            .andExpect(status().isOk())
+            .andReturn();
+        return JsonPath.read(result.getResponse().getContentAsString(), "$[0].id");
+    }
+
+    private int createStudy(String body) throws Exception {
+        MvcResult result = mockMvc.perform(
+                post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andReturn();
+        return JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+    }
+}
