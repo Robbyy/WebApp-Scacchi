@@ -5,22 +5,24 @@
 .board-frame {
   position: relative;
   display: inline-grid;
-  grid-template-columns: 1.25rem auto 1.25rem;
-  grid-template-rows: 1.25rem auto 1.25rem;
-  padding: 5px;
-  border-radius: 5px;
-  /* Cornice in legno mogano scuro con venatura verticale (riferimento). */
-  background: repeating-linear-gradient(
-    90deg,
-    #43291a 0px,
-    #5c3a24 2px,
-    #71492f 5px,
-    #5c3a24 8px,
-    #43291a 11px
-  );
+  grid-template-columns: 1rem auto 1rem;
+  grid-template-rows: 1rem auto 1rem;
+  padding: 4px;
+  border-radius: 2px;
+  /* Cornice rosso legno stile Fritz: base campionata dal riferimento (#6b2121). */
+  background:
+    linear-gradient(90deg, rgba(255, 180, 110, 0.08), transparent 22%, rgba(40, 0, 0, 0.14) 58%, transparent),
+    repeating-linear-gradient(
+      90deg,
+      #4f1617 0,
+      #682020 9px,
+      #7a2921 18px,
+      #5b1a1b 31px,
+      #732921 44px
+    );
   box-shadow:
-    0 12px 34px oklch(0.25 0.05 40 / 0.45),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+    0 12px 34px oklch(0.22 0.05 25 / 0.42),
+    inset 0 0 0 1px rgba(45, 0, 0, 0.72);
 }
 
 .ranks {
@@ -44,7 +46,7 @@
   justify-content: center;
   font-size: clamp(0.6rem, 1.4vw, 0.85rem);
   font-weight: 600;
-  color: #f3e6cc;
+  color: #f4dfbd;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
 }
 
