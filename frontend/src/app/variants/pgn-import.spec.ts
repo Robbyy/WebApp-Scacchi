@@ -21,12 +21,24 @@ function setup(service: Partial<VariantService>, studyService: Partial<StudyServ
 }
 
 describe('PgnImport', () => {
-  it('parses a simple PGN into SAN moves', () => {
+  it('parses a simple PGN into the mainline', () => {
     const { cmp } = setup({});
     cmp.pgn.set('1. e4 e5 2. Nf3 Nc6 3. Bb5 a6');
     const p = cmp.preview();
     expect(p.state).toBe('ok');
-    expect(p.moves).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6']);
+    expect(p.mainline).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'a6']);
+    expect(p.variationCount).toBe(0);
+  });
+
+  it('parses nested variations into the tree (Prototipo 13)', () => {
+    const { cmp } = setup({});
+    cmp.pgn.set('1. e4 e5 (1... c5 2. Nf3) 2. Nf3 Nc6');
+    const p = cmp.preview();
+    expect(p.state).toBe('ok');
+    expect(p.mainline).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
+    expect(p.variationCount).toBe(1);
+    expect(p.tree[0].children.map((c: { san: string }) => c.san)).toEqual(['e5', 'c5']);
+    expect(cmp.tokens().length).toBeGreaterThan(0);
   });
 
   it('suggests a name from the PGN headers', () => {
@@ -69,12 +81,12 @@ describe('PgnImport', () => {
     cmp.color.set('BLACK');
     cmp.save();
 
-    expect(captured).toEqual({
-      name: 'Apertura di Re',
-      color: 'BLACK',
-      moves: ['e4', 'e5'],
-      sourcePgn: '1. e4 e5',
-    });
+    expect(captured!.name).toBe('Apertura di Re');
+    expect(captured!.color).toBe('BLACK');
+    expect(captured!.moves).toEqual(['e4', 'e5']);
+    expect(captured!.sourcePgn).toBe('1. e4 e5');
+    // Prototipo 13: ora viene inviato anche l'albero completo.
+    expect(captured!.tree?.[0].san).toBe('e4');
     expect(navTarget).toEqual(['/variants', 9]);
   });
 });

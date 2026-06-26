@@ -10,13 +10,13 @@
 
 - **Parte 1 (Prototipi 0-6) + estensioni anticipate**: completa e verificata (vedi sezione 2).
 - **Parte 2 pianificata**: roadmap P7-P18 + sezioni TODO/idee, descritta nel planning (sezioni 11-19). Fasi: A consolidamento, B studi, C import PGN/Lichess, D apprendimento, E motore Stockfish.
-- **Parte 2 implementata finora**: **P7-P10** (fase A · consolidamento completata) + **P11-P12** (fase B · Studi completata: backend, UI e audio mosse). Prossimo: **P13** (import PGN avanzato).
+- **Parte 2 implementata finora**: **P7-P10** (fase A · consolidamento) + **P11-P12** (fase B · Studi) + **P13** (import PGN avanzato con varianti annidate). Prossimo: **P14** (import studio Lichess pubblico).
 
 Alla verifica del 2026-06-25:
 
 - repository in lavorazione con le modifiche del P12 e della documentazione da consolidare;
 - backend e frontend verificati tramite suite automatiche locali;
-- **test backend: 41 passati**; **test frontend: 91 passati**;
+- **test backend: 41 passati**; **test frontend: 104 passati**;
 - checklist manuale E2E formalizzata in `checklist-e2e.md`;
 - verifiche browser dei flussi principali senza errori console.
 
@@ -112,9 +112,17 @@ Tutti completati e verificati. Sintesi:
 
 **Verifica:** backend **41** test passati; frontend **91** test passati. Resta solo la validazione percettiva manuale dell'audio reale nel browser, perché non automatizzabile in modo affidabile dalla suite headless.
 
-### Prototipi 13-18 — da fare
+### Prototipo 13 — Import PGN avanzato ✅ (apre la fase C)
 
-- **P13** Import PGN avanzato (varianti annidate → `tree`).
+- Nuovo parser frontend dedicato `core/pgn.ts` (`parsePgnTree`): legge il movetext con **varianti annidate** `( ... )`, ignora testate, **commenti** `{...}`/`; ...` e **NAG** `$n`, normalizza l'arrocco con zeri e le annotazioni; costruisce l'albero con uno **stack di percorsi** (parentesi = alternativa all'ultima mossa) riusando `addChild`. Decisione R15 in **ADR 0007** (parsing client; `chess.js` resta motore di regole, non parser PGN).
+- Validazione/normalizzazione SAN ramo per ramo con `chess.js`; mossa illegale → errore leggibile nell'anteprima.
+- `PgnImport`: **anteprima ad albero** (mainline + varianti tra parentesi via `buildTokens`) con riepilogo "N mosse · M varianti"; il salvataggio invia `tree` e riusa `POST /api/variants` o l'endpoint studio.
+- Backend invariato (riuso): l'albero importato è validato e persistito come ogni variante.
+
+**Verifica:** frontend **104** test (+13: `pgn.spec` 12 + 1 in `pgn-import.spec`); backend **41** (invariato). **Round-trip verificato live**: PGN con 2 varianti annidate → `POST /api/variants` 201 → riletto con i rami intatti (e5/c5 fratelli, Nc6/d6 fratelli), `sourcePgn` conservato.
+
+### Prototipi 14-18 — da fare
+
 - **P14** Import studio/capitolo Lichess pubblico da link (`/study/{studyId}` o `/study/{studyId}/{chapterId}`).
 - **P15-P17** Persistenza sessioni → statistiche → spaced repetition.
 - **P18** Integrazione Stockfish (toggle motore, barra valutazione, gioca-vs-computer in nuova tab; mai in allenamento).
@@ -147,8 +155,8 @@ La legalità di mainline e albero è ora validata lato server con `chesslib`; er
 ### 5.2 Consolidamento modello ad albero — ✅ in gran parte (P8)
 Vincolo `children[0] = mainline` ufficiale e testato; round-trip garantito; promozione a mainline e protezione cancellazione sottoalbero implementate. Restano: import/export PGN ramificato (P13 / TODO export) e UX avanzata ulteriore.
 
-### 5.3 Import PGN e studi Lichess — ⏳ pianificato (P13-P14)
-P13 copre PGN con varianti annidate, commenti e NAG di base. P14 aggiunge l'import da link a **studio pubblico Lichess** (`https://lichess.org/study/{studyId}`) o a **capitolo corrente** (`https://lichess.org/study/{studyId}/{chapterId}`), usando gli endpoint PGN pubblici Lichess e salvando localmente capitoli come varianti dentro uno studio. Restano fuori: OAuth per studi privati/unlisted, sincronizzazione con Lichess, import file `.pgn` locale ed export PGN (sezione 19 del planning).
+### 5.3 Import PGN e studi Lichess — ✅ P13 fatto, P14 pianificato
+P13 ✅ copre PGN con varianti annidate (commenti/NAG ignorati senza rompere il parsing). P14 aggiunge l'import da link a **studio pubblico Lichess** (`https://lichess.org/study/{studyId}`) o a **capitolo corrente** (`https://lichess.org/study/{studyId}/{chapterId}`), usando gli endpoint PGN pubblici Lichess e salvando localmente capitoli come varianti dentro uno studio. Restano fuori: OAuth per studi privati/unlisted, sincronizzazione con Lichess, import file `.pgn` locale ed export PGN (sezione 19 del planning).
 
 ### 5.4 UX e sicurezza azioni distruttive — ✅ RISOLTO (P9)
 Conferma su elimina variante e su elimina sottoalbero; guard modifiche non salvate; feedback errori via toast; stati loading/saving. Resta margine per skeleton di caricamento ed empty-state curati (proposte UX sezione 17 del planning).
@@ -183,7 +191,7 @@ Spaced repetition (P17) e statistiche (P16) sono pianificate; multiutente, Supab
 | R11 | Modello ad albero | **Consolidato (P8)**: vincolo ufficiale, round-trip, promozione, protezione delete |
 | R13 | Libreria scacchi Java | Chiuso: `chesslib` via JitPack (ADR 0004) |
 | R14 | Modello Studi / cancellazione | **Chiuso (P11-P12)**: entità, FK `study_id`, delete a cascata, studio di default, UI lista/dettaglio e creazione varianti nello studio |
-| R15 | Import PGN ramificato | Aperto → P13 |
+| R15 | Import PGN ramificato | **Chiuso (P13)**: parser frontend `parsePgnTree` con varianti annidate (ADR 0007) |
 | R20 | Import studio Lichess pubblico | Aperto → P14: link pubblico studio/capitolo, fetch PGN Lichess, import transazionale locale |
 | R19 | Asset/audio mossa | **Chiuso (P12)**: asset Lichess standard vendorizzati con attribuzione, OGG/MP3, toggle locale |
 | R16 | Responsive scacchiera | Aperto (proposta UX da validare) |
@@ -193,14 +201,13 @@ Spaced repetition (P17) e statistiche (P16) sono pianificate; multiutente, Supab
 
 ## 7. Prossimi passi consigliati
 
-1. **P13** — import PGN avanzato (varianti annidate, commenti/NAG dove utile, popolamento di `tree`).
-2. **P14** — import da studio/capitolo Lichess pubblico tramite link.
-3. **P15-P17** — sessioni di training, statistiche e spaced repetition.
-4. **P18** — Stockfish come ultimo rilascio pianificato della Parte 2.
+1. **P14** — import da studio/capitolo Lichess pubblico tramite link (riusa il parser di P13).
+2. **P15-P17** — sessioni di training, statistiche e spaced repetition.
+3. **P18** — Stockfish come ultimo rilascio pianificato della Parte 2.
 5. Quando opportuno, sottoporre all'utente le **proposte grafiche** (sezione 17 del planning), esclusa la verifica mobile/tablet che non è richiesta.
 
 ---
 
 ## 8. Stato finale
 
-La webapp ha completato la Parte 1, l'intera **fase A di consolidamento della Parte 2** e la **fase B · Studi** (P11-P12): il backend valida la legalità delle mosse, il modello ad albero è consolidato (promozione, protezione, round-trip), le interazioni distruttive sono protette (conferme, toast, guard), gli **Studi** vivono in DB con CRUD e **cancellazione a cascata**, la UI permette di creare/eliminare studi e varianti al loro interno, e l'audio mosse è integrato con toggle locale. I flussi sono coperti da test automatici (backend 41, frontend 91) più una checklist E2E ripetibile. Il progetto è pronto per **P13 · import PGN avanzato**, seguito da **P14 · import studio Lichess pubblico**.
+La webapp ha completato la Parte 1, l'intera **fase A di consolidamento della Parte 2** e la **fase B · Studi** (P11-P12): il backend valida la legalità delle mosse, il modello ad albero è consolidato (promozione, protezione, round-trip), le interazioni distruttive sono protette (conferme, toast, guard), gli **Studi** vivono in DB con CRUD e **cancellazione a cascata**, la UI permette di creare/eliminare studi e varianti al loro interno, e l'audio mosse è integrato con toggle locale. Con **P13** l'import PGN legge anche le **varianti annidate** e le mappa sull'albero (parser frontend dedicato, round-trip verificato live). I flussi sono coperti da test automatici (backend 41, frontend 104) più una checklist E2E ripetibile. Il progetto è pronto per **P14 · import studio Lichess pubblico**, che riusa il parser di P13.

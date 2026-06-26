@@ -1,22 +1,24 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Chess } from 'chess.js';
 import { VariantService } from '../core/variant.service';
 import { StudyService } from '../core/study.service';
-import { CreateVariantRequest, VariantColor, validationMessage } from '../core/variant.model';
+import { CreateVariantRequest, MoveNode, VariantColor, validationMessage } from '../core/variant.model';
 import { ToastService } from '../core/toast.service';
-
-interface MoveRow {
-  number: number;
-  white?: string;
-  black?: string;
-}
+import { parsePgnTree } from '../core/pgn';
+import { buildTokens } from '../core/move-tree';
 
 type Preview =
   | { state: 'empty' }
   | { state: 'error'; message: string }
-  | { state: 'ok'; moves: string[]; suggestedName: string };
+  | {
+      state: 'ok';
+      tree: MoveNode[];
+      mainline: string[];
+      nodeCount: number;
+      variationCount: number;
+      suggestedName: string;
+    };
 
 @Component({
   selector: 'app-pgn-import',
@@ -48,23 +50,27 @@ export class PgnImport {
     }
   }
 
-  /** Risultato del parsing del PGN incollato (parsing lato client con chess.js). */
+  /**
+   * Parsing avanzato del PGN incollato (Prototipo 13): legge anche le varianti
+   * annidate e costruisce l'albero. Vedi {@link parsePgnTree}.
+   */
   protected readonly preview = computed<Preview>(() => {
     const text = this.pgn().trim();
     if (!text) {
       return { state: 'empty' };
     }
-    try {
-      const chess = new Chess();
-      chess.loadPgn(text);
-      const moves = chess.history();
-      if (moves.length === 0) {
-        return { state: 'error', message: 'Nessuna mossa trovata nel PGN.' };
-      }
-      return { state: 'ok', moves, suggestedName: suggestName(text) };
-    } catch {
-      return { state: 'error', message: 'PGN non valido: controlla il formato.' };
+    const parsed = parsePgnTree(text);
+    if (!parsed.ok) {
+      return { state: 'error', message: parsed.error };
     }
+    return {
+      state: 'ok',
+      tree: parsed.value.tree,
+      mainline: parsed.value.mainline,
+      nodeCount: parsed.value.nodeCount,
+      variationCount: parsed.value.variationCount,
+      suggestedName: suggestName(text),
+    };
   });
 
   /** Accessori "piatti" per il template (evitano l'accesso a proprietà dell'union). */
@@ -77,17 +83,19 @@ export class PgnImport {
     const p = this.preview();
     return p.state === 'error' ? p.message : '';
   });
-
-  protected readonly rows = computed<MoveRow[]>(() => {
+  protected readonly nodeCount = computed(() => {
     const p = this.preview();
-    if (p.state !== 'ok') {
-      return [];
-    }
-    const rows: MoveRow[] = [];
-    for (let i = 0; i < p.moves.length; i += 2) {
-      rows.push({ number: i / 2 + 1, white: p.moves[i], black: p.moves[i + 1] });
-    }
-    return rows;
+    return p.state === 'ok' ? p.nodeCount : 0;
+  });
+  protected readonly variationCount = computed(() => {
+    const p = this.preview();
+    return p.state === 'ok' ? p.variationCount : 0;
+  });
+
+  /** Token per l'anteprima ad albero (mainline + varianti tra parentesi). */
+  protected readonly tokens = computed(() => {
+    const p = this.preview();
+    return p.state === 'ok' ? buildTokens(p.tree) : [];
   });
 
   protected save(): void {
@@ -102,7 +110,8 @@ export class PgnImport {
     const request: CreateVariantRequest = {
       name,
       color: this.color(),
-      moves: p.moves,
+      moves: p.mainline,
+      tree: p.tree,
       sourcePgn: this.pgn().trim(),
     };
     const studyId = this.studyId();

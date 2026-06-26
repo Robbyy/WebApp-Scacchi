@@ -264,3 +264,48 @@ resta l'unica sorgente per costruire `MoveNode[]`.
   dello studio su Lichess.
 - Errori remoti (`404`, studio non pubblico, `429` rate limit, rete) devono avere
   messaggi espliciti e non lasciare dati parziali.
+
+---
+
+## 0007 — Parsing PGN avanzato lato frontend (P13, R15)
+
+**Data:** 2026-06-26 · **Stato:** Accettata · **Contesto:** Prototipo 13 (Parte 2), rischio R15.
+
+### Decisione
+L'import PGN con **varianti annidate** e' gestito da un parser **lato frontend**
+dedicato (`core/pgn.ts`, `parsePgnTree`), non da `chess.js` ne' dal backend.
+`chess.js` resta il motore di **regole** (legalita' e SAN canonico), ma non come
+parser PGN: il suo `loadPgn` appiattisce le varianti e ne restituisce solo la
+linea principale (`history()`), inadatto a costruire l'albero `MoveNode[]`.
+
+### Alternative valutate
+- **`chess.js.loadPgn` + `history()` (com'era in P6):** scartato — perde tutte le
+  sotto-varianti tra parentesi, proprio l'oggetto di P13.
+- **Parsing lato backend con libreria Java (chesslib):** scartato per coerenza con
+  P6 (parsing client) e per tenere il backend semplice; la validazione di legalita'
+  dell'albero importato resta comunque server-side (P7, riusata al salvataggio).
+
+### Note di implementazione
+- Tokenizer: rimuove testate `[...]`, commenti `{...}`/`; ...`, NAG `$n`, numeri di
+  mossa e risultati; normalizza l'arrocco con zeri (`0-0`→`O-O`); isola le
+  parentesi di variante.
+- Semantica PGN delle parentesi: una `( ... )` e' **alternativa all'ultima mossa**.
+  L'albero si costruisce con uno **stack di percorsi**: a `(` si torna alla
+  posizione del padre (i figli diventano fratelli), a `)` si ripristina. Riusa
+  `addChild` di `core/move-tree`.
+- Pass di validazione/normalizzazione: replay ramo per ramo con `chess.js` dalla
+  FEN del padre; ogni SAN viene riscritto nella forma canonica e una mossa
+  illegale produce un errore leggibile nell'anteprima.
+- L'anteprima mostra l'albero (mainline + varianti tra parentesi) riusando
+  `buildTokens`, piu' un riepilogo "N mosse · M varianti".
+- Il salvataggio invia `tree` (oltre a `moves` = mainline) e riusa
+  `POST /api/variants` o `POST /api/studies/{id}/variants`; il backend valida e
+  persiste l'albero (round-trip verificato live).
+
+### Conseguenze
+- I PGN ramificati diventano varianti ad albero allenabili, con i rami ritrovati
+  nel dettaglio/editor.
+- Il parser e' una base riusabile per l'import studio Lichess (P14, ADR 0006), che
+  divide il PGN multi-capitolo e passa ogni blocco a `parsePgnTree`.
+- Restano fuori (P13): PGN multi-partita in un singolo blocco, upload di file
+  `.pgn` (solo incolla), e la conservazione di commenti/NAG (per ora scartati).

@@ -6,7 +6,7 @@
 
   <div class="import-grid">
     <div class="import-col">
-      <label class="field-label" for="pgn">Incolla il PGN (linea principale)</label>
+      <label class="field-label" for="pgn">Incolla il PGN (anche con varianti annidate)</label>
       <textarea
         id="pgn"
         class="pgn-area"
@@ -55,24 +55,41 @@
     </div>
 
     <aside class="panel">
-      <h3 class="panel-title">Anteprima mosse</h3>
+      <h3 class="panel-title">Anteprima albero</h3>
       @switch (state()) {
         @case ('ok') {
-          <ol class="moves">
-            @for (row of rows(); track row.number) {
-              <li class="move-row">
-                <span class="move-num">{{ row.number }}.</span>
-                <span class="move-cell">{{ row.white }}</span>
-                <span class="move-cell">{{ row.black }}</span>
-              </li>
+          <p class="preview-summary">
+            {{ nodeCount() }} mosse
+            @if (variationCount() > 0) {
+              · {{ variationCount() }} variant{{ variationCount() === 1 ? 'e' : 'i' }}
+            } @else {
+              · solo linea principale
             }
-          </ol>
+          </p>
+          <div class="pgn">
+            @for (t of tokens(); track $index) {
+              @switch (t.kind) {
+                @case ('open') {
+                  <span class="paren">(</span>
+                }
+                @case ('close') {
+                  <span class="paren">)</span>
+                }
+                @default {
+                  @if (t.label) {
+                    <span class="move-num">{{ t.label }}</span>
+                  }
+                  <span class="move" [class.move--variation]="t.variation">{{ t.san }}</span>
+                }
+              }
+            }
+          </div>
         }
         @case ('error') {
           <p class="panel-note panel-note--error">{{ errorMessage() }}</p>
         }
         @default {
-          <p class="panel-note">Incolla un PGN per vedere le mosse riconosciute.</p>
+          <p class="panel-note">Incolla un PGN per vedere l'albero riconosciuto.</p>
         }
       }
     </aside>
