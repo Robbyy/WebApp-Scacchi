@@ -129,7 +129,7 @@ Tutti completati e verificati. Sintesi:
 - Backend: endpoint **transazionale** `POST /api/studies/import` (`ImportStudyRequest`) che crea studio + varianti in blocco, valida ogni capitolo e fa **rollback** se uno è illegale. Import di un singolo capitolo in uno studio aperto → riuso di `POST /api/studies/{id}/variants`.
 - Entry "Importa da Lichess" nella home studi e nel dettaglio studio. Decisione in **ADR 0006** (aggiornato a implementato).
 
-**Verifica:** backend **44** (+3: import bulk, rollback, lista vuota); frontend **121** (+17: `lichess.spec`, `lichess-import.spec`, `study.service` import). La validazione **live** con un URL Lichess reale resta da fare in locale (richiede rete).
+**Verifica:** backend **44** (+3: import bulk, rollback, lista vuota); frontend **121** (+17: `lichess.spec`, `lichess-import.spec`, `study.service` import). **Validazione live superata** (2026-06-26) con lo studio pubblico reale `lichess.org/study/OR3CU5Je` ("Difesa Due Cavalli", 4 capitoli): fetch browser → CORS OK (nessun proxy necessario), anteprima corretta, import → studio locale con 4 varianti, `sourcePgn` e **varianti annidate** conservati (capitolo "Fegatello" 33 nodi, 2 rami), cancellazione a cascata OK. Bug emerso e risolto: la colonna `source_pgn` del **DB H2 su file** era ancora `VARCHAR(255)` (drift di schema: `ddl-auto=update` non allarga le colonne esistenti) → `ALTER ... CHARACTER LARGE OBJECT` sul DB di sviluppo; l'entità era già corretta (`columnDefinition="text"`), nessuna modifica al codice.
 
 ### Prototipi 15-18 — da fare
 
@@ -201,7 +201,7 @@ Spaced repetition (P17) e statistiche (P16) sono pianificate; multiutente, Supab
 | R13 | Libreria scacchi Java | Chiuso: `chesslib` via JitPack (ADR 0004) |
 | R14 | Modello Studi / cancellazione | **Chiuso (P11-P12)**: entità, FK `study_id`, delete a cascata, studio di default, UI lista/dettaglio e creazione varianti nello studio |
 | R15 | Import PGN ramificato | **Chiuso (P13)**: parser frontend `parsePgnTree` con varianti annidate (ADR 0007) |
-| R20 | Import studio Lichess pubblico | **Chiuso (P14)**: link pubblico studio/capitolo, fetch PGN Lichess, import transazionale locale (ADR 0006); resta da provare live con URL reale |
+| R20 | Import studio Lichess pubblico | **Chiuso (P14)**: link pubblico studio/capitolo, fetch PGN Lichess, import transazionale locale (ADR 0006); **verificato live** con `study/OR3CU5Je` (CORS OK senza proxy) |
 | R19 | Asset/audio mossa | **Chiuso (P12)**: asset Lichess standard vendorizzati con attribuzione, OGG/MP3, toggle locale |
 | R16 | Responsive scacchiera | Aperto (proposta UX da validare) |
 | R8/R9/R10 | Supabase DB / Auth / Docker | Rinviati (terza tornata) |
