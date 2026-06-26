@@ -9,8 +9,8 @@
 ## 1. Sintesi esecutiva
 
 - **Parte 1 (Prototipi 0-6) + estensioni anticipate**: completa e verificata (vedi sezione 2).
-- **Parte 2 pianificata**: roadmap P7-P18 + sezioni TODO/idee, descritta nel planning (sezioni 11-19). Fasi: A consolidamento, B studi, C import PGN/Lichess, D apprendimento, E motore Stockfish.
-- **Parte 2 implementata finora**: **P7-P10** (fase A · consolidamento) + **P11-P12** (fase B · Studi) + **P13-P14** (fase C · import PGN avanzato e import studio Lichess pubblico). Prossimo: **P15** (persistenza sessioni di allenamento).
+- **Parte 2 pianificata**: roadmap P7-P19 + sezioni TODO/idee, descritta nel planning (sezioni 11-19). Fasi: A consolidamento, B studi, C import PGN/Lichess, D apprendimento, E motore Stockfish.
+- **Parte 2 implementata finora**: **P7-P10** (fase A · consolidamento) + **P11-P12** (fase B · Studi) + **P13-P14** (fase C · import PGN avanzato e import studio Lichess pubblico). Prossimo: **P15** (import Lichess privati/unlisted via OAuth + sync/upsert).
 
 Alla verifica del 2026-06-25:
 
@@ -131,10 +131,11 @@ Tutti completati e verificati. Sintesi:
 
 **Verifica:** backend **44** (+3: import bulk, rollback, lista vuota); frontend **121** (+17: `lichess.spec`, `lichess-import.spec`, `study.service` import). **Validazione live superata** (2026-06-26) con lo studio pubblico reale `lichess.org/study/OR3CU5Je` ("Difesa Due Cavalli", 4 capitoli): fetch browser → CORS OK (nessun proxy necessario), anteprima corretta, import → studio locale con 4 varianti, `sourcePgn` e **varianti annidate** conservati (capitolo "Fegatello" 33 nodi, 2 rami), cancellazione a cascata OK. Bug emerso e risolto: la colonna `source_pgn` del **DB H2 su file** era ancora `VARCHAR(255)` (drift di schema: `ddl-auto=update` non allarga le colonne esistenti) → `ALTER ... CHARACTER LARGE OBJECT` sul DB di sviluppo; l'entità era già corretta (`columnDefinition="text"`), nessuna modifica al codice.
 
-### Prototipi 15-18 — da fare
+### Prototipi 15-19 — da fare
 
-- **P15-P17** Persistenza sessioni → statistiche → spaced repetition.
-- **P18** Integrazione Stockfish (toggle motore, barra valutazione, gioca-vs-computer in nuova tab; mai in allenamento).
+- **P15** Import Lichess privati/unlisted via OAuth + sync/upsert — **prossimo passo**: memorizza il riferimento allo studio Lichess, evita duplicati, re-importa sostituendo le varianti ma preservando i dati locali dello studio.
+- **P16** Integrazione Stockfish: toggle motore, barra valutazione, gioca-vs-computer in nuova tab; mai in allenamento.
+- **P17-P19** Persistenza sessioni → statistiche → spaced repetition, da riprendere dopo Stockfish.
 
 ---
 
@@ -165,7 +166,7 @@ La legalità di mainline e albero è ora validata lato server con `chesslib`; er
 Vincolo `children[0] = mainline` ufficiale e testato; round-trip garantito; promozione a mainline e protezione cancellazione sottoalbero implementate. Restano: import/export PGN ramificato (P13 / TODO export) e UX avanzata ulteriore.
 
 ### 5.3 Import PGN e studi Lichess — ✅ P13 e P14 fatti
-P13 ✅ copre PGN con varianti annidate (commenti/NAG ignorati senza rompere il parsing). P14 ✅ importa da link a **studio pubblico Lichess** (`https://lichess.org/study/{studyId}`) o a **capitolo** (`https://lichess.org/study/{studyId}/{chapterId}`): fetch frontend degli endpoint PGN pubblici, parsing che riusa `parsePgnTree`, e salvataggio locale via endpoint transazionale `POST /api/studies/import` (o `POST /api/studies/{id}/variants` per il singolo capitolo). Restano fuori: OAuth per studi privati/unlisted, sincronizzazione con Lichess, posizioni di partenza non standard nei capitoli, import file `.pgn` locale ed export PGN (sezione 19 del planning).
+P13 ✅ copre PGN con varianti annidate (commenti/NAG ignorati senza rompere il parsing). P14 ✅ importa da link a **studio pubblico Lichess** (`https://lichess.org/study/{studyId}`) o a **capitolo** (`https://lichess.org/study/{studyId}/{chapterId}`): fetch frontend degli endpoint PGN pubblici, parsing che riusa `parsePgnTree`, e salvataggio locale via endpoint transazionale `POST /api/studies/import` (o `POST /api/studies/{id}/variants` per il singolo capitolo). Restano da fare in P15: OAuth per studi privati/unlisted, riferimento remoto Lichess sullo studio locale e re-import con sovrascrittura varianti senza duplicazione. Restano fuori: sincronizzazione automatica periodica, posizioni di partenza non standard nei capitoli, import file `.pgn` locale ed export PGN (sezione 19 del planning).
 
 ### 5.4 UX e sicurezza azioni distruttive — ✅ RISOLTO (P9)
 Conferma su elimina variante e su elimina sottoalbero; guard modifiche non salvate; feedback errori via toast; stati loading/saving. Resta margine per skeleton di caricamento ed empty-state curati (proposte UX sezione 17 del planning).
@@ -186,7 +187,7 @@ Entità `Study` 1-N con `Variant`, **cancellazione a cascata**, studio di defaul
 `MoveSoundService` usa gli asset **Lichess standard** vendorizzati localmente (`Move` e `Capture`, OGG con fallback MP3), con default attivo, toggle globale e preferenza persistita in `localStorage`. Il codice è testato; resta solo una verifica percettiva manuale dell'effetto audio su browser reale.
 
 ### 5.10 Post-MVP ancora fuori
-Spaced repetition (P17) e statistiche (P16) sono pianificate; multiutente, Supabase Auth, Supabase PostgreSQL, Docker restano per la terza tornata.
+P15 Lichess OAuth/sync è ora il prossimo passo operativo. Stockfish (P16) viene subito dopo. Persistenza sessioni (P17), statistiche (P18) e spaced repetition (P19) restano pianificate dopo Stockfish; multiutente applicativo, Supabase Auth, Supabase PostgreSQL e Docker restano per la terza tornata.
 
 ---
 
@@ -202,6 +203,7 @@ Spaced repetition (P17) e statistiche (P16) sono pianificate; multiutente, Supab
 | R14 | Modello Studi / cancellazione | **Chiuso (P11-P12)**: entità, FK `study_id`, delete a cascata, studio di default, UI lista/dettaglio e creazione varianti nello studio |
 | R15 | Import PGN ramificato | **Chiuso (P13)**: parser frontend `parsePgnTree` con varianti annidate (ADR 0007) |
 | R20 | Import studio Lichess pubblico | **Chiuso (P14)**: link pubblico studio/capitolo, fetch PGN Lichess, import transazionale locale (ADR 0006); **verificato live** con `study/OR3CU5Je` (CORS OK senza proxy) |
+| R21 | Import Lichess privati/unlisted + sync | **Da fare (P15)**: OAuth Lichess, riferimento remoto su `Study`, re-import come upsert transazionale senza duplicati |
 | R19 | Asset/audio mossa | **Chiuso (P12)**: asset Lichess standard vendorizzati con attribuzione, OGG/MP3, toggle locale |
 | R16 | Responsive scacchiera | Aperto (proposta UX da validare) |
 | R8/R9/R10 | Supabase DB / Auth / Docker | Rinviati (terza tornata) |
@@ -210,13 +212,13 @@ Spaced repetition (P17) e statistiche (P16) sono pianificate; multiutente, Supab
 
 ## 7. Prossimi passi consigliati
 
-1. **P14** — import da studio/capitolo Lichess pubblico tramite link (riusa il parser di P13).
-2. **P15-P17** — sessioni di training, statistiche e spaced repetition.
-3. **P18** — Stockfish come ultimo rilascio pianificato della Parte 2.
-5. Quando opportuno, sottoporre all'utente le **proposte grafiche** (sezione 17 del planning), esclusa la verifica mobile/tablet che non è richiesta.
+1. **P15** — import Lichess privati/unlisted via OAuth + sync/upsert: se lo studio remoto esiste gia' localmente, sostituire le varianti e preservare i dati locali dello studio.
+2. **P16** — Stockfish: motore client-side, barra valutazione e "gioca contro il computer" in nuova tab, mai in allenamento.
+3. **P17-P19** — sessioni di training, statistiche e spaced repetition.
+4. Quando opportuno, sottoporre all'utente le **proposte grafiche** (sezione 17 del planning), esclusa la verifica mobile/tablet che non è richiesta.
 
 ---
 
 ## 8. Stato finale
 
-La webapp ha completato la Parte 1, l'intera **fase A di consolidamento della Parte 2** e la **fase B · Studi** (P11-P12): il backend valida la legalità delle mosse, il modello ad albero è consolidato (promozione, protezione, round-trip), le interazioni distruttive sono protette (conferme, toast, guard), gli **Studi** vivono in DB con CRUD e **cancellazione a cascata**, la UI permette di creare/eliminare studi e varianti al loro interno, e l'audio mosse è integrato con toggle locale. Con **P13** l'import PGN legge anche le **varianti annidate** e le mappa sull'albero (parser frontend dedicato, round-trip verificato live). I flussi sono coperti da test automatici (backend 41, frontend 104) più una checklist E2E ripetibile. Il progetto è pronto per **P14 · import studio Lichess pubblico**, che riusa il parser di P13.
+La webapp ha completato la Parte 1, l'intera **fase A di consolidamento della Parte 2**, la **fase B · Studi** (P11-P12) e la prima parte della **fase C · import PGN/Lichess** (P13-P14). Il backend valida la legalità delle mosse, il modello ad albero è consolidato, gli Studi vivono in DB con CRUD e cancellazione a cascata, l'audio mosse è integrato con toggle locale, l'import PGN legge varianti annidate e l'import da studio Lichess pubblico è verificato. Il progetto è ora pronto per **P15 · import Lichess privati/unlisted + sync**, prima di Stockfish.
