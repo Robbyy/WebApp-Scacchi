@@ -1,0 +1,237 @@
+.import {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.crumbs a {
+  color: var(--wood-dark);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.crumbs a:hover {
+  text-decoration: underline;
+}
+
+.crumb-sep,
+.crumb-current {
+  color: var(--text-muted);
+}
+
+.import-head {
+  margin-bottom: 1.25rem;
+}
+
+.import-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.import-title {
+  margin: 0.2rem 0 0;
+  font-size: 1.8rem;
+  color: var(--text-main);
+}
+
+.import-sub {
+  margin: 0.5rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.import-sub code {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.85rem;
+  background: var(--wood-light);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.3rem;
+}
+
+.url-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.url-input {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.55rem;
+  background: oklch(0.99 0.005 90);
+  font: inherit;
+  color: var(--text-main);
+}
+
+.url-input:focus {
+  outline: 2px solid var(--wood-medium);
+  outline-offset: 1px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.55rem;
+  background: oklch(0.965 0.018 80);
+  color: var(--wood-dark);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--wood-light);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn--primary {
+  color: var(--board-light);
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--wood-medium), var(--wood-dark));
+}
+
+.import-error {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.55rem;
+  background: oklch(0.92 0.06 25);
+  color: oklch(0.4 0.16 25);
+  font-size: 0.9rem;
+}
+
+.preview {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.85rem;
+  padding: 1.1rem 1.2rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.9rem;
+}
+
+.field-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.field-input {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.5rem;
+  background: oklch(0.99 0.005 90);
+  font: inherit;
+  color: var(--text-main);
+}
+
+.preview-summary {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.chapter-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.chapter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.55rem;
+  background: oklch(0.99 0.005 90);
+}
+
+.chapter-name {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.chapter-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.chapter-count {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.badge {
+  padding: 0.12rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.badge--white {
+  background: var(--board-light);
+  color: var(--wood-dark);
+}
+
+.badge--black {
+  background: var(--wood-dark);
+  color: var(--board-light);
+}
+
+.failed {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.55rem;
+  background: oklch(0.95 0.04 75);
+  color: var(--wood-dark);
+  font-size: 0.85rem;
+}
+
+.failed-title {
+  margin: 0 0 0.3rem;
+  font-weight: 700;
+}
+
+.failed ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}

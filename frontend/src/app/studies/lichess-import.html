@@ -1,0 +1,107 @@
+<section class="import">
+  <nav class="crumbs">
+    @if (studyId(); as sid) {
+      <a [routerLink]="['/studies', sid]">Studio</a>
+    } @else {
+      <a routerLink="/">Studi</a>
+    }
+    <span class="crumb-sep">/</span>
+    <span class="crumb-current">Importa da Lichess</span>
+  </nav>
+
+  <header class="import-head">
+    <p class="import-kicker">Import</p>
+    <h2 class="import-title">Importa da Lichess</h2>
+    <p class="import-sub">
+      Incolla il link di uno <strong>studio pubblico</strong> Lichess (o di un suo
+      capitolo). Esempio: <code>https://lichess.org/study/OR3CU5Je</code>
+    </p>
+  </header>
+
+  <div class="url-row">
+    <input
+      class="url-input"
+      type="text"
+      name="url"
+      [ngModel]="url()"
+      (ngModelChange)="url.set($event)"
+      (keyup.enter)="loadPreview()"
+      placeholder="https://lichess.org/study/XXXXXXXX"
+      autocomplete="off"
+    />
+    <button class="btn" type="button" (click)="loadPreview()" [disabled]="loading() || !url().trim()">
+      {{ loading() ? 'Recupero…' : 'Anteprima' }}
+    </button>
+  </div>
+
+  @if (error()) {
+    <p class="import-error">{{ error() }}</p>
+  }
+
+  @if (preview(); as p) {
+    <div class="preview">
+      @if (studyId() === null) {
+        <label class="field">
+          <span class="field-label">Nome dello studio locale</span>
+          <input
+            class="field-input"
+            type="text"
+            name="studyName"
+            [ngModel]="studyName()"
+            (ngModelChange)="studyName.set($event)"
+            autocomplete="off"
+          />
+        </label>
+      }
+
+      <p class="preview-summary">
+        {{ chapters().length }} capitol{{ chapters().length === 1 ? 'o' : 'i' }} importabil{{ chapters().length === 1 ? 'e' : 'i' }}
+        @if (studyId() === null) {
+          · colore {{ colorLabel(studyColor()) }}
+        }
+      </p>
+
+      @if (chapters().length > 0) {
+        <ul class="chapter-list">
+          @for (c of chapters(); track $index) {
+            <li class="chapter">
+              <span class="chapter-name">{{ c.name }}</span>
+              <span class="chapter-meta">
+                <span
+                  class="badge"
+                  [class.badge--white]="c.color === 'WHITE'"
+                  [class.badge--black]="c.color === 'BLACK'"
+                  >{{ c.color === 'WHITE' ? 'Bianco' : 'Nero' }}</span
+                >
+                <span class="chapter-count">
+                  {{ c.nodeCount }} mosse
+                  @if (c.variationCount > 0) {
+                    · {{ c.variationCount }} variant{{ c.variationCount === 1 ? 'e' : 'i' }}
+                  }
+                </span>
+              </span>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (failed().length > 0) {
+        <div class="failed">
+          <p class="failed-title">{{ failed().length }} capitol{{ failed().length === 1 ? 'o' : 'i' }} non importabil{{ failed().length === 1 ? 'e' : 'i' }} (saltat{{ failed().length === 1 ? 'o' : 'i' }}):</p>
+          <ul>
+            @for (f of failed(); track $index) {
+              <li><strong>{{ f.name }}</strong>: {{ f.error }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      <div class="actions">
+        <button class="btn btn--primary" type="button" (click)="doImport()" [disabled]="!canImport()">
+          {{ importing() ? 'Importazione…' : (studyId() === null ? 'Importa come nuovo studio' : 'Importa nello studio') }}
+        </button>
+        <a class="btn" [routerLink]="studyId() ? ['/studies', studyId()] : ['/']">Annulla</a>
+      </div>
+    </div>
+  }
+</section>

@@ -60,6 +60,22 @@ public class StudyController {
             .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /**
+     * Import in blocco di uno studio con tutte le sue varianti (Prototipo 14),
+     * tipicamente da uno studio pubblico Lichess. Valida ogni variante prima di
+     * creare alcunché: al primo errore risponde 400 e non persiste nulla.
+     */
+    @PostMapping("/import")
+    public ResponseEntity<StudyDto> importStudy(@RequestBody ImportStudyRequest request) {
+        if (request == null || request.variants() == null || request.variants().isEmpty()) {
+            throw new InvalidStudyException(
+                new ValidationError("variants", null, null, "Nessun capitolo da importare."));
+        }
+        request.variants().forEach(variantValidator::validate);
+        StudyDto created = service.importStudy(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
     /** Crea una variante già agganciata allo studio (Prototipo 12). */
     @PostMapping("/{id}/variants")
     public ResponseEntity<VariantDto> createVariant(

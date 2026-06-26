@@ -63,6 +63,25 @@
   cursor: default;
 }
 
+/* Variante secondaria (Importa da Lichess) */
+.new-cta--ghost {
+  color: var(--wood-dark);
+  background: oklch(0.965 0.018 80);
+  border: 1px solid var(--panel-border);
+  box-shadow: none;
+  text-decoration: none;
+}
+
+.new-cta--ghost svg {
+  fill: none;
+  stroke: currentColor;
+}
+
+.new-cta--ghost:hover {
+  color: var(--wood-dark);
+  background: var(--wood-light);
+}
+
 /* Form "Nuovo studio" */
 .study-form {
   display: flex;

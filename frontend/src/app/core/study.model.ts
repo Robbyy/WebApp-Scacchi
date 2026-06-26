@@ -1,4 +1,4 @@
-import { Variant } from './variant.model';
+import { CreateVariantRequest, Variant } from './variant.model';
 
 /** Colore/orientamento di uno studio: per colore singolo o repertorio misto. */
 export type StudyColor = 'WHITE' | 'BLACK' | 'MIXED';
@@ -23,4 +23,12 @@ export interface CreateStudyRequest {
   name: string;
   description?: string | null;
   color?: StudyColor | null;
+}
+
+/** Payload per l'import in blocco di uno studio con tutte le sue varianti (P14). */
+export interface ImportStudyRequest {
+  name: string;
+  description?: string | null;
+  color?: StudyColor | null;
+  variants: CreateVariantRequest[];
 }

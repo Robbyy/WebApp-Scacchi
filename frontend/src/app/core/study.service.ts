@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { CreateStudyRequest, Study } from './study.model';
+import { CreateStudyRequest, ImportStudyRequest, Study } from './study.model';
 import { CreateVariantRequest, Variant } from './variant.model';
 
 /** Accesso alle API degli studi (/api/studies) - Prototipo 11. */
@@ -36,5 +36,10 @@ export class StudyService {
   /** Crea una variante già agganciata allo studio (endpoint nidificato). */
   addVariant(studyId: number, request: CreateVariantRequest): Observable<Variant> {
     return this.http.post<Variant>(`${this.baseUrl}/${studyId}/variants`, request);
+  }
+
+  /** Import in blocco: crea uno studio con tutte le sue varianti (Prototipo 14). */
+  importStudy(request: ImportStudyRequest): Observable<Study> {
+    return this.http.post<Study>(`${this.baseUrl}/import`, request);
   }
 }

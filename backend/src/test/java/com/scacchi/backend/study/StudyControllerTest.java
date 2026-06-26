@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -151,6 +152,47 @@ class StudyControllerTest {
     }
 
     @Test
+    void importsAStudyWithMultipleVariants() throws Exception {
+        String body = """
+            {"name":"Repertorio Lichess","description":"importato","color":"WHITE","variants":[
+              {"name":"Cap. 1","color":"WHITE","moves":["e4","e5","Nf3"]},
+              {"name":"Cap. 2","color":"WHITE","moves":["d4","d5","c4"]}
+            ]}""";
+        mockMvc.perform(post("/api/studies/import").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("Repertorio Lichess"))
+            .andExpect(jsonPath("$.variantCount").value(2))
+            .andExpect(jsonPath("$.variants.length()").value(2))
+            .andExpect(jsonPath("$.variants[0].name").value("Cap. 1"))
+            .andExpect(jsonPath("$.variants[0].studyId").isNumber());
+    }
+
+    @Test
+    void importRollsBackEntirelyWhenAVariantIsIllegal() throws Exception {
+        int before = studyCount();
+        String body = """
+            {"name":"Import rotto","variants":[
+              {"name":"Buono","color":"WHITE","moves":["e4","e5"]},
+              {"name":"Illegale","color":"WHITE","moves":["e4","e4"]}
+            ]}""";
+        mockMvc.perform(post("/api/studies/import").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("moves"));
+
+        // Nessuno studio creato: l'import è transazionale.
+        org.junit.jupiter.api.Assertions.assertEquals(before, studyCount());
+    }
+
+    @Test
+    void importRejectsAnEmptyChapterList() throws Exception {
+        String body = """
+            {"name":"Vuoto","variants":[]}""";
+        mockMvc.perform(post("/api/studies/import").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("variants"));
+    }
+
+    @Test
     void deleteAnEmptyStudyReturns204() throws Exception {
         int id = createStudy("""
             {"name":"Vuoto"}""");
@@ -186,6 +228,14 @@ class StudyControllerTest {
             .andExpect(status().isOk())
             .andReturn();
         return JsonPath.read(result.getResponse().getContentAsString(), "$[0].id");
+    }
+
+    private int studyCount() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/studies"))
+            .andExpect(status().isOk())
+            .andReturn();
+        List<?> studies = JsonPath.read(result.getResponse().getContentAsString(), "$");
+        return studies.size();
     }
 
     private int createStudy(String body) throws Exception {

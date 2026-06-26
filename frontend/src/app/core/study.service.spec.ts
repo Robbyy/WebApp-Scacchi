@@ -76,4 +76,17 @@ describe('StudyService', () => {
     expect(req.request.body).toEqual(request);
     req.flush({ id: 11, name: 'Italiana', color: 'WHITE', moves: ['e4', 'e5'], studyId: 5 });
   });
+
+  it('imports a study in bulk via POST /api/studies/import', () => {
+    const request = {
+      name: 'Importato',
+      color: 'MIXED' as const,
+      variants: [{ name: 'Cap. 1', color: 'WHITE' as const, moves: ['e4'] }],
+    };
+    service.importStudy(request).subscribe();
+    const req = httpMock.expectOne('/api/studies/import');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(request);
+    req.flush({ id: 50, name: 'Importato', variantCount: 1 });
+  });
 });

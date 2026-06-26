@@ -10,13 +10,13 @@
 
 - **Parte 1 (Prototipi 0-6) + estensioni anticipate**: completa e verificata (vedi sezione 2).
 - **Parte 2 pianificata**: roadmap P7-P18 + sezioni TODO/idee, descritta nel planning (sezioni 11-19). Fasi: A consolidamento, B studi, C import PGN/Lichess, D apprendimento, E motore Stockfish.
-- **Parte 2 implementata finora**: **P7-P10** (fase A · consolidamento) + **P11-P12** (fase B · Studi) + **P13** (import PGN avanzato con varianti annidate). Prossimo: **P14** (import studio Lichess pubblico).
+- **Parte 2 implementata finora**: **P7-P10** (fase A · consolidamento) + **P11-P12** (fase B · Studi) + **P13-P14** (fase C · import PGN avanzato e import studio Lichess pubblico). Prossimo: **P15** (persistenza sessioni di allenamento).
 
 Alla verifica del 2026-06-25:
 
 - repository in lavorazione con le modifiche del P12 e della documentazione da consolidare;
 - backend e frontend verificati tramite suite automatiche locali;
-- **test backend: 41 passati**; **test frontend: 104 passati**;
+- **test backend: 44 passati**; **test frontend: 121 passati**;
 - checklist manuale E2E formalizzata in `checklist-e2e.md`;
 - verifiche browser dei flussi principali senza errori console.
 
@@ -121,9 +121,18 @@ Tutti completati e verificati. Sintesi:
 
 **Verifica:** frontend **104** test (+13: `pgn.spec` 12 + 1 in `pgn-import.spec`); backend **41** (invariato). **Round-trip verificato live**: PGN con 2 varianti annidate → `POST /api/variants` 201 → riletto con i rami intatti (e5/c5 fratelli, Nc6/d6 fratelli), `sourcePgn` conservato.
 
-### Prototipi 14-18 — da fare
+### Prototipo 14 — Import studio Lichess pubblico ✅
 
-- **P14** Import studio/capitolo Lichess pubblico da link (`/study/{studyId}` o `/study/{studyId}/{chapterId}`).
+- Logica pura `core/lichess.ts`: `parseLichessStudyUrl` (link studio/capitolo, tollera protocollo/slash/query), `splitPgnGames` (split del PGN multi-capitolo), `parseLichessStudyPgn` (un capitolo per partita, nome da `[Event "Studio: Capitolo"]`, colore da `[Orientation]`) — riusa `parsePgnTree` di P13. Capitoli non parsabili → elenco "saltati", senza bloccare gli altri.
+- `LichessService`: fetch dagli endpoint **pubblici** Lichess (`/api/study/{id}.pgn`, `/api/study/{id}/{chapterId}.pgn`, con `comments/variations/orientation`), senza OAuth.
+- Componente `LichessImport` (rotta `/studies/import-lichess`, con `?studyId` opzionale): incolla link → **anteprima** (nome studio, capitoli con colore/mosse/varianti, saltati) → import. Gestione errori `404`/`429`/rete con messaggi dedicati.
+- Backend: endpoint **transazionale** `POST /api/studies/import` (`ImportStudyRequest`) che crea studio + varianti in blocco, valida ogni capitolo e fa **rollback** se uno è illegale. Import di un singolo capitolo in uno studio aperto → riuso di `POST /api/studies/{id}/variants`.
+- Entry "Importa da Lichess" nella home studi e nel dettaglio studio. Decisione in **ADR 0006** (aggiornato a implementato).
+
+**Verifica:** backend **44** (+3: import bulk, rollback, lista vuota); frontend **121** (+17: `lichess.spec`, `lichess-import.spec`, `study.service` import). La validazione **live** con un URL Lichess reale resta da fare in locale (richiede rete).
+
+### Prototipi 15-18 — da fare
+
 - **P15-P17** Persistenza sessioni → statistiche → spaced repetition.
 - **P18** Integrazione Stockfish (toggle motore, barra valutazione, gioca-vs-computer in nuova tab; mai in allenamento).
 
@@ -155,8 +164,8 @@ La legalità di mainline e albero è ora validata lato server con `chesslib`; er
 ### 5.2 Consolidamento modello ad albero — ✅ in gran parte (P8)
 Vincolo `children[0] = mainline` ufficiale e testato; round-trip garantito; promozione a mainline e protezione cancellazione sottoalbero implementate. Restano: import/export PGN ramificato (P13 / TODO export) e UX avanzata ulteriore.
 
-### 5.3 Import PGN e studi Lichess — ✅ P13 fatto, P14 pianificato
-P13 ✅ copre PGN con varianti annidate (commenti/NAG ignorati senza rompere il parsing). P14 aggiunge l'import da link a **studio pubblico Lichess** (`https://lichess.org/study/{studyId}`) o a **capitolo corrente** (`https://lichess.org/study/{studyId}/{chapterId}`), usando gli endpoint PGN pubblici Lichess e salvando localmente capitoli come varianti dentro uno studio. Restano fuori: OAuth per studi privati/unlisted, sincronizzazione con Lichess, import file `.pgn` locale ed export PGN (sezione 19 del planning).
+### 5.3 Import PGN e studi Lichess — ✅ P13 e P14 fatti
+P13 ✅ copre PGN con varianti annidate (commenti/NAG ignorati senza rompere il parsing). P14 ✅ importa da link a **studio pubblico Lichess** (`https://lichess.org/study/{studyId}`) o a **capitolo** (`https://lichess.org/study/{studyId}/{chapterId}`): fetch frontend degli endpoint PGN pubblici, parsing che riusa `parsePgnTree`, e salvataggio locale via endpoint transazionale `POST /api/studies/import` (o `POST /api/studies/{id}/variants` per il singolo capitolo). Restano fuori: OAuth per studi privati/unlisted, sincronizzazione con Lichess, posizioni di partenza non standard nei capitoli, import file `.pgn` locale ed export PGN (sezione 19 del planning).
 
 ### 5.4 UX e sicurezza azioni distruttive — ✅ RISOLTO (P9)
 Conferma su elimina variante e su elimina sottoalbero; guard modifiche non salvate; feedback errori via toast; stati loading/saving. Resta margine per skeleton di caricamento ed empty-state curati (proposte UX sezione 17 del planning).
@@ -192,7 +201,7 @@ Spaced repetition (P17) e statistiche (P16) sono pianificate; multiutente, Supab
 | R13 | Libreria scacchi Java | Chiuso: `chesslib` via JitPack (ADR 0004) |
 | R14 | Modello Studi / cancellazione | **Chiuso (P11-P12)**: entità, FK `study_id`, delete a cascata, studio di default, UI lista/dettaglio e creazione varianti nello studio |
 | R15 | Import PGN ramificato | **Chiuso (P13)**: parser frontend `parsePgnTree` con varianti annidate (ADR 0007) |
-| R20 | Import studio Lichess pubblico | Aperto → P14: link pubblico studio/capitolo, fetch PGN Lichess, import transazionale locale |
+| R20 | Import studio Lichess pubblico | **Chiuso (P14)**: link pubblico studio/capitolo, fetch PGN Lichess, import transazionale locale (ADR 0006); resta da provare live con URL reale |
 | R19 | Asset/audio mossa | **Chiuso (P12)**: asset Lichess standard vendorizzati con attribuzione, OGG/MP3, toggle locale |
 | R16 | Responsive scacchiera | Aperto (proposta UX da validare) |
 | R8/R9/R10 | Supabase DB / Auth / Docker | Rinviati (terza tornata) |

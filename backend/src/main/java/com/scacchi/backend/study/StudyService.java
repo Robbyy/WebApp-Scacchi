@@ -63,6 +63,25 @@ public class StudyService {
         return Optional.of(variantService.createInStudy(studyId, request));
     }
 
+    /**
+     * Import in blocco (Prototipo 14): crea lo studio e tutte le sue varianti in
+     * un'unica transazione. La validazione scacchistica di ogni variante è a carico
+     * del controller; se un inserimento fallisce, l'intero import viene annullato.
+     */
+    @Transactional
+    public StudyDto importStudy(ImportStudyRequest request) {
+        validate(new CreateStudyRequest(request.name(), request.description(), request.color()));
+        Study entity = new Study();
+        entity.setName(request.name().trim());
+        entity.setDescription(normalize(request.description()));
+        entity.setColor(parseColor(request.color()));
+        Study saved = repository.save(entity);
+        for (CreateVariantRequest variant : request.variants()) {
+            variantService.createInStudy(saved.getId(), variant);
+        }
+        return findById(saved.getId()).orElseThrow();
+    }
+
     public Optional<StudyDto> update(Long id, CreateStudyRequest request) {
         validate(request);
         return repository.findById(id).map(entity -> {

@@ -212,7 +212,17 @@ vengono mai riassegnate ad altri studi.
 
 ## 0006 — Import studio Lichess pubblico da URL (P14, R20)
 
-**Data:** 2026-06-25 · **Stato:** Pianificata · **Contesto:** Prototipo 14 (Parte 2), rischio R20.
+**Data:** 2026-06-25 · **Stato:** Accettata e implementata (P14) · **Contesto:** Prototipo 14 (Parte 2), rischio R20.
+
+> **Implementazione (2026-06-26).** Fetch frontend diretto dell'API pubblica
+> Lichess (`LichessService`), parsing in `core/lichess.ts` (URL `parseLichessStudyUrl`,
+> split multi-capitolo `splitPgnGames`, mappatura `parseLichessStudyPgn` che riusa
+> `parsePgnTree` di P13 e l'`[Orientation]` per il colore). Persistenza tramite il
+> nuovo endpoint **transazionale** `POST /api/studies/import` (studio + varianti in
+> blocco, validate da `VariantValidator`, rollback se un capitolo è illegale).
+> L'import di un singolo capitolo dentro uno studio aperto riusa
+> `POST /api/studies/{id}/variants`. I capitoli non parsabili (es. posizione di
+> partenza non standard) finiscono in un elenco "saltati", senza bloccare gli altri.
 
 ### Decisione
 L'app supportera' l'import di **studi pubblici Lichess** partendo dai link copiati
