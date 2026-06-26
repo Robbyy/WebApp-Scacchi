@@ -74,6 +74,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   margin: 0;
   padding: 0;
   border: none;
@@ -81,14 +82,71 @@
   font: inherit;
   -webkit-user-select: none;
   user-select: none;
+  isolation: isolate;
+  background: var(--wood-base);
+}
+
+.square::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 20% 18%, var(--wood-knot) 0 5%, transparent 20%),
+    radial-gradient(ellipse at 76% 48%, var(--wood-glow) 0 8%, transparent 30%),
+    linear-gradient(
+      90deg,
+      transparent 0 8%,
+      var(--wood-grain) 17%,
+      transparent 28%,
+      var(--wood-soft-grain) 45%,
+      transparent 59%,
+      var(--wood-grain) 78%,
+      transparent 92%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 18px,
+      var(--wood-hairline) 22px 24px,
+      transparent 34px 58px
+    ),
+    linear-gradient(90deg, var(--wood-edge), transparent 24%, var(--wood-highlight) 54%, transparent 86%, var(--wood-edge));
+  background-size:
+    145% 110%,
+    132% 125%,
+    118px 100%,
+    96px 100%,
+    100% 100%;
+  background-position:
+    12% 0,
+    58% 0,
+    0 0,
+    15px 0,
+    0 0;
+  opacity: 0.36;
 }
 
 .square--light {
-  background: var(--board-light);
+  --wood-base: #f2dfb6;
+  --wood-grain: rgba(139, 86, 34, 0.16);
+  --wood-soft-grain: rgba(255, 249, 224, 0.42);
+  --wood-hairline: rgba(136, 86, 34, 0.07);
+  --wood-highlight: rgba(255, 249, 220, 0.44);
+  --wood-edge: rgba(126, 72, 22, 0.1);
+  --wood-knot: rgba(158, 99, 39, 0.08);
+  --wood-glow: rgba(255, 245, 205, 0.48);
 }
 
 .square--dark {
-  background: var(--board-dark);
+  --wood-base: #b76532;
+  --wood-grain: rgba(77, 30, 12, 0.17);
+  --wood-soft-grain: rgba(226, 137, 62, 0.22);
+  --wood-hairline: rgba(68, 24, 10, 0.09);
+  --wood-highlight: rgba(215, 125, 55, 0.3);
+  --wood-edge: rgba(70, 24, 10, 0.13);
+  --wood-knot: rgba(75, 27, 12, 0.1);
+  --wood-glow: rgba(225, 133, 56, 0.24);
 }
 
 .square--selected {
@@ -104,6 +162,8 @@
 }
 
 .piece {
+  position: relative;
+  z-index: 2;
   width: 96%;
   height: 96%;
   pointer-events: none;
@@ -119,6 +179,7 @@
 
 .legal-dot {
   position: absolute;
+  z-index: 1;
   width: 28%;
   height: 28%;
   border-radius: 50%;
