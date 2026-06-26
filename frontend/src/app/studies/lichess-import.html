@@ -18,6 +18,16 @@
     </p>
   </header>
 
+  <div class="connect-row">
+    @if (connected()) {
+      <span class="connect-badge">✓ Connesso a Lichess — puoi importare anche studi privati/unlisted</span>
+      <button class="connect-link" type="button" (click)="disconnectLichess()">Disconnetti</button>
+    } @else {
+      <span class="connect-hint">Per gli studi <strong>privati o unlisted</strong> serve l'autorizzazione Lichess.</span>
+      <button class="connect-link" type="button" (click)="connectLichess()">Connetti Lichess</button>
+    }
+  </div>
+
   <div class="url-row">
     <input
       class="url-input"
@@ -61,6 +71,17 @@
         }
       </p>
 
+      @if (willUpdate()) {
+        <p class="upsert-notice">
+          Questo studio Lichess è già importato come «{{ existingStudy()?.name }}»:
+          verrà <strong>aggiornato</strong>. Le varianti attuali saranno
+          <strong>sostituite</strong> con quelle correnti; nome, descrizione e colore dello
+          studio locale restano invariati.
+        </p>
+      } @else if (studyId() === null) {
+        <p class="upsert-notice upsert-notice--new">Verrà creato un nuovo studio locale.</p>
+      }
+
       @if (chapters().length > 0) {
         <ul class="chapter-list">
           @for (c of chapters(); track $index) {
@@ -98,7 +119,15 @@
 
       <div class="actions">
         <button class="btn btn--primary" type="button" (click)="doImport()" [disabled]="!canImport()">
-          {{ importing() ? 'Importazione…' : (studyId() === null ? 'Importa come nuovo studio' : 'Importa nello studio') }}
+          @if (importing()) {
+            Importazione…
+          } @else if (studyId() !== null) {
+            Importa nello studio
+          } @else if (willUpdate()) {
+            Aggiorna lo studio
+          } @else {
+            Importa come nuovo studio
+          }
         </button>
         <a class="btn" [routerLink]="studyId() ? ['/studies', studyId()] : ['/']">Annulla</a>
       </div>

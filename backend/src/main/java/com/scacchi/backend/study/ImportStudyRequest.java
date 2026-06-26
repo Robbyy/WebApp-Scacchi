@@ -13,6 +13,9 @@ public record ImportStudyRequest(
     String name,
     String description,
     String color,               // "WHITE" | "BLACK" | "MIXED" (opzionale)
+    String sourceProvider,      // es. "LICHESS" (Prototipo 15) - opzionale
+    String sourceStudyId,       // id studio remoto (Prototipo 15) - opzionale
+    String sourceUrl,           // link canonico remoto (Prototipo 15) - opzionale
     List<CreateVariantRequest> variants
 ) {
 }

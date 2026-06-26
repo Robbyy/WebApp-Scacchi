@@ -4,6 +4,7 @@ import com.scacchi.backend.variant.CreateVariantRequest;
 import com.scacchi.backend.variant.ValidationError;
 import com.scacchi.backend.variant.VariantDto;
 import com.scacchi.backend.variant.VariantService;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Sort;
@@ -82,6 +83,52 @@ public class StudyService {
         return findById(saved.getId()).orElseThrow();
     }
 
+    /**
+     * Import/sync di uno studio remoto con comportamento <b>upsert</b> (Prototipo 15).
+     * Se esiste già uno studio locale con lo stesso riferimento remoto
+     * ({@code sourceProvider + sourceStudyId}) lo <b>aggiorna</b> sostituendo le
+     * varianti e preservando i metadati locali ({@code name/description/color});
+     * altrimenti ne crea uno nuovo. Transazionale: niente sostituzioni parziali.
+     *
+     * @return l'esito con il flag {@code created} (true = nuovo studio, false = aggiornato)
+     */
+    @Transactional
+    public ImportResult importLichess(ImportStudyRequest request) {
+        Optional<Study> existing = (request.sourceProvider() != null && request.sourceStudyId() != null)
+            ? repository.findBySourceProviderAndSourceStudyId(
+                request.sourceProvider(), request.sourceStudyId())
+            : Optional.empty();
+
+        boolean created = existing.isEmpty();
+        Study study;
+        if (existing.isPresent()) {
+            // Upsert: sostituisce le varianti, conserva i metadati locali dello studio.
+            study = existing.get();
+            variantService.deleteByStudyId(study.getId());
+            study.setSourceUrl(request.sourceUrl());
+            study.setLastImportedAt(Instant.now());
+        } else {
+            validate(new CreateStudyRequest(request.name(), request.description(), request.color()));
+            study = new Study();
+            study.setName(request.name().trim());
+            study.setDescription(normalize(request.description()));
+            study.setColor(parseColor(request.color()));
+            study.setSourceProvider(request.sourceProvider());
+            study.setSourceStudyId(request.sourceStudyId());
+            study.setSourceUrl(request.sourceUrl());
+            study.setLastImportedAt(Instant.now());
+        }
+        Study saved = repository.save(study);
+        for (CreateVariantRequest variant : request.variants()) {
+            variantService.createInStudy(saved.getId(), variant);
+        }
+        return new ImportResult(findById(saved.getId()).orElseThrow(), created);
+    }
+
+    /** Esito di un import upsert: lo studio risultante e se è stato creato o aggiornato. */
+    public record ImportResult(StudyDto study, boolean created) {
+    }
+
     public Optional<StudyDto> update(Long id, CreateStudyRequest request) {
         validate(request);
         return repository.findById(id).map(entity -> {
@@ -144,6 +191,10 @@ public class StudyService {
             s.getColor() == null ? null : s.getColor().name(),
             variantCount,
             variants,
+            s.getSourceProvider(),
+            s.getSourceStudyId(),
+            s.getSourceUrl(),
+            s.getLastImportedAt() == null ? null : s.getLastImportedAt().toString(),
             s.getCreatedAt() == null ? null : s.getCreatedAt().toString()
         );
     }

@@ -16,6 +16,10 @@ public record StudyDto(
     String color,            // "WHITE" | "BLACK" | "MIXED" | null
     int variantCount,
     List<VariantDto> variants,
+    String sourceProvider,   // es. "LICHESS" (Prototipo 15), null se locale
+    String sourceStudyId,    // id studio remoto (Prototipo 15), null se locale
+    String sourceUrl,        // link canonico remoto (Prototipo 15), null se locale
+    String lastImportedAt,   // timestamp ultimo import/sync (Prototipo 15), null se locale
     String createdAt
 ) {
 }

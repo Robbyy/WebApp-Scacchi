@@ -319,3 +319,58 @@ linea principale (`history()`), inadatto a costruire l'albero `MoveNode[]`.
   divide il PGN multi-capitolo e passa ogni blocco a `parsePgnTree`.
 - Restano fuori (P13): PGN multi-partita in un singolo blocco, upload di file
   `.pgn` (solo incolla), e la conservazione di commenti/NAG (per ora scartati).
+
+---
+
+## 0008 — Sync studi Lichess: riferimento remoto + upsert + OAuth PKCE (P15)
+
+**Data:** 2026-06-26 · **Stato:** Accettata e implementata (P15) · **Contesto:** Prototipo 15 (Parte 2), estende ADR 0006.
+
+### Decisione
+Gli studi importati da Lichess portano un **riferimento remoto persistente**
+(`sourceProvider`, `sourceStudyId`, `sourceUrl`, `lastImportedAt` su `Study`).
+Il re-import è un **upsert** per coppia `(sourceProvider, sourceStudyId)`: se lo
+studio remoto è già presente localmente lo **aggiorna** sostituendo le varianti e
+preservando i metadati locali (`name/description/color`); altrimenti lo crea. Gli
+studi **privati/unlisted** si leggono via **OAuth Authorization Code + PKCE**
+(client pubblico, scope `study:read`), col token tenuto **solo lato frontend**
+(`sessionStorage`), mai persistito nel backend.
+
+### Alternative valutate
+- **Dedup per nome studio:** scartato — i nomi non sono univoci e l'utente può
+  rinominare localmente; il riferimento remoto è stabile.
+- **Aggiornare anche i metadati locali al re-import:** scartato — l'utente può aver
+  rinominato/descritto lo studio localmente; il sync tocca solo le varianti.
+- **Sostituzione varianti con diff puntuale:** scartato per il prototipo —
+  delete+reinsert in transazione è semplice e sufficiente (atomico, niente stato
+  parziale). Da rivalutare se servirà preservare progressi/allenamento per variante.
+- **OAuth con client secret / proxy backend per il token:** non necessario per un
+  client pubblico PKCE; eviterebbe di esporre il flusso ma aggiunge backend e
+  segreti. Rinviato salvo necessità (es. refresh token server-side).
+- **Endpoint generico `/import` riusato con upsert:** si è preferito un endpoint
+  dedicato `POST /api/studies/import/lichess` per non cambiare la semantica
+  "create-only" di `/import` (P14).
+
+### Note di implementazione
+- `StudyRepository.findBySourceProviderAndSourceStudyId` individua il duplicato.
+  `StudyService.importLichess` (`@Transactional`) ritorna un `ImportResult`
+  (studio + flag `created`); il controller risponde `201` (create) o `200` (update).
+- Upsert: `variantService.deleteByStudyId` poi reinserimento dei capitoli correnti;
+  la validazione scacchistica di ogni capitolo avviene **prima** (nel controller),
+  così un capitolo illegale fallisce con `400` senza toccare le varianti esistenti.
+- `LichessAuthService`: PKCE S256 con Web Crypto; `client_id` arbitrario
+  (`webapp-scacchi`), `redirect_uri = origin + /lichess/callback`; token e PKCE
+  verifier/state in `sessionStorage`. `LichessService` aggiunge `Authorization:
+  Bearer` quando connesso; gli studi pubblici restano leggibili senza token.
+- Frontend: anteprima con avviso create-vs-update (rileva il duplicato via
+  `getStudies`), pulsante «Connetti/Disconnetti Lichess».
+
+### Conseguenze
+- Uno studio Lichess è ri-sincronizzabile senza duplicati, conservando le
+  modifiche locali ai metadati.
+- Il token Lichess vive solo nella sessione del browser; chiudendo la sessione va
+  ri-autorizzato. Nessun segreto nel backend.
+- Restano fuori (P15): sync automatico periodico, refresh token, multi-account,
+  diff fine delle varianti, export verso Lichess.
+- Verifica OAuth end-to-end richiede un account Lichess reale (login interattivo):
+  non automatizzabile nei test né nel preview headless.

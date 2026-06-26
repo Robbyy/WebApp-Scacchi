@@ -35,6 +35,24 @@ public class Study {
     @Column(length = 8)
     private StudyColor color;
 
+    /**
+     * Provenienza remota (Prototipo 15): per gli studi importati da Lichess
+     * {@code sourceProvider="LICHESS"} e {@code sourceStudyId} è l'id Lichess.
+     * La coppia (provider, sourceStudyId) identifica univocamente l'origine ed
+     * evita duplicati al re-import. {@code null} per studi creati localmente.
+     */
+    @Column(name = "source_provider", length = 32)
+    private String sourceProvider;
+
+    @Column(name = "source_study_id", length = 64)
+    private String sourceStudyId;
+
+    @Column(name = "source_url", columnDefinition = "text")
+    private String sourceUrl;
+
+    @Column(name = "last_imported_at")
+    private Instant lastImportedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -71,6 +89,38 @@ public class Study {
 
     public void setColor(StudyColor color) {
         this.color = color;
+    }
+
+    public String getSourceProvider() {
+        return sourceProvider;
+    }
+
+    public void setSourceProvider(String sourceProvider) {
+        this.sourceProvider = sourceProvider;
+    }
+
+    public String getSourceStudyId() {
+        return sourceStudyId;
+    }
+
+    public void setSourceStudyId(String sourceStudyId) {
+        this.sourceStudyId = sourceStudyId;
+    }
+
+    public String getSourceUrl() {
+        return sourceUrl;
+    }
+
+    public void setSourceUrl(String sourceUrl) {
+        this.sourceUrl = sourceUrl;
+    }
+
+    public Instant getLastImportedAt() {
+        return lastImportedAt;
+    }
+
+    public void setLastImportedAt(Instant lastImportedAt) {
+        this.lastImportedAt = lastImportedAt;
     }
 
     public Instant getCreatedAt() {

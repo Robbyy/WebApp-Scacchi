@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { LichessAuthService } from './lichess-auth.service';
 
 /**
  * Recupero del PGN da studi/capitoli **pubblici** Lichess (Prototipo 14), via gli
@@ -13,6 +14,7 @@ import { Observable } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class LichessService {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(LichessAuthService);
   private readonly base = 'https://lichess.org/api/study';
 
   fetchStudyPgn(studyId: string): Observable<string> {
@@ -29,6 +31,10 @@ export class LichessService {
       .set('variations', 'true')
       .set('orientation', 'true')
       .set('clocks', 'false');
-    return this.http.get(url, { params, responseType: 'text' });
+    // Se l'utente è connesso a Lichess (P15), il token autorizza la lettura di
+    // studi privati/unlisted. Per gli studi pubblici l'header è semplicemente assente.
+    const token = this.auth.token();
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    return this.http.get(url, { params, responseType: 'text', headers });
   }
 }

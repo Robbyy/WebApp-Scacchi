@@ -15,6 +15,11 @@ export interface Study {
   color?: StudyColor | null;
   variantCount: number;
   variants?: Variant[] | null;
+  /** Provenienza remota (P15): valorizzati per gli studi importati da Lichess. */
+  sourceProvider?: string | null;
+  sourceStudyId?: string | null;
+  sourceUrl?: string | null;
+  lastImportedAt?: string | null;
   createdAt?: string | null;
 }
 
@@ -25,10 +30,14 @@ export interface CreateStudyRequest {
   color?: StudyColor | null;
 }
 
-/** Payload per l'import in blocco di uno studio con tutte le sue varianti (P14). */
+/** Payload per l'import in blocco di uno studio con tutte le sue varianti (P14/P15). */
 export interface ImportStudyRequest {
   name: string;
   description?: string | null;
   color?: StudyColor | null;
+  /** Riferimento remoto per l'upsert/sync (P15). */
+  sourceProvider?: string | null;
+  sourceStudyId?: string | null;
+  sourceUrl?: string | null;
   variants: CreateVariantRequest[];
 }

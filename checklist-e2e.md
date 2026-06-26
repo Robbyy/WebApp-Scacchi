@@ -32,7 +32,7 @@
 
 ---
 
-## Flussi aggiunti (Parte 2: P7-P14)
+## Flussi aggiunti (Parte 2: P7-P15)
 
 - [ ] **13. Validazione backend (P7)** — tentare di salvare via API un payload con mossa illegale (es. `moves: ["e4","e4"]`): risposta **400** con `{ field, ply, message }`. Nell'editor/import un eventuale errore di validazione viene mostrato come messaggio.
 - [ ] **14. Drag and drop pulito (P7)** — trascinare un pezzo: viene trascinato **solo il pezzo** (niente sfondo della casa) e la casa di partenza resta **vuota** durante il trascinamento. La cornice della scacchiera è sottile, coordinate leggibili.
@@ -48,6 +48,9 @@
 - [ ] **24. Import studio Lichess (P14)** — dalla home `Importa da Lichess` → incollare l'URL di uno **studio pubblico** (es. `https://lichess.org/study/XXXXXXXX`) → `Anteprima`: compaiono nome studio e l'elenco capitoli (colore, mosse, varianti). `Importa come nuovo studio` crea lo studio locale con una variante per capitolo; aprendo una variante i rami sono presenti e il training funziona.
 - [ ] **25. Import singolo capitolo nello studio (P14)** — dal dettaglio di uno studio `Importa da Lichess` con un URL di **capitolo** (`/study/{id}/{chapterId}`): viene aggiunta **una** variante allo studio corrente.
 - [ ] **26. Errori import Lichess (P14)** — URL non valido → messaggio «Link Lichess non valido»; studio inesistente/non pubblico → «non trovato o non pubblico»; nessun dato parziale salvato.
+- [ ] **27. Re-import / sync senza duplicati (P15)** — re-importare lo stesso studio pubblico già importato: l'anteprima mostra l'avviso **«già importato … verrà aggiornato»** e il pulsante diventa **«Aggiorna lo studio»**. Confermando, lo studio **non** viene duplicato nella home; le sue varianti sono sostituite con quelle correnti.
+- [ ] **28. Metadati locali preservati nel sync (P15)** — rinominare/descrivere localmente uno studio importato, poi re-importarlo: nome, descrizione e colore locali **restano invariati**, solo le varianti cambiano.
+- [ ] **29. OAuth Lichess per studi privati (P15)** — premere **«Connetti Lichess»**, autorizzare su Lichess (login reale), tornare all'app (badge «Connesso a Lichess»); importare un proprio studio **privato/unlisted** → i capitoli vengono letti e importati. «Disconnetti» rimuove il token di sessione.
 
 ---
 

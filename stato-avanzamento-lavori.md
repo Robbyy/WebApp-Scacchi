@@ -10,13 +10,13 @@
 
 - **Parte 1 (Prototipi 0-6) + estensioni anticipate**: completa e verificata (vedi sezione 2).
 - **Parte 2 pianificata**: roadmap P7-P19 + sezioni TODO/idee, descritta nel planning (sezioni 11-19). Fasi: A consolidamento, B studi, C import PGN/Lichess, D apprendimento, E motore Stockfish.
-- **Parte 2 implementata finora**: **P7-P10** (fase A · consolidamento) + **P11-P12** (fase B · Studi) + **P13-P14** (fase C · import PGN avanzato e import studio Lichess pubblico). Prossimo: **P15** (import Lichess privati/unlisted via OAuth + sync/upsert).
+- **Parte 2 implementata finora**: **P7-P10** (fase A · consolidamento) + **P11-P12** (fase B · Studi) + **P13-P15** (fase C · import PGN avanzato, studio Lichess pubblico, import privati/unlisted via OAuth + sync/upsert). Prossimo: **P16** (integrazione Stockfish).
 
 Alla verifica del 2026-06-25:
 
 - repository in lavorazione con le modifiche del P12 e della documentazione da consolidare;
 - backend e frontend verificati tramite suite automatiche locali;
-- **test backend: 44 passati**; **test frontend: 121 passati**;
+- **test backend: 48 passati**; **test frontend: 129 passati**;
 - checklist manuale E2E formalizzata in `checklist-e2e.md`;
 - verifiche browser dei flussi principali senza errori console.
 
@@ -131,9 +131,17 @@ Tutti completati e verificati. Sintesi:
 
 **Verifica:** backend **44** (+3: import bulk, rollback, lista vuota); frontend **121** (+17: `lichess.spec`, `lichess-import.spec`, `study.service` import). **Validazione live superata** (2026-06-26) con lo studio pubblico reale `lichess.org/study/OR3CU5Je` ("Difesa Due Cavalli", 4 capitoli): fetch browser → CORS OK (nessun proxy necessario), anteprima corretta, import → studio locale con 4 varianti, `sourcePgn` e **varianti annidate** conservati (capitolo "Fegatello" 33 nodi, 2 rami), cancellazione a cascata OK. Bug emerso e risolto: la colonna `source_pgn` del **DB H2 su file** era ancora `VARCHAR(255)` (drift di schema: `ddl-auto=update` non allarga le colonne esistenti) → `ALTER ... CHARACTER LARGE OBJECT` sul DB di sviluppo; l'entità era già corretta (`columnDefinition="text"`), nessuna modifica al codice.
 
-### Prototipi 15-19 — da fare
+### Prototipo 15 — Import Lichess privati/unlisted + sync ✅
 
-- **P15** Import Lichess privati/unlisted via OAuth + sync/upsert — **prossimo passo**: memorizza il riferimento allo studio Lichess, evita duplicati, re-importa sostituendo le varianti ma preservando i dati locali dello studio.
+- Entità `Study` estesa con riferimento remoto: `sourceProvider` ("LICHESS"), `sourceStudyId`, `sourceUrl`, `lastImportedAt` (colonne nuove → aggiunte da `ddl-auto=update`). `StudyDto` le espone.
+- Endpoint **upsert** `POST /api/studies/import/lichess` (`ImportStudyRequest` con i campi sorgente): se lo studio remoto è già importato (match `sourceProvider+sourceStudyId`) **aggiorna** lo studio esistente sostituendo le varianti e **preservando i metadati locali** (`name/description/color`); altrimenti crea. Transazionale (rollback su capitolo illegale, validato prima). Risponde **201** se crea, **200** se aggiorna.
+- Frontend: `LichessImport` rileva lo studio già importato (via `getStudies` + `sourceStudyId`) e mostra l'avviso **«verrà aggiornato: le varianti attuali saranno sostituite, i dati dello studio restano»** con pulsante «Aggiorna lo studio»; usa `studyService.importLichess` col riferimento remoto.
+- **OAuth Lichess (PKCE)** per studi privati/unlisted: `LichessAuthService` (Authorization Code + PKCE, client pubblico, `study:read`, token solo in `sessionStorage`, mai lato backend), callback `/lichess/callback`, header `Authorization: Bearer` aggiunto da `LichessService` quando connesso. UI «Connetti/Disconnetti Lichess» nella pagina di import. Decisione in **ADR 0008**.
+
+**Verifica:** backend **48** (+4: upsert create/update, metadati preservati, rollback re-import); frontend **129** (+8: `lichess-auth.spec`, upsert in `lichess-import.spec`/`study.service`). **Validazione live superata** (2026-06-26): via API, re-import di uno stesso `sourceStudyId` → `200` stesso id, varianti sostituite (2→1), nome locale preservato, nessun duplicato; nel browser, ri-anteprima dello studio pubblico reale `OR3CU5Je` già importato → avviso «verrà aggiornato» e pulsante «Aggiorna lo studio». **Da provare con l'utente:** il flusso OAuth con un account Lichess reale (login + autorizzazione, non automatizzabile).
+
+### Prototipi 16-19 — da fare
+
 - **P16** Integrazione Stockfish: toggle motore, barra valutazione, gioca-vs-computer in nuova tab; mai in allenamento.
 - **P17-P19** Persistenza sessioni → statistiche → spaced repetition, da riprendere dopo Stockfish.
 

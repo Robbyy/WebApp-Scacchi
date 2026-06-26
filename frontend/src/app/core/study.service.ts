@@ -42,4 +42,13 @@ export class StudyService {
   importStudy(request: ImportStudyRequest): Observable<Study> {
     return this.http.post<Study>(`${this.baseUrl}/import`, request);
   }
+
+  /**
+   * Import/sync di uno studio Lichess con upsert (Prototipo 15): crea un nuovo
+   * studio oppure aggiorna quello già importato (stesso `sourceStudyId`) senza
+   * duplicarlo, preservando i metadati locali.
+   */
+  importLichess(request: ImportStudyRequest): Observable<Study> {
+    return this.http.post<Study>(`${this.baseUrl}/import/lichess`, request);
+  }
 }

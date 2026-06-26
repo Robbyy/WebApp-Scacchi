@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { StudyList } from './studies/study-list';
 import { StudyDetail } from './studies/study-detail';
 import { LichessImport } from './studies/lichess-import';
+import { LichessCallback } from './studies/lichess-callback';
 import { VariantList } from './variants/variant-list';
 import { VariantEditor } from './variants/variant-editor';
 import { PgnImport } from './variants/pgn-import';
@@ -11,6 +12,7 @@ import { canLeaveEditor } from './variants/can-deactivate.guard';
 
 export const routes: Routes = [
   { path: '', component: StudyList },
+  { path: 'lichess/callback', component: LichessCallback },
   { path: 'studies/import-lichess', component: LichessImport },
   { path: 'studies/:id', component: StudyDetail },
   { path: 'variants', component: VariantList },

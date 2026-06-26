@@ -76,6 +76,23 @@ public class StudyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    /**
+     * Import/sync di uno studio Lichess con <b>upsert</b> (Prototipo 15): se lo
+     * studio remoto è già stato importato, lo aggiorna senza duplicarlo. Risponde
+     * 201 se crea un nuovo studio locale, 200 se ne aggiorna uno esistente.
+     */
+    @PostMapping("/import/lichess")
+    public ResponseEntity<StudyDto> importLichess(@RequestBody ImportStudyRequest request) {
+        if (request == null || request.variants() == null || request.variants().isEmpty()) {
+            throw new InvalidStudyException(
+                new ValidationError("variants", null, null, "Nessun capitolo da importare."));
+        }
+        request.variants().forEach(variantValidator::validate);
+        StudyService.ImportResult result = service.importLichess(request);
+        HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
+        return ResponseEntity.status(status).body(result.study());
+    }
+
     /** Crea una variante già agganciata allo studio (Prototipo 12). */
     @PostMapping("/{id}/variants")
     public ResponseEntity<VariantDto> createVariant(

@@ -89,4 +89,20 @@ describe('StudyService', () => {
     expect(req.request.body).toEqual(request);
     req.flush({ id: 50, name: 'Importato', variantCount: 1 });
   });
+
+  it('imports/syncs a Lichess study via POST /api/studies/import/lichess', () => {
+    const request = {
+      name: 'Da Lichess',
+      color: 'WHITE' as const,
+      sourceProvider: 'LICHESS',
+      sourceStudyId: 'OR3CU5Je',
+      sourceUrl: 'https://lichess.org/study/OR3CU5Je',
+      variants: [{ name: 'Cap. 1', color: 'WHITE' as const, moves: ['e4'] }],
+    };
+    service.importLichess(request).subscribe();
+    const req = httpMock.expectOne('/api/studies/import/lichess');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(request);
+    req.flush({ id: 60, name: 'Da Lichess', variantCount: 1, sourceStudyId: 'OR3CU5Je' });
+  });
 });

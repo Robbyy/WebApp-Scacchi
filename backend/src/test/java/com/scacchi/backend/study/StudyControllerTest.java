@@ -193,6 +193,107 @@ class StudyControllerTest {
     }
 
     @Test
+    void importLichessCreatesANewStudyWithRemoteReference() throws Exception {
+        String body = """
+            {"name":"Da Lichess","color":"WHITE",
+             "sourceProvider":"LICHESS","sourceStudyId":"abcd1234",
+             "sourceUrl":"https://lichess.org/study/abcd1234","variants":[
+              {"name":"Cap. 1","color":"WHITE","moves":["e4","e5"]}
+            ]}""";
+        mockMvc.perform(post("/api/studies/import/lichess").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("Da Lichess"))
+            .andExpect(jsonPath("$.sourceProvider").value("LICHESS"))
+            .andExpect(jsonPath("$.sourceStudyId").value("abcd1234"))
+            .andExpect(jsonPath("$.lastImportedAt").isNotEmpty())
+            .andExpect(jsonPath("$.variantCount").value(1));
+    }
+
+    @Test
+    void reimportingTheSameLichessStudyUpdatesInsteadOfDuplicating() throws Exception {
+        String first = """
+            {"name":"Repertorio Lichess","sourceProvider":"LICHESS","sourceStudyId":"sync0001","variants":[
+              {"name":"A","color":"WHITE","moves":["e4","e5"]},
+              {"name":"B","color":"WHITE","moves":["d4","d5"]}
+            ]}""";
+        int before = studyCount();
+        MvcResult created = mockMvc.perform(
+                post("/api/studies/import/lichess").contentType(MediaType.APPLICATION_JSON).content(first))
+            .andExpect(status().isCreated())
+            .andReturn();
+        int id = JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+        org.junit.jupiter.api.Assertions.assertEquals(before + 1, studyCount());
+
+        // Re-import dello stesso studio remoto con capitoli diversi → aggiorna, non duplica.
+        String second = """
+            {"name":"IGNORATO","sourceProvider":"LICHESS","sourceStudyId":"sync0001","variants":[
+              {"name":"C","color":"BLACK","moves":["c4","e5"]}
+            ]}""";
+        mockMvc.perform(post("/api/studies/import/lichess").contentType(MediaType.APPLICATION_JSON).content(second))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(id))
+            .andExpect(jsonPath("$.variantCount").value(1))
+            .andExpect(jsonPath("$.variants[0].name").value("C"));
+
+        // Nessun duplicato: stesso numero di studi di prima del re-import.
+        org.junit.jupiter.api.Assertions.assertEquals(before + 1, studyCount());
+    }
+
+    @Test
+    void reimportPreservesLocallyEditedMetadata() throws Exception {
+        String first = """
+            {"name":"Nome Lichess","sourceProvider":"LICHESS","sourceStudyId":"keep0001","variants":[
+              {"name":"A","color":"WHITE","moves":["e4"]}
+            ]}""";
+        MvcResult created = mockMvc.perform(
+                post("/api/studies/import/lichess").contentType(MediaType.APPLICATION_JSON).content(first))
+            .andExpect(status().isCreated())
+            .andReturn();
+        int id = JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+
+        // L'utente rinomina lo studio e aggiunge una descrizione locale.
+        mockMvc.perform(put("/api/studies/" + id).contentType(MediaType.APPLICATION_JSON).content("""
+            {"name":"Nome mio","description":"nota locale","color":"MIXED"}"""))
+            .andExpect(status().isOk());
+
+        // Re-import: i metadati locali restano, le varianti vengono sostituite.
+        mockMvc.perform(post("/api/studies/import/lichess").contentType(MediaType.APPLICATION_JSON).content("""
+            {"name":"Nome Lichess","sourceProvider":"LICHESS","sourceStudyId":"keep0001","variants":[
+              {"name":"B","color":"WHITE","moves":["d4"]}
+            ]}"""))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Nome mio"))
+            .andExpect(jsonPath("$.description").value("nota locale"))
+            .andExpect(jsonPath("$.color").value("MIXED"))
+            .andExpect(jsonPath("$.variants[0].name").value("B"));
+    }
+
+    @Test
+    void reimportRollsBackWhenAChapterIsIllegal() throws Exception {
+        String first = """
+            {"name":"Studio","sourceProvider":"LICHESS","sourceStudyId":"roll0001","variants":[
+              {"name":"Buono","color":"WHITE","moves":["e4","e5"]}
+            ]}""";
+        int id = JsonPath.read(mockMvc.perform(
+                post("/api/studies/import/lichess").contentType(MediaType.APPLICATION_JSON).content(first))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.id");
+
+        // Re-import con un capitolo illegale: deve fallire SENZA toccare le varianti esistenti.
+        mockMvc.perform(post("/api/studies/import/lichess").contentType(MediaType.APPLICATION_JSON).content("""
+            {"name":"Studio","sourceProvider":"LICHESS","sourceStudyId":"roll0001","variants":[
+              {"name":"Nuovo","color":"WHITE","moves":["e4","e5"]},
+              {"name":"Illegale","color":"WHITE","moves":["e4","e4"]}
+            ]}"""))
+            .andExpect(status().isBadRequest());
+
+        // La variante originale è ancora lì: la sostituzione non è avvenuta.
+        mockMvc.perform(get("/api/studies/" + id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.variantCount").value(1))
+            .andExpect(jsonPath("$.variants[0].name").value("Buono"));
+    }
+
+    @Test
     void deleteAnEmptyStudyReturns204() throws Exception {
         int id = createStudy("""
             {"name":"Vuoto"}""");

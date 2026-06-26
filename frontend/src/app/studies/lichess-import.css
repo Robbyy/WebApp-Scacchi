@@ -59,6 +59,41 @@
   border-radius: 0.3rem;
 }
 
+.connect-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.55rem;
+  background: oklch(0.96 0.02 80);
+  border: 1px solid var(--panel-border);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.connect-badge {
+  color: oklch(0.4 0.1 145);
+  font-weight: 600;
+}
+
+.connect-link {
+  margin-left: auto;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.45rem;
+  background: var(--panel-bg);
+  color: var(--wood-dark);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.connect-link:hover {
+  background: var(--wood-light);
+}
+
 .url-row {
   display: flex;
   gap: 0.5rem;
@@ -153,6 +188,22 @@
 .preview-summary {
   margin: 0 0 0.75rem;
   font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.upsert-notice {
+  margin: 0 0 0.85rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.55rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  background: oklch(0.95 0.05 75);
+  color: var(--wood-dark);
+  border: 1px solid var(--panel-border);
+}
+
+.upsert-notice--new {
+  background: oklch(0.96 0.02 80);
   color: var(--text-muted);
 }
 
