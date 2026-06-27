@@ -17,9 +17,14 @@ backend/**/application-local.yml
 backend/**/application-local.properties
 
 # Database H2 persistito su file (sviluppo locale)
+# Temporaneamente versioniamo il DB H2 principale per condividere lo stato
+# tra PC; quando passeremo a Supabase PostgreSQL questa eccezione andra' rimossa.
 backend/data/
 *.mv.db
 *.trace.db
+!backend/data/
+!backend/data/*.mv.db
+backend/data/*.lock.db
 
 # ---------- Frontend: Angular / Node ----------
 frontend/node_modules/
