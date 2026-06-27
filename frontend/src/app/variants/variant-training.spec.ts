@@ -3,6 +3,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { of } from 'rxjs';
 import { VariantTraining } from './variant-training';
 import { VariantService } from '../core/variant.service';
+import { TrainingSessionService } from '../core/training-session.service';
 import { MoveNode, Variant } from '../core/variant.model';
 import { MoveMade } from '../chessboard/chessboard';
 
@@ -16,12 +17,13 @@ function move(san: string): MoveMade {
   return { san, from: '', to: '', fen: '' };
 }
 
-function setup(v: Variant) {
+function setup(v: Variant, sessions: Partial<TrainingSessionService> = {}) {
   TestBed.configureTestingModule({
     imports: [VariantTraining],
     providers: [
       provideRouter([]),
       { provide: VariantService, useValue: { getVariant: () => of(v) } },
+      { provide: TrainingSessionService, useValue: { create: () => of({} as any), ...sessions } },
       { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '1' }) } } },
     ],
   });
@@ -96,5 +98,34 @@ describe('VariantTraining (albero)', () => {
     cmp.onUserMove(move('e4'));
     cmp.applyOpponentReply();
     expect(cmp.status()).toBe('completed');
+  });
+
+  it('records the session on completion with moves and mistakes (P17)', () => {
+    let captured: any = null;
+    const { cmp } = setup(variant({ moves: ['e4', 'e5'] }), {
+      create: (req: unknown) => { captured = req; return of({} as any); },
+    });
+    cmp.onUserMove(move('d4')); // sbagliata
+    cmp.onUserMove(move('e4')); // corretta → avversario
+    cmp.applyOpponentReply(); // e5 → completato
+    expect(cmp.status()).toBe('completed');
+    expect(cmp.sessionSave()).toBe('saved');
+    expect(captured.variantId).toBe(1);
+    expect(captured.result).toBe('COMPLETED');
+    expect(captured.mistakesCount).toBe(1);
+    // log: una mossa sbagliata + una corretta dell'utente
+    expect(captured.moves.length).toBe(2);
+    expect(captured.moves[0]).toMatchObject({ playedSan: 'd4', correct: false });
+    expect(captured.moves[1]).toMatchObject({ playedSan: 'e4', correct: true });
+  });
+
+  it('does not submit a session if no user move was played', () => {
+    let called = false;
+    // variante che parte già completata dal lato utente (nessuna mossa da giocare)
+    const { cmp } = setup(variant({ tree: [], moves: [] }), {
+      create: () => { called = true; return of({} as any); },
+    });
+    expect(cmp.status()).toBe('completed');
+    expect(called).toBe(false);
   });
 });

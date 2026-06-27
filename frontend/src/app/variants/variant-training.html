@@ -40,6 +40,11 @@
           @case ('completed') {
             <strong>✓ Variante completata!</strong>
             <span>Hai giocato tutta la linea. Errori: {{ mistakes() }}.</span>
+            @switch (sessionSave()) {
+              @case ('saving') { <span class="session-save">Salvataggio sessione&#8230;</span> }
+              @case ('saved') { <span class="session-save session-save--ok">Sessione registrata ✓</span> }
+              @case ('error') { <span class="session-save session-save--err">Sessione non salvata.</span> }
+            }
           }
           @case ('wrong') {
             <strong>✗ {{ wrongMove() }} non è la mossa attesa</strong>

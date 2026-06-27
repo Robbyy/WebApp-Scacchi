@@ -10,13 +10,13 @@
 
 - **Parte 1 (Prototipi 0-6) + estensioni anticipate**: completa e verificata (vedi sezione 2).
 - **Parte 2 pianificata**: roadmap P7-P19 + sezioni TODO/idee, descritta nel planning (sezioni 11-19). Fasi: A consolidamento, B studi, C import PGN/Lichess, D apprendimento, E motore Stockfish.
-- **Parte 2 implementata finora**: **P7-P10** (fase A · consolidamento) + **P11-P12** (fase B · Studi) + **P13-P15** (fase C · import PGN/Lichess + sync) + **P16** (integrazione Stockfish client-side). Prossimo: **P17** (persistenza sessioni di allenamento).
+- **Parte 2 implementata finora**: **P7-P10** (fase A) + **P11-P12** (fase B · Studi) + **P13-P15** (fase C · import PGN/Lichess + sync) + **P16** (Stockfish client-side) + **P17** (persistenza sessioni di allenamento). Prossimo: **P18** (statistiche e reportistica).
 
 Alla verifica del 2026-06-25:
 
 - repository in lavorazione con le modifiche del P12 e della documentazione da consolidare;
 - backend e frontend verificati tramite suite automatiche locali;
-- **test backend: 48 passati**; **test frontend: 144 passati**;
+- **test backend: 54 passati**; **test frontend: 149 passati**;
 - checklist manuale E2E formalizzata in `checklist-e2e.md`;
 - verifiche browser dei flussi principali senza errori console.
 
@@ -149,9 +149,19 @@ Tutti completati e verificati. Sintesi:
 
 **Verifica:** frontend **144** (+15: `uci.spec`, `play.spec`); backend **48** (invariato). **Validazione live superata** (2026-06-27): in dettaglio il motore raggiunge **prof. 14** con eval reale (es. **+0.8**, barra al 61%); mostra/nascondi barra e on/off ok; in `/play` ho giocato **1.e4** e il motore ha risposto **1...d5**; in allenamento **nessun** controllo motore presente.
 
-### Prototipi 17-19 — da fare
+### Prototipo 17 — Persistenza sessioni di allenamento ✅
 
-- **P17-P19** Persistenza sessioni → statistiche → spaced repetition.
+- Backend: entità `TrainingSession` (variante, esito, errori, durata, `userId` nullable) + `TrainingMove` (ply, attesa, giocata, corretta) come figli in cascata. `POST /api/training-sessions` (registra), `GET` (storico riepilogo / dettaglio con mosse, filtri `?variantId=`/`?studyId=`). Lo `studyId` è denormalizzato dalla variante. Decisione in **ADR 0010**.
+- Letture `@Transactional(readOnly=true)` (con `open-in-view: false` le collezioni LAZY vanno lette in transazione) — **bug emerso in verifica live** e corretto.
+- Frontend: `TrainingSessionService` + il componente di allenamento registra il log delle mosse (tentativi inclusi) e invia la sessione **a completamento**, una sola volta e solo se è stata giocata almeno una mossa; piccolo indicatore «Sessione registrata ✓».
+- **Vincolo ribadito**: nessun motore in allenamento (P16).
+
+**Verifica:** backend **54** (+6: `TrainingSessionControllerTest`); frontend **149** (+5: `training-session.service.spec`, submit in `variant-training.spec`). **Validazione live superata** (2026-06-27): completato l'allenamento di una variante reale → sessione registrata (`moveCount=8`, `studyId` risolto, mosse con ply corretti) e rileggibile via `GET` (lista filtrata + dettaglio).
+
+### Prototipi 18-19 — da fare
+
+- **P18** Statistiche e reportistica (aggregazioni per variante/studio dai dati P17).
+- **P19** Spaced repetition (scheduling ripetizioni).
 
 ---
 

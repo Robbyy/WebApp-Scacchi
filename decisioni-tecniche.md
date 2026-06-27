@@ -430,3 +430,54 @@ computer" in una nuova tab) ed è **assente in allenamento**.
 - Vincolo GPL da rispettare in caso di ridistribuzione dell'app (vedi attribution).
 - Fuori perimetro (per scelta): suggerimento "mossa migliore", blunder detection,
   multi-PV, opening explorer — da valutare solo se emergeranno necessità reali.
+
+---
+
+## 0010 — Persistenza sessioni di allenamento (P17)
+
+**Data:** 2026-06-27 · **Stato:** Accettata e implementata (P17) · **Contesto:** Prototipo 17 (Parte 2).
+
+### Decisione
+Ogni allenamento concluso viene registrato come **`TrainingSession`** (variante,
+esito, numero errori, durata, `userId` nullable predisposto) con le singole mosse
+tentate in **`TrainingMove`** (ply, mossa attesa, mossa giocata, corretta). Le
+mosse sono figlie della sessione (`@OneToMany` con cascata e `orphanRemoval`):
+si creano e si leggono insieme alla sessione. Endpoint `POST /api/training-sessions`
+(registra) e `GET` (storico riepilogativo / dettaglio con mosse). Lo `studyId`
+viene **denormalizzato** sulla sessione, risolto dalla variante al salvataggio,
+per le future statistiche per studio (P18).
+
+### Alternative valutate
+- **FK semplice `session_id` + cascata manuale nel service** (come Study→Variant):
+  scartata qui — le `TrainingMove` sono figlie naturali della sessione (non
+  aggregati indipendenti), quindi `@OneToMany(cascade=ALL, orphanRemoval=true)` è
+  più diretto e idiomatico.
+- **Calcolo `studyId` a runtime con join variante→studio:** scartato — la variante
+  potrebbe cambiare studio in futuro; denormalizzare lo studio al momento
+  dell'allenamento fotografa il contesto reale ed è più semplice da filtrare.
+- **Sessione senza mosse (solo conteggi):** scartata — salvare le singole mosse
+  (incl. i tentativi sbagliati) abilita statistiche più ricche in P18 (mosse più
+  problematiche) senza nuove tabelle.
+
+### Note di implementazione
+- `open-in-view: false` (scelta dell'app): le collezioni LAZY **non** sono
+  accessibili fuori da una transazione. I metodi di lettura del service sono quindi
+  `@Transactional(readOnly = true)`, altrimenti la mappatura del DTO (che tocca
+  `moves`) solleva `LazyInitializationException`. Bug emerso in **verifica live**
+  (i test lo mascheravano per via del `@Transactional` a livello di classe) e
+  corretto.
+- Lista = riepilogo (`moves` null, `moveCount`); dettaglio (`GET /{id}`) = con mosse.
+- `POST` rifiuta payload senza variante o con esito non valido (`400`,
+  `ValidationError`); variante inesistente → `404`.
+- Frontend: il componente di allenamento registra il log delle mosse (tentativi
+  inclusi) e invia la sessione a completamento, **una sola volta** e solo se è stata
+  giocata almeno una mossa.
+
+### Conseguenze
+- Base dati pronta per statistiche (P18) e spaced repetition (P19).
+- **Vincolo invariante ribadito (P16/P17):** in allenamento nessun aiuto del motore
+  (niente barra di valutazione, niente gioca-vs-computer). L'allenamento serve solo
+  a memorizzare le mosse.
+- Verifica live (2026-06-27): completando l'allenamento di una variante, la sessione
+  è registrata (`moveCount=8`, `studyId` risolto, mosse con ply corretti) e
+  rileggibile via `GET` (lista filtrata e dettaglio).

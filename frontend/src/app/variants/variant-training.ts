@@ -10,10 +10,13 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Chessboard, MoveMade } from '../chessboard/chessboard';
 import { VariantService } from '../core/variant.service';
 import { MoveSoundService } from '../core/move-sound.service';
+import { TrainingSessionService } from '../core/training-session.service';
+import { TrainingMove } from '../core/training-session.model';
 import { MoveNode, Variant } from '../core/variant.model';
 import { childrenAt, fenAt, fromLine, remainingMainline } from '../core/move-tree';
 
 type TrainingStatus = 'loading' | 'playing' | 'opponent' | 'wrong' | 'completed' | 'error';
+type SessionSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 @Component({
   selector: 'app-variant-training',
@@ -26,6 +29,7 @@ export class VariantTraining implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(VariantService);
   private readonly moveSound = inject(MoveSoundService);
+  private readonly sessions = inject(TrainingSessionService);
 
   protected readonly variant = signal<Variant | null>(null);
   protected readonly status = signal<TrainingStatus>('loading');
@@ -33,11 +37,17 @@ export class VariantTraining implements OnDestroy {
   protected readonly mistakes = signal(0);
   protected readonly wrongMove = signal<string | null>(null);
   protected readonly showHint = signal(false);
+  /** Esito del salvataggio della sessione a fine training (P17). */
+  protected readonly sessionSave = signal<SessionSaveState>('idle');
 
   /** Ritardo (ms) prima della replica avversaria; 0 nei test. */
   replyDelayMs = 450;
 
   private opponentTimer: ReturnType<typeof setInterval> | null = null;
+  /** Log delle mosse tentate dall'utente (per la sessione P17). */
+  private moveLog: TrainingMove[] = [];
+  private startedAt = '';
+  private submitted = false;
 
   protected readonly tree = computed<MoveNode[]>(() => {
     const v = this.variant();
@@ -94,6 +104,10 @@ export class VariantTraining implements OnDestroy {
     this.mistakes.set(0);
     this.wrongMove.set(null);
     this.showHint.set(false);
+    this.moveLog = [];
+    this.startedAt = new Date().toISOString();
+    this.submitted = false;
+    this.sessionSave.set('idle');
 
     // gioca le eventuali mosse iniziali dell'avversario (es. variante nera: 1.e4)
     const tree = this.tree();
@@ -118,14 +132,18 @@ export class VariantTraining implements OnDestroy {
       return;
     }
     const kids = this.currentChildren();
+    const ply = this.currentPath().length + 1;
+    const expected = kids[0]?.san ?? null;
     const idx = kids.findIndex((c) => sameMove(c.san, move.san));
     if (idx < 0) {
+      this.moveLog.push({ ply, expectedSan: expected, playedSan: move.san, correct: false });
       this.wrongMove.set(move.san);
       this.mistakes.update((m) => m + 1);
       this.status.set('wrong');
       return;
     }
 
+    this.moveLog.push({ ply, expectedSan: kids[idx].san, playedSan: move.san, correct: true });
     const path = [...this.currentPath(), idx];
     this.currentPath.set(path);
     this.wrongMove.set(null);
@@ -133,6 +151,7 @@ export class VariantTraining implements OnDestroy {
 
     if (childrenAt(this.tree(), path).length === 0) {
       this.status.set('completed');
+      this.submitSession();
       return;
     }
     this.status.set('opponent');
@@ -150,7 +169,38 @@ export class VariantTraining implements OnDestroy {
     const path = [...this.currentPath(), idx];
     this.currentPath.set(path);
     this.moveSound.play(soundKind(kids[idx].san));
-    this.status.set(childrenAt(this.tree(), path).length === 0 ? 'completed' : 'playing');
+    if (childrenAt(this.tree(), path).length === 0) {
+      this.status.set('completed');
+      this.submitSession();
+    } else {
+      this.status.set('playing');
+    }
+  }
+
+  /**
+   * Registra la sessione conclusa sul backend (P17). Una sola volta per sessione,
+   * e solo se l'utente ha effettivamente giocato almeno una mossa.
+   */
+  private submitSession(): void {
+    const variant = this.variant();
+    if (this.submitted || !variant || this.moveLog.length === 0) {
+      return;
+    }
+    this.submitted = true;
+    this.sessionSave.set('saving');
+    this.sessions
+      .create({
+        variantId: variant.id,
+        result: 'COMPLETED',
+        mistakesCount: this.mistakes(),
+        startedAt: this.startedAt,
+        completedAt: new Date().toISOString(),
+        moves: this.moveLog,
+      })
+      .subscribe({
+        next: () => this.sessionSave.set('saved'),
+        error: () => this.sessionSave.set('error'),
+      });
   }
 
   protected revealHint(): void {
