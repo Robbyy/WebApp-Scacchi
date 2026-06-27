@@ -373,4 +373,6 @@ studi **privati/unlisted** si leggono via **OAuth Authorization Code + PKCE**
 - Restano fuori (P15): sync automatico periodico, refresh token, multi-account,
   diff fine delle varianti, export verso Lichess.
 - Verifica OAuth end-to-end richiede un account Lichess reale (login interattivo):
-  non automatizzabile nei test né nel preview headless.
+  non automatizzabile nei test né nel preview headless. **Verificata dall'utente il
+  2026-06-26**: il flusso PKCE (autorizzazione su Lichess → callback → token →
+  lettura studio) funziona.
