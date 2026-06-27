@@ -16,6 +16,88 @@
   gap: 1rem;
 }
 
+/* Scacchiera con barra di valutazione affiancata (Prototipo 16) */
+.board-with-eval {
+  display: flex;
+  align-items: stretch;
+  gap: 0.6rem;
+}
+
+.board-with-eval app-eval-bar {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.engine-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+}
+
+.engine-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.55rem;
+  background: var(--panel-bg);
+  color: var(--text-main);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.engine-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.engine-toggle--on {
+  background: linear-gradient(135deg, var(--wood-medium), var(--wood-dark));
+  color: var(--board-light);
+  border-color: transparent;
+}
+
+.engine-toggle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.engine-depth {
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.engine-sub {
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.55rem;
+  background: oklch(0.965 0.018 80);
+  color: var(--wood-dark);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.engine-sub:hover:not(:disabled) {
+  background: var(--wood-light);
+}
+
+.engine-sub:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.engine-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .controls {
   display: flex;
   gap: 0.4rem;

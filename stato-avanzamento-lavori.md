@@ -10,13 +10,13 @@
 
 - **Parte 1 (Prototipi 0-6) + estensioni anticipate**: completa e verificata (vedi sezione 2).
 - **Parte 2 pianificata**: roadmap P7-P19 + sezioni TODO/idee, descritta nel planning (sezioni 11-19). Fasi: A consolidamento, B studi, C import PGN/Lichess, D apprendimento, E motore Stockfish.
-- **Parte 2 implementata finora**: **P7-P10** (fase A · consolidamento) + **P11-P12** (fase B · Studi) + **P13-P15** (fase C · import PGN avanzato, studio Lichess pubblico, import privati/unlisted via OAuth + sync/upsert). Prossimo: **P16** (integrazione Stockfish).
+- **Parte 2 implementata finora**: **P7-P10** (fase A · consolidamento) + **P11-P12** (fase B · Studi) + **P13-P15** (fase C · import PGN/Lichess + sync) + **P16** (integrazione Stockfish client-side). Prossimo: **P17** (persistenza sessioni di allenamento).
 
 Alla verifica del 2026-06-25:
 
 - repository in lavorazione con le modifiche del P12 e della documentazione da consolidare;
 - backend e frontend verificati tramite suite automatiche locali;
-- **test backend: 48 passati**; **test frontend: 129 passati**;
+- **test backend: 48 passati**; **test frontend: 144 passati**;
 - checklist manuale E2E formalizzata in `checklist-e2e.md`;
 - verifiche browser dei flussi principali senza errori console.
 
@@ -140,10 +140,18 @@ Tutti completati e verificati. Sintesi:
 
 **Verifica:** backend **48** (+4: upsert create/update, metadati preservati, rollback re-import); frontend **129** (+8: `lichess-auth.spec`, upsert in `lichess-import.spec`/`study.service`). **Validazione live superata** (2026-06-26): via API, re-import di uno stesso `sourceStudyId` → `200` stesso id, varianti sostituite (2→1), nome locale preservato, nessun duplicato; nel browser, ri-anteprima dello studio pubblico reale `OR3CU5Je` già importato → avviso «verrà aggiornato» e pulsante «Aggiorna lo studio». **Flusso OAuth verificato dall'utente** (2026-06-26): login + autorizzazione su Lichess e ritorno all'app funzionano end-to-end.
 
-### Prototipi 16-19 — da fare
+### Prototipo 16 — Integrazione Stockfish ✅
 
-- **P16** Integrazione Stockfish: toggle motore, barra valutazione, gioca-vs-computer in nuova tab; mai in allenamento.
-- **P17-P19** Persistenza sessioni → statistiche → spaced repetition, da riprendere dopo Stockfish.
+- Motore **client-side** in un Web Worker: build **asm.js single-thread** (Stockfish 10, `stockfish.js` vendorizzato in `frontend/public/stockfish/`, GPLv3) — niente `SharedArrayBuffer`, niente header COOP/COEP, **nessun lavoro/endpoint backend**. Decisione in **ADR 0009**.
+- `core/uci.ts` (puro, testato): parsing UCI (`parseInfoLine`, `parseBestMove`) e `formatEval` (score → testo + frazione barra, dal punto di vista del Bianco). `StockfishService` pilota il worker (`available`/`evaluation`/`thinking`).
+- **Dettaglio/editor**: toggle **«Motore»** sulla posizione corrente, **barra di valutazione** (`EvalBar`) mostra/nascondi, **«Gioca contro il computer»** → apre `/play?fen=...` in una **nuova tab** (componente `PlayVsComputer`, stato via URL).
+- **Vincolo rispettato**: in **allenamento** nessun controllo del motore (per costruzione: `variant-training` non importa né `EvalBar` né `StockfishService`).
+
+**Verifica:** frontend **144** (+15: `uci.spec`, `play.spec`); backend **48** (invariato). **Validazione live superata** (2026-06-27): in dettaglio il motore raggiunge **prof. 14** con eval reale (es. **+0.8**, barra al 61%); mostra/nascondi barra e on/off ok; in `/play` ho giocato **1.e4** e il motore ha risposto **1...d5**; in allenamento **nessun** controllo motore presente.
+
+### Prototipi 17-19 — da fare
+
+- **P17-P19** Persistenza sessioni → statistiche → spaced repetition.
 
 ---
 

@@ -1,0 +1,42 @@
+<section class="play">
+  <header class="play-head">
+    <p class="play-kicker">Stockfish</p>
+    <h2 class="play-title">Gioca contro il computer</h2>
+  </header>
+
+  @if (status() === 'invalid') {
+    <p class="play-error">Posizione non valida. <a routerLink="/">Torna agli studi</a></p>
+  } @else {
+    @if (engineUnavailable()) {
+      <p class="play-warn">
+        Motore non disponibile in questo ambiente: il computer non potrà rispondere.
+      </p>
+    }
+
+    <div class="play-grid">
+      <app-chessboard
+        [position]="fen()"
+        [interactive]="interactive()"
+        [controlled]="true"
+        [orientation]="orientation()"
+        (moveMade)="onUserMove($event)"
+      />
+
+      <aside class="play-side">
+        <div class="play-status" [class.play-status--over]="status() === 'over'">
+          @switch (status()) {
+            @case ('your-turn') { Tocca a te. }
+            @case ('engine') { Il computer sta pensando&#8230; }
+            @case ('over') { {{ resultText() }} }
+          }
+        </div>
+        <button class="play-btn" type="button" (click)="restart()">Ricomincia</button>
+        <a class="play-link" routerLink="/">Chiudi e torna agli studi</a>
+        <p class="play-note">
+          Questa è una tab separata: la posizione di partenza arriva dal link, la tab
+          originale resta invariata.
+        </p>
+      </aside>
+    </div>
+  }
+</section>

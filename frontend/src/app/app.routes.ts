@@ -8,10 +8,12 @@ import { VariantEditor } from './variants/variant-editor';
 import { PgnImport } from './variants/pgn-import';
 import { VariantDetail } from './variants/variant-detail';
 import { VariantTraining } from './variants/variant-training';
+import { PlayVsComputer } from './play/play';
 import { canLeaveEditor } from './variants/can-deactivate.guard';
 
 export const routes: Routes = [
   { path: '', component: StudyList },
+  { path: 'play', component: PlayVsComputer },
   { path: 'lichess/callback', component: LichessCallback },
   { path: 'studies/import-lichess', component: LichessImport },
   { path: 'studies/:id', component: StudyDetail },

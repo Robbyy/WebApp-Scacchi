@@ -1,9 +1,19 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Chessboard, MoveMade } from '../chessboard/chessboard';
+import { EvalBar } from '../chessboard/eval-bar';
 import { VariantService } from '../core/variant.service';
 import { StudyService } from '../core/study.service';
+import { StockfishService } from '../core/stockfish.service';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
 import { CanComponentDeactivate } from './can-deactivate.guard';
@@ -29,18 +39,26 @@ import {
 
 @Component({
   selector: 'app-variant-editor',
-  imports: [FormsModule, RouterLink, Chessboard],
+  imports: [FormsModule, RouterLink, Chessboard, EvalBar],
   templateUrl: './variant-editor.html',
   styleUrl: './variant-editor.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class VariantEditor implements CanComponentDeactivate {
+export class VariantEditor implements CanComponentDeactivate, OnDestroy {
   private readonly service = inject(VariantService);
   private readonly studyService = inject(StudyService);
+  private readonly stockfish = inject(StockfishService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
+
+  /** Stato del motore Stockfish (Prototipo 16): aiuto allo studio, mai in allenamento. */
+  protected readonly engineOn = signal(false);
+  protected readonly showEvalBar = signal(true);
+  protected readonly engineEval = this.stockfish.evaluation;
+  protected readonly engineThinking = this.stockfish.thinking;
+  protected readonly engineAvailable = this.stockfish.available;
 
   /** Studio a cui agganciare la nuova variante (da query param ?studyId), se presente. */
   protected readonly studyId = signal<number | null>(null);
@@ -102,6 +120,34 @@ export class VariantEditor implements CanComponentDeactivate {
         error: () => this.error.set('Variante non trovata.'),
       });
     }
+    // Motore acceso → analizza la posizione corrente a ogni cambio.
+    effect(() => {
+      const fen = this.fen();
+      if (this.engineOn() && fen) {
+        this.stockfish.analyse(fen);
+      }
+    });
+  }
+
+  protected toggleEngine(): void {
+    const next = !this.engineOn();
+    this.engineOn.set(next);
+    if (!next) {
+      this.stockfish.stop();
+    }
+  }
+
+  protected toggleEvalBar(): void {
+    this.showEvalBar.update((v) => !v);
+  }
+
+  /** Apre "gioca contro il computer" in una nuova tab con la FEN corrente. */
+  protected playVsComputer(): void {
+    window.open(`/play?fen=${encodeURIComponent(this.fen())}`, '_blank');
+  }
+
+  ngOnDestroy(): void {
+    this.stockfish.dispose();
   }
 
   /** Mossa legale giocata: segue il figlio esistente o crea una nuova variante. */

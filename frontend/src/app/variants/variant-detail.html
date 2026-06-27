@@ -3,11 +3,44 @@
 } @else if (variant(); as v) {
   <div class="detail">
     <div class="board-col">
-      <app-chessboard
-        [position]="currentFen()"
-        [interactive]="false"
-        [orientation]="orientation()"
-      />
+      <div class="board-with-eval">
+        @if (engineOn() && showEvalBar()) {
+          <app-eval-bar [score]="engineEval()" [thinking]="engineThinking()" />
+        }
+        <app-chessboard
+          [position]="currentFen()"
+          [interactive]="false"
+          [orientation]="orientation()"
+        />
+      </div>
+
+      <div class="engine-bar">
+        <button
+          class="engine-toggle"
+          type="button"
+          (click)="toggleEngine()"
+          [class.engine-toggle--on]="engineOn()"
+          [disabled]="!engineAvailable()"
+          [attr.aria-pressed]="engineOn()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v1H7a2 2 0 0 0-2 2v2H4a2 2 0 0 0 0 4h1v2a2 2 0 0 0 2 2h2v1a3 3 0 1 0 6 0v-1h2a2 2 0 0 0 2-2v-2h1a2 2 0 0 0 0-4h-1V8a2 2 0 0 0-2-2h-2V5a3 3 0 0 0-3-3z"/></svg>
+          {{ engineOn() ? 'Motore acceso' : 'Motore' }}
+          @if (engineOn() && engineEval(); as ev) {
+            <span class="engine-depth">prof. {{ ev.depth }}</span>
+          }
+        </button>
+        @if (engineOn()) {
+          <button class="engine-sub" type="button" (click)="toggleEvalBar()">
+            {{ showEvalBar() ? 'Nascondi barra' : 'Mostra barra' }}
+          </button>
+        }
+        <button class="engine-sub" type="button" (click)="playVsComputer()" [disabled]="!engineAvailable()">
+          Gioca contro il computer
+        </button>
+      </div>
+      @if (!engineAvailable()) {
+        <p class="engine-note">Motore non disponibile in questo ambiente.</p>
+      }
     </div>
 
     <aside class="side">

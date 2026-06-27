@@ -4,13 +4,16 @@ import {
   HostListener,
   OnDestroy,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Chessboard } from '../chessboard/chessboard';
+import { EvalBar } from '../chessboard/eval-bar';
 import { VariantService } from '../core/variant.service';
 import { MoveSoundService } from '../core/move-sound.service';
+import { StockfishService } from '../core/stockfish.service';
 import { MoveNode, Variant } from '../core/variant.model';
 import {
   buildTokens,
@@ -23,7 +26,7 @@ import {
 
 @Component({
   selector: 'app-variant-detail',
-  imports: [RouterLink, Chessboard],
+  imports: [RouterLink, Chessboard, EvalBar],
   templateUrl: './variant-detail.html',
   styleUrl: './variant-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,6 +35,14 @@ export class VariantDetail implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly service = inject(VariantService);
   private readonly moveSound = inject(MoveSoundService);
+  private readonly stockfish = inject(StockfishService);
+
+  /** Stato del motore Stockfish (Prototipo 16): solo aiuto allo studio, mai in allenamento. */
+  protected readonly engineOn = signal(false);
+  protected readonly showEvalBar = signal(true);
+  protected readonly engineEval = this.stockfish.evaluation;
+  protected readonly engineThinking = this.stockfish.thinking;
+  protected readonly engineAvailable = this.stockfish.available;
 
   protected readonly variant = signal<Variant | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -67,6 +78,31 @@ export class VariantDetail implements OnDestroy {
       next: (v) => this.variant.set(v),
       error: () => this.error.set('Variante non trovata.'),
     });
+    // Quando il motore è acceso, analizza la posizione corrente a ogni cambio.
+    effect(() => {
+      const fen = this.currentFen();
+      if (this.engineOn() && fen) {
+        this.stockfish.analyse(fen);
+      }
+    });
+  }
+
+  /** Accende/spegne il motore sulla posizione corrente. */
+  protected toggleEngine(): void {
+    const next = !this.engineOn();
+    this.engineOn.set(next);
+    if (!next) {
+      this.stockfish.stop();
+    }
+  }
+
+  protected toggleEvalBar(): void {
+    this.showEvalBar.update((v) => !v);
+  }
+
+  /** Apre "gioca contro il computer" in una nuova tab con la FEN corrente. */
+  protected playVsComputer(): void {
+    window.open(`/play?fen=${encodeURIComponent(this.currentFen())}`, '_blank');
   }
 
   protected isCurrent(path: number[] | undefined): boolean {
@@ -149,6 +185,7 @@ export class VariantDetail implements OnDestroy {
 
   ngOnDestroy(): void {
     this.stop();
+    this.stockfish.dispose();
   }
 }
 

@@ -376,3 +376,57 @@ studi **privati/unlisted** si leggono via **OAuth Authorization Code + PKCE**
   non automatizzabile nei test né nel preview headless. **Verificata dall'utente il
   2026-06-26**: il flusso PKCE (autorizzazione su Lichess → callback → token →
   lettura studio) funziona.
+
+---
+
+## 0009 — Stockfish client-side (WASM/asm.js in Web Worker), perimetro limitato (P16, R18)
+
+**Data:** 2026-06-27 · **Stato:** Accettata e implementata (P16) · **Contesto:** Prototipo 16 (Parte 2), rischio R18.
+
+### Decisione
+Stockfish gira **interamente lato client** in un **Web Worker**, senza alcuna
+dipendenza backend né nuovi endpoint. Si usa il build **asm.js single-thread**
+(`stockfish.js` di Stockfish 10, vendorizzato in `frontend/public/stockfish/`),
+che **non** richiede `SharedArrayBuffer` né gli header di cross-origin isolation
+(**COOP/COEP**). Il motore è disponibile **solo** come aiuto allo studio in
+**dettaglio/editor** (toggle motore, barra di valutazione, "gioca contro il
+computer" in una nuova tab) ed è **assente in allenamento**.
+
+### Alternative valutate
+- **`stockfish.wasm` multi-thread:** più veloce, ma richiede `SharedArrayBuffer`
+  e quindi header COOP/COEP sul server — vincolo infrastrutturale non desiderato
+  per un'app personale/locale. Scartato (fallback single-thread, come da R18).
+- **`stockfish` v18 (NNUE):** più forte ma con file NNUE da decine di MB; eccessivo
+  per una barra di valutazione e un avversario da studio. Scartato.
+- **Motore lato backend (processo UCI o servizio):** contrario al principio
+  "regole/motore lato client" e alla separazione FE/BE; introdurrebbe stato e
+  risorse server. Scartato.
+- **Build asm.js vs wasm single-thread:** scelto l'**asm.js single-file** (1.5MB)
+  per massima robustezza: nessun file `.wasm` companion da fetchare, nessun
+  problema di MIME/percorso; basta `new Worker('/stockfish/stockfish.js')`.
+
+### Note di implementazione
+- `StockfishService` (root): crea il worker in modo lazy, pilota l'UCI (`uci`,
+  `isready`, `position fen ...`, `go depth/movetime`), espone `evaluation`,
+  `thinking`, `available` (false se il worker non è caricabile → UI degrada).
+- Parsing UCI puro e testato in `core/uci.ts` (`parseInfoLine`, `parseBestMove`,
+  `formatEval`): lo score è convertito al punto di vista del Bianco e mappato su
+  una frazione 0..1 per la barra.
+- `EvalBar` (presentazionale) affiancata alla scacchiera in dettaglio/editor.
+- "Gioca contro il computer": `window.open('/play?fen=...', '_blank')` → componente
+  `PlayVsComputer` autonomo (stato passato via URL, nessuno stato condiviso fra tab);
+  l'utente gioca il lato al tratto, il motore risponde con `go movetime`.
+- **Vincolo invariante:** in allenamento non c'è alcun controllo del motore (per
+  costruzione: `variant-training` non importa né `EvalBar` né `StockfishService`).
+- Asset Stockfish (GPLv3) vendorizzato con `Copying.txt`/`ATTRIBUTION.md`.
+
+### Conseguenze
+- Nessun lavoro né dipendenza backend; la separazione FE/BE resta invariata.
+- Funziona senza header speciali su qualunque hosting statico; più lento del
+  multi-thread, ma adeguato a eval bar e avversario da studio.
+- Verifica live (2026-06-27): in dettaglio il motore raggiunge prof. 14 con eval
+  reale (es. +0.8); barra mostra/nascondi e on/off ok; in `/play` l'utente gioca
+  1.e4 e il motore risponde (1...d5); in allenamento nessun controllo motore.
+- Vincolo GPL da rispettare in caso di ridistribuzione dell'app (vedi attribution).
+- Fuori perimetro (per scelta): suggerimento "mossa migliore", blunder detection,
+  multi-PV, opening explorer — da valutare solo se emergeranno necessità reali.
