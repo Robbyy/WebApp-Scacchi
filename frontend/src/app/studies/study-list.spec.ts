@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 import { StudyList } from './study-list';
 import { StudyService } from '../core/study.service';
 import { Study } from '../core/study.model';
+import { ReviewService } from '../core/review.service';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
 
@@ -16,6 +17,7 @@ function setup(service: Partial<StudyService>, confirmResult = true) {
     providers: [
       provideRouter([]),
       { provide: StudyService, useValue: service },
+      { provide: ReviewService, useValue: { getDue: () => of([]) } },
       { provide: ConfirmService, useValue: { ask: () => Promise.resolve(confirmResult) } },
       { provide: ToastService, useValue: { success() {}, error() {}, info() {} } },
     ],

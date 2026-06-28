@@ -1,0 +1,49 @@
+@if (loading()) {
+  <p class="rev-muted">Caricamento&#8230;</p>
+} @else if (error()) {
+  <p class="rev-error">{{ error() }} — <a routerLink="/">torna agli studi</a></p>
+} @else {
+  <section class="rev">
+    <nav class="crumbs">
+      <a routerLink="/">Studi</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb-current">Ripeti oggi</span>
+    </nav>
+
+    <header class="rev-head">
+      <p class="rev-kicker">Spaced repetition</p>
+      <h2 class="rev-title">Ripeti oggi</h2>
+      <p class="rev-lead">
+        {{ rows().length }} variant{{ rows().length === 1 ? 'e' : 'i' }} da ripetere.
+      </p>
+    </header>
+
+    @if (rows().length === 0) {
+      <p class="rev-muted">
+        Nessuna variante da ripetere oggi. 🎉
+        <a routerLink="/">Allena</a> le tue varianti per pianificare le prossime ripetizioni.
+      </p>
+    } @else {
+      <ul class="rev-list">
+        @for (r of rows(); track r.variantId) {
+          <li class="rev-card">
+            <div class="rev-info">
+              <a class="rev-name" [routerLink]="['/variants', r.variantId]">{{ r.variantName }}</a>
+              <span class="rev-sub">
+                @if (r.studyName) {
+                  <span class="rev-study">{{ r.studyName }}</span>
+                  <span class="rev-dot">·</span>
+                }
+                <span class="rev-when" [class.rev-when--late]="r.late">{{ r.label }}</span>
+              </span>
+            </div>
+            <a class="rev-train" [routerLink]="['/variants', r.variantId, 'train']">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+              Allena
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+}

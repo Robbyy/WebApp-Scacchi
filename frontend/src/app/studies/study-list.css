@@ -82,6 +82,22 @@
   background: var(--wood-light);
 }
 
+/* Badge conteggio "Ripeti oggi" (P19) */
+.due-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--wood-dark);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 /* Form "Nuovo studio" */
 .study-form {
   display: flex;

@@ -244,6 +244,36 @@
   color: #fff;
 }
 
+/* Indicatore prossima ripetizione (P19) */
+.review-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.review-hint svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.review-hint strong {
+  color: var(--text-main);
+}
+
+.review-hint a {
+  color: var(--wood-dark);
+  font-weight: 600;
+}
+
+.review-hint--due {
+  color: oklch(0.5 0.16 25);
+  font-weight: 600;
+}
+
 .panel {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);

@@ -526,3 +526,58 @@ senza allenamenti risponde **200 con metriche a zero** (non 404).
   correttamente la variante.
 - Fuori perimetro (per scelta): analisi qualitativa col motore, confronto tra utenti
   (single-user), grafici complessi.
+
+---
+
+## 0012 — Spaced repetition con SM-2 semplificato e relearning "oggi" (P19)
+
+**Data:** 2026-06-28 · **Stato:** Accettata e implementata (P19) · **Contesto:** Prototipo 19 (Parte 2), ultimo della roadmap.
+
+### Decisione
+La pianificazione delle ripetizioni usa una variante semplificata di **SM-2** (SuperMemo),
+con una sola schedule per variante (`ReviewSchedule`: `easeFactor`, `intervalDays`,
+`repetitions`, `nextReviewDate`, `lastReviewedAt`). L'esito di **ogni** allenamento concluso
+aggiorna la schedule, dentro la stessa transazione che salva la sessione (P17). Endpoint:
+`GET /api/reviews/due` (varianti dovute, con nome variante/studio risolti) e
+`GET /api/reviews/variants/{id}` (schedule singola; **204** se la variante non è ancora
+pianificata, così il frontend non genera errori in console).
+
+### Voto di qualità e relearning
+- Il voto SM-2 (0..5) è derivato dall'allenamento: sessione interrotta → 1; completata →
+  `5 - errori`, con minimo 2. Soglia di promozione: qualità ≥ 3 (da **3 errori** in su l'esito
+  è "negativo").
+- Esito **positivo**: intervalli SM-2 classici (1 giorno, poi 6, poi `intervallo * easeFactor`),
+  `easeFactor` aggiornato e mai sotto **1.3**.
+- Esito **negativo** (adattamento "relearning"): azzera `repetitions` e imposta l'intervallo a
+  **0**, cioè ripeti **oggi**. Così una variante appena sbagliata rientra subito nella lista
+  "Ripeti oggi" (e la validazione "molti errori accorciano l'intervallo" è dimostrabile senza
+  attendere giorni).
+
+### Alternative valutate
+- **Algoritmo più ricco (SM-2+ / FSRS):** sovradimensionato per uso personale single-user;
+  SM-2 semplificato è trasparente, testabile e sufficiente.
+- **Intervallo minimo 1 anche sui fallimenti (SM-2 puro):** scartato — avrebbe reso la coda
+  "Ripeti oggi" sempre vuota subito dopo l'allenamento, poco utile come ripasso immediato e
+  difficile da verificare. Il relearning a 0 giorni risolve entrambi.
+- **Campi sulla `Variant` invece di una tabella dedicata:** scartato — `ReviewSchedule`
+  separata (come previsto in sezione 7 del planning) tiene la variante pulita e isola lo stato
+  di apprendimento.
+
+### Note di implementazione
+- `ReviewScheduler` è **logica pura** (niente Spring/JPA): `quality(...)` e `next(...)` con
+  unit test dedicati; il servizio si limita a persistere l'esito.
+- `studyId` denormalizzato sulla schedule (come per le sessioni P17), utile per future viste.
+- Le schedule **orfane** (variante eliminata) sono ignorate in lettura, coerentemente con
+  sessioni/statistiche che non sono cancellate a cascata (scelta pragmatica single-user).
+- Frontend: vista `/reviews` ("Ripeti oggi" con avvio rapido del training), badge conteggio
+  in home, e indicatore "prossima ripetizione" nel dettaglio variante; helper di formattazione
+  puri e testati (`review-format.ts`).
+
+### Conseguenze
+- Il ciclo di ripetizione spaziata funziona end-to-end in locale single-user (criterio P19).
+- Verifica live (2026-06-28): variante non allenata → 204; sessione completata con 4 errori →
+  schedule a 0 giorni, dovuta oggi (`easeFactor` 2.5→2.18) e presente in "Ripeti oggi"; sessione
+  pulita su un'altra variante → ripetizione a domani (`easeFactor` 2.5→2.6), non dovuta. Le viste
+  mostrano badge "Ripeti oggi 1", la card "Da ripetere oggi" e l'indicatore di dettaglio.
+- Fuori perimetro (per scelta): notifiche push/email, sincronizzazione multi-dispositivo (cloud,
+  terza tornata).

@@ -60,6 +60,19 @@
         Allena questa variante
       </a>
 
+      @if (review(); as r) {
+        <p class="review-hint" [class.review-hint--due]="r.due">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          @if (r.due) {
+            <span>Da ripetere — <a routerLink="/reviews">vai a Ripeti oggi</a></span>
+          } @else {
+            <span>Prossima ripetizione: <strong>{{ reviewDate() }}</strong> ({{ reviewLabel() }})</span>
+          }
+        </p>
+      }
+
       <div class="panel">
         <h3 class="panel-title">Mosse &amp; varianti</h3>
         @if (tokens().length === 0) {

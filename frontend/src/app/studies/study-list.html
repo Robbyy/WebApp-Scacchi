@@ -5,6 +5,15 @@
       <h2 class="list-title">I tuoi studi</h2>
     </div>
     <div class="head-actions">
+      <a class="new-cta new-cta--ghost" routerLink="/reviews">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Ripeti oggi
+        @if (dueCount() > 0) {
+          <span class="due-badge">{{ dueCount() }}</span>
+        }
+      </a>
       <a class="new-cta new-cta--ghost" routerLink="/studies/import-lichess">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 3v10m0 0l-4-4m4 4l4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />

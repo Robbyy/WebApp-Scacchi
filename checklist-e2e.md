@@ -32,7 +32,7 @@
 
 ---
 
-## Flussi aggiunti (Parte 2: P7-P18)
+## Flussi aggiunti (Parte 2: P7-P19)
 
 - [ ] **13. Validazione backend (P7)** — tentare di salvare via API un payload con mossa illegale (es. `moves: ["e4","e4"]`): risposta **400** con `{ field, ply, message }`. Nell'editor/import un eventuale errore di validazione viene mostrato come messaggio.
 - [ ] **14. Drag and drop pulito (P7)** — trascinare un pezzo: viene trascinato **solo il pezzo** (niente sfondo della casa) e la casa di partenza resta **vuota** durante il trascinamento. La cornice della scacchiera è sottile, coordinate leggibili.
@@ -57,6 +57,8 @@
 - [ ] **33. Registrazione sessione di allenamento (P17)** — completare un allenamento: al termine compare «Sessione registrata ✓». Via API `GET /api/training-sessions?variantId={id}` la sessione è presente con esito, numero errori e conteggio mosse; `GET /api/training-sessions/{id}` mostra le mosse tentate (anche quelle sbagliate). Un allenamento senza alcuna mossa giocata **non** crea sessioni.
 - [ ] **34. Statistiche variante (P18)** — dal dettaglio variante → «Statistiche»: dopo qualche allenamento si vedono allenamenti, completati, errori totali/medi, **precisione %**, ultima esecuzione e l'elenco delle **mosse più sbagliate**. Una variante mai allenata mostra l'invito ad allenarla.
 - [ ] **35. Statistiche studio (P18)** — dal dettaglio studio → «Statistiche dello studio»: i totali aggregano le varianti dello studio e la tabella per‑variante riporta le metriche (con link alle statistiche di ciascuna variante). L'aggregato somma correttamente le varianti.
+- [ ] **36. Pianificazione ripetizione (P19)** — completare un allenamento di una variante **senza errori**: nel dettaglio compare «Prossima ripetizione: <data> (Domani)» e la variante **non** è dovuta oggi. Completare un allenamento con **molti errori** (≥3): l'indicatore diventa «Da ripetere» (evidenziato) e la variante torna dovuta **oggi**. Una variante mai allenata non mostra l'indicatore.
+- [ ] **37. Vista «Ripeti oggi» (P19)** — in home compare il link **«Ripeti oggi»** con il **badge** del numero di varianti dovute; aprendolo (`/reviews`) si vede l'elenco delle varianti dovute con studio e stato («Da ripetere oggi» / «In ritardo di N giorni»). Il pulsante **«Allena»** avvia il training della variante. Senza varianti dovute, la vista mostra l'empty-state e il badge sparisce.
 
 ---
 

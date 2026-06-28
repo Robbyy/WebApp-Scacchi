@@ -10,13 +10,13 @@
 
 - **Parte 1 (Prototipi 0-6) + estensioni anticipate**: completa e verificata (vedi sezione 2).
 - **Parte 2 pianificata**: roadmap P7-P19 + sezioni TODO/idee, descritta nel planning (sezioni 11-19). Fasi: A consolidamento, B studi, C import PGN/Lichess, D apprendimento, E motore Stockfish.
-- **Parte 2 implementata finora**: **P7-P10** (fase A) + **P11-P12** (fase B · Studi) + **P13-P15** (fase C · import PGN/Lichess + sync) + **P16** (Stockfish client-side) + **P17-P18** (fase D · sessioni di allenamento + statistiche). Prossimo: **P19** (spaced repetition) — ultimo della Parte 2.
+- **Parte 2 implementata**: **P7-P10** (fase A) + **P11-P12** (fase B · Studi) + **P13-P15** (fase C · import PGN/Lichess + sync) + **P16** (Stockfish client-side) + **P17-P19** (fase D · sessioni di allenamento + statistiche + spaced repetition). **Roadmap Parte 2 completata** (P7-P19).
 
 Alla verifica del 2026-06-25:
 
 - repository in lavorazione con le modifiche del P12 e della documentazione da consolidare;
 - backend e frontend verificati tramite suite automatiche locali;
-- **test backend: 57 passati**; **test frontend: 159 passati**;
+- **test backend: 66 passati**; **test frontend: 168 passati**;
 - checklist manuale E2E formalizzata in `checklist-e2e.md`;
 - verifiche browser dei flussi principali senza errori console.
 
@@ -165,9 +165,12 @@ Tutti completati e verificati. Sintesi:
 
 **Verifica:** backend **57** (+3: `StatsControllerTest` — aggregazioni, top‑mistakes, somma studio); frontend **159** (+10: `stats-format`, `stats.service`, `variant-stats`, `study-stats`). **Validazione live superata** (2026-06-28): con 3 sessioni su una variante reale, la vista mostra 3 allenamenti, **80% precisione**, «Nf3 3× sbagliata», ultima esecuzione formattata; l'aggregato di studio somma correttamente la variante.
 
-### Prototipo 19 — da fare (ultimo della Parte 2)
+### Prototipo 19 — Spaced repetition ✅ (chiude la fase D e la Parte 2)
 
-- **P19** Spaced repetition: scheduling delle ripetizioni per variante (`ReviewSchedule`), vista «da ripetere oggi».
+- Backend: nuovo package `review`. Entità `ReviewSchedule` (una per variante: `easeFactor`, `intervalDays`, `repetitions`, `nextReviewDate`, `lastReviewedAt`) aggiornata a fine di **ogni** allenamento, nella stessa transazione che salva la sessione (P17). Algoritmo **SM-2 semplificato** (`ReviewScheduler`, logica pura testata): qualità derivata da esito+errori (≥3 errori = esito negativo); esito positivo → intervalli 1/6/`×easeFactor`, esito negativo → `relearning` a **0 giorni** (ripeti oggi). `GET /api/reviews/due` (varianti dovute, nome variante/studio risolti) e `GET /api/reviews/variants/{id}` (**204** se non pianificata). Decisione in **ADR 0012**.
+- Frontend: vista **`/reviews`** «Ripeti oggi» (card dovute con avvio rapido del training), **badge conteggio** in home e **indicatore prossima ripetizione** nel dettaglio variante; helper di formattazione puri (`review-format.ts`).
+
+**Verifica:** backend **66** (+9: `ReviewSchedulerTest`, `ReviewControllerTest`); frontend **168** (+9: `review-format`, `review.service`, `review-due`). **Validazione live superata** (2026-06-28): variante non allenata → 204; sessione completata con 4 errori → schedule a 0 giorni dovuta oggi (`easeFactor` 2.5→2.18) e presente in «Ripeti oggi»; sessione pulita su un'altra variante → ripetizione a domani (`easeFactor` 2.5→2.6), non dovuta. UI: badge «Ripeti oggi 1», card «Da ripetere oggi», indicatore «Prossima ripetizione: 29/06/2026 (Domani)» e «Da ripetere» nel dettaglio; console pulita.
 
 ---
 

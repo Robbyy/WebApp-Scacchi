@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { StudyService } from '../core/study.service';
 import { Study, StudyColor } from '../core/study.model';
+import { ReviewService } from '../core/review.service';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
 import { validationMessage } from '../core/variant.model';
@@ -21,6 +22,7 @@ import { validationMessage } from '../core/variant.model';
 })
 export class StudyList implements OnInit {
   private readonly service = inject(StudyService);
+  private readonly reviews = inject(ReviewService);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
 
@@ -28,6 +30,8 @@ export class StudyList implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly loading = signal(true);
   protected readonly deletingId = signal<number | null>(null);
+  /** Quante varianti sono da ripetere oggi (badge "Ripeti oggi"); P19. */
+  protected readonly dueCount = signal(0);
 
   /** Form "Nuovo studio". */
   protected readonly creating = signal(false);
@@ -46,6 +50,11 @@ export class StudyList implements OnInit {
         this.error.set('Impossibile caricare gli studi.');
         this.loading.set(false);
       },
+    });
+    // Conteggio delle varianti dovute oggi (best-effort: un errore non blocca la home).
+    this.reviews.getDue().subscribe({
+      next: (items) => this.dueCount.set(items.length),
+      error: () => this.dueCount.set(0),
     });
   }
 

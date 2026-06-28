@@ -10,11 +10,13 @@ import { VariantDetail } from './variants/variant-detail';
 import { VariantTraining } from './variants/variant-training';
 import { VariantStats } from './stats/variant-stats';
 import { StudyStats } from './stats/study-stats';
+import { ReviewDue } from './reviews/review-due';
 import { PlayVsComputer } from './play/play';
 import { canLeaveEditor } from './variants/can-deactivate.guard';
 
 export const routes: Routes = [
   { path: '', component: StudyList },
+  { path: 'reviews', component: ReviewDue },
   { path: 'play', component: PlayVsComputer },
   { path: 'lichess/callback', component: LichessCallback },
   { path: 'studies/import-lichess', component: LichessImport },

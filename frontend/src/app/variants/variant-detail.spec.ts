@@ -3,6 +3,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { of } from 'rxjs';
 import { VariantDetail } from './variant-detail';
 import { VariantService } from '../core/variant.service';
+import { ReviewService } from '../core/review.service';
 import { Variant } from '../core/variant.model';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -38,6 +39,7 @@ function setup(v: Variant) {
     providers: [
       provideRouter([]),
       { provide: VariantService, useValue: { getVariant: () => of(v) } },
+      { provide: ReviewService, useValue: { getForVariant: () => of(null) } },
       { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: String(v.id) }) } } },
     ],
   });

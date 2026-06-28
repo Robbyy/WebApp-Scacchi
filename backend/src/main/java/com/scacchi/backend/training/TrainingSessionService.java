@@ -1,5 +1,6 @@
 package com.scacchi.backend.training;
 
+import com.scacchi.backend.review.ReviewService;
 import com.scacchi.backend.training.CreateTrainingSessionRequest.TrainingMoveInput;
 import com.scacchi.backend.training.TrainingSessionDto.TrainingMoveDto;
 import com.scacchi.backend.variant.ValidationError;
@@ -23,11 +24,15 @@ public class TrainingSessionService {
 
     private final TrainingSessionRepository repository;
     private final VariantRepository variantRepository;
+    private final ReviewService reviewService;
 
     public TrainingSessionService(
-        TrainingSessionRepository repository, VariantRepository variantRepository) {
+        TrainingSessionRepository repository,
+        VariantRepository variantRepository,
+        ReviewService reviewService) {
         this.repository = repository;
         this.variantRepository = variantRepository;
+        this.reviewService = reviewService;
     }
 
     /** Registra una sessione conclusa; {@code empty} se la variante non esiste (→ 404). */
@@ -47,7 +52,14 @@ public class TrainingSessionService {
         session.setStartedAt(parseInstant(request.startedAt()));
         session.setCompletedAt(parseInstant(request.completedAt()));
         session.setMoves(mapMoves(request.moves()));
-        return Optional.of(toDto(repository.save(session), true));
+        TrainingSession saved = repository.save(session);
+        // Spaced repetition (P19): l'esito ripianifica la prossima ripetizione della variante.
+        reviewService.recordSession(
+            saved.getVariantId(),
+            saved.getStudyId(),
+            saved.getResult() == TrainingResult.COMPLETED,
+            saved.getMistakesCount());
+        return Optional.of(toDto(saved, true));
     }
 
     /** Storico (riepilogo, senza mosse), opzionalmente filtrato per variante o studio. */

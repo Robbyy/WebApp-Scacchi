@@ -14,7 +14,10 @@ import { EvalBar } from '../chessboard/eval-bar';
 import { VariantService } from '../core/variant.service';
 import { MoveSoundService } from '../core/move-sound.service';
 import { StockfishService } from '../core/stockfish.service';
+import { ReviewService } from '../core/review.service';
 import { MoveNode, Variant } from '../core/variant.model';
+import { ReviewSchedule } from '../core/review.model';
+import { formatReviewDate, reviewLabel } from '../reviews/review-format';
 import {
   buildTokens,
   childrenAt,
@@ -36,6 +39,7 @@ export class VariantDetail implements OnDestroy {
   private readonly service = inject(VariantService);
   private readonly moveSound = inject(MoveSoundService);
   private readonly stockfish = inject(StockfishService);
+  private readonly reviews = inject(ReviewService);
 
   /** Stato del motore Stockfish (Prototipo 16): solo aiuto allo studio, mai in allenamento. */
   protected readonly engineOn = signal(false);
@@ -46,6 +50,16 @@ export class VariantDetail implements OnDestroy {
 
   protected readonly variant = signal<Variant | null>(null);
   protected readonly error = signal<string | null>(null);
+  /** Schedule di ripetizione della variante (P19), null se mai allenata. */
+  protected readonly review = signal<ReviewSchedule | null>(null);
+  protected readonly reviewLabel = computed(() => {
+    const r = this.review();
+    return r ? reviewLabel(r.nextReviewDate) : null;
+  });
+  protected readonly reviewDate = computed(() => {
+    const r = this.review();
+    return r ? formatReviewDate(r.nextReviewDate) : null;
+  });
   /** Percorso (indici di figlio dalla radice) del nodo selezionato; vuoto = posizione iniziale. */
   protected readonly currentPath = signal<number[]>([]);
   protected readonly playing = signal(false);
@@ -77,6 +91,11 @@ export class VariantDetail implements OnDestroy {
     this.service.getVariant(id).subscribe({
       next: (v) => this.variant.set(v),
       error: () => this.error.set('Variante non trovata.'),
+    });
+    // Schedule di ripetizione (P19): best-effort, l'assenza non è un errore.
+    this.reviews.getForVariant(id).subscribe({
+      next: (r) => this.review.set(r),
+      error: () => this.review.set(null),
     });
     // Quando il motore è acceso, analizza la posizione corrente a ogni cambio.
     effect(() => {
