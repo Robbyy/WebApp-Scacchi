@@ -37,6 +37,7 @@ Ordine consigliato di lettura:
 2. [`docs/stato-corrente.md`](docs/stato-corrente.md) — cosa esiste oggi, funzionalità, aree delicate
 3. Per task specifici:
    - architettura / API / dati → [`docs/architettura.md`](docs/architettura.md)
+   - ripetizione spaziata (SM-2) → [`docs/sm2.md`](docs/sm2.md)
    - setup e test → [`backend/README.md`](backend/README.md), [`frontend/README.md`](frontend/README.md)
    - checklist manuale → [`docs/checklist-e2e.md`](docs/checklist-e2e.md)
 4. [`docs/adr/decisioni-tecniche.md`](docs/adr/decisioni-tecniche.md) — decisioni architetturali (ADR 0001–0012)

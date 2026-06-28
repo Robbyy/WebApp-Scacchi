@@ -35,7 +35,7 @@ Package principali sotto `com.scacchi.backend`:
 | `study` | CRUD studi 1-N con varianti, cascata, import bulk e upsert Lichess |
 | `training` | Sessioni di allenamento: registrazione e storico mosse |
 | `stats` | Aggregazioni statistiche per variante e studio |
-| `review` | Spaced repetition SM-2: scheduling e lista varianti dovute |
+| `review` | Spaced repetition SM-2: scheduling e lista varianti dovute (teoria e formule → [`docs/sm2.md`](sm2.md)) |
 
 ---
 
@@ -157,3 +157,5 @@ Le decisioni architetturali sono documentate in [`docs/adr/decisioni-tecniche.md
 - ADR 0006–0008: import Lichess, parser PGN, OAuth PKCE
 - ADR 0009: Stockfish client-side
 - ADR 0010–0012: sessioni di allenamento, statistiche, SM-2 relearning
+
+Per il funzionamento dettagliato della ripetizione spaziata (parametri, formule, esempi, flusso) → [`docs/sm2.md`](sm2.md).
