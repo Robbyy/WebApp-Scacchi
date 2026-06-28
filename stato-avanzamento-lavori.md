@@ -1,6 +1,6 @@
 # Stato avanzamento lavori - WebApp Scacchi
 
-> Fotografia operativa dello stato del progetto al **2026-06-25**.
+> Fotografia operativa dello stato del progetto al **2026-06-28**.
 > Fonti di riferimento: `planning-prototipi-webapp.md` (Parte 1 e Parte 2), `decisioni-tecniche.md` (ADR), e verifica locale end-to-end su frontend Angular e backend Spring Boot.
 > Questo documento non sostituisce planning e ADR: riassume cosa risulta implementato e cosa manca.
 
@@ -12,15 +12,15 @@
 - **Parte 2 pianificata**: roadmap P7-P19 + sezioni TODO/idee, descritta nel planning (sezioni 11-19). Fasi: A consolidamento, B studi, C import PGN/Lichess, D apprendimento, E motore Stockfish.
 - **Parte 2 implementata**: **P7-P10** (fase A) + **P11-P12** (fase B · Studi) + **P13-P15** (fase C · import PGN/Lichess + sync) + **P16** (Stockfish client-side) + **P17-P19** (fase D · sessioni di allenamento + statistiche + spaced repetition). **Roadmap Parte 2 completata** (P7-P19).
 
-Alla verifica del 2026-06-25:
+Alla verifica del 2026-06-28:
 
-- repository in lavorazione con le modifiche del P12 e della documentazione da consolidare;
+- working tree pulito (a parte il file di sviluppo `backend/data/scacchi.mv.db`, escluso dai commit per drift runtime); P19 committato, Parte 2 chiusa;
 - backend e frontend verificati tramite suite automatiche locali;
 - **test backend: 66 passati**; **test frontend: 168 passati**;
-- checklist manuale E2E formalizzata in `checklist-e2e.md`;
+- checklist manuale E2E formalizzata in `checklist-e2e.md` (37 flussi);
 - verifiche browser dei flussi principali senza errori console.
 
-Ultimi commit rilevanti: `050f86c` (P8), `fa90ef7` (P9), `793d867` (P10); P11-P12 presenti nel working tree corrente.
+Ultimi commit rilevanti: `95e7ed0` (P15), `b16a4c6` (P16), `8186b54` (P17), `37d03d3` (P18), `3560348` (P19).
 
 Il repository resta strutturato con due progetti separati: `backend/` (Spring Boot + Maven + H2/JPA) e `frontend/` (Angular + npm + `chess.js`).
 
@@ -177,18 +177,18 @@ Tutti completati e verificati. Sintesi:
 ## 4. Verifiche eseguite
 
 ### Backend
-Comando: `.\mvnw.cmd test`.
-Esito: **41 test passati**. Copertura: contesto Spring, ping, repository varianti, controller varianti (CRUD + validazione legalità su `POST` e `PUT` + round-trip albero), `MoveNode`, `VariantValidator`, **controller studi (CRUD, dettaglio con varianti, creazione variante nello studio, cancellazione a cascata)**.
+Comando: `.\mvnw.cmd test` (richiede `MAVEN_OPTS=-Djavax.net.ssl.trustStoreType=Windows-ROOT` in locale).
+Esito: **66 test passati**. Copertura: contesto Spring, ping, repository/controller varianti (CRUD + validazione legalità `POST`/`PUT` + round-trip albero), `MoveNode`, `VariantValidator`, controller studi (CRUD, dettaglio con varianti, creazione variante nello studio, cancellazione a cascata, import bulk/upsert Lichess), sessioni di allenamento (`TrainingSessionControllerTest`), statistiche (`StatsControllerTest`), spaced repetition (`ReviewSchedulerTest` SM-2 puro + `ReviewControllerTest`).
 
 ### Frontend
 Comando: `npm test -- --watch=false`.
-Esito: **91 test passati** (12 file), incluse le utilità `move-tree`, `StudyService`, `StudyList`, `StudyDetail`, `MoveSoundService`, flussi editor/import con `studyId`, drag-and-drop scacchiera e audio su mosse.
+Esito: **168 test passati** (26 file), incluse le utilità `move-tree`/`pgn`/`lichess`/`uci`, i servizi (`StudyService`, `TrainingSessionService`, `StatsService`, `ReviewService`, `LichessAuthService`, `MoveSoundService`), i componenti (`StudyList`, `StudyDetail`, editor/import con `studyId`, training, `play`, `variant-stats`/`study-stats`, `review-due`) e gli helper puri (`stats-format`, `review-format`).
 
 ### Checklist manuale E2E
-`checklist-e2e.md` — 22 flussi ripetibili (studi, creazione variante nello studio, dettaglio, replay, training, rami, import PGN, eliminazione + validazione/drag/promozione/conferme/guard/toast/audio della Parte 2).
+`checklist-e2e.md` — **37 flussi** ripetibili: 12 core + 25 della Parte 2 (validazione/drag/promozione/conferme/guard/toast/audio, studi e cascata, import PGN ramificato, import e sync Lichess + OAuth, motore Stockfish, sessioni, statistiche, spaced repetition).
 
 ### Verifiche browser (live)
-Verifiche live precedenti: lista, dettaglio, training, editor (rami, promozione, conferma cancellazione, guard modifiche non salvate), import PGN, dialog di conferma e toast senza errori console. Per P12 la copertura automatica è verde; resta solo la verifica percettiva manuale del suono reale nel browser.
+Verifiche live cumulate senza errori console: lista/dettaglio/training/editor, import PGN, import e re-sync Lichess (studio pubblico reale `OR3CU5Je`) + OAuth, motore Stockfish e «gioca contro il computer», registrazione sessioni, statistiche variante/studio, e spaced repetition (schedule a 0/1 giorno, vista «Ripeti oggi», indicatore nel dettaglio). Resta non automatizzabile la sola verifica percettiva del suono reale nel browser.
 
 ---
 
@@ -200,14 +200,14 @@ La legalità di mainline e albero è ora validata lato server con `chesslib`; er
 ### 5.2 Consolidamento modello ad albero — ✅ in gran parte (P8)
 Vincolo `children[0] = mainline` ufficiale e testato; round-trip garantito; promozione a mainline e protezione cancellazione sottoalbero implementate. Restano: import/export PGN ramificato (P13 / TODO export) e UX avanzata ulteriore.
 
-### 5.3 Import PGN e studi Lichess — ✅ P13 e P14 fatti
-P13 ✅ copre PGN con varianti annidate (commenti/NAG ignorati senza rompere il parsing). P14 ✅ importa da link a **studio pubblico Lichess** (`https://lichess.org/study/{studyId}`) o a **capitolo** (`https://lichess.org/study/{studyId}/{chapterId}`): fetch frontend degli endpoint PGN pubblici, parsing che riusa `parsePgnTree`, e salvataggio locale via endpoint transazionale `POST /api/studies/import` (o `POST /api/studies/{id}/variants` per il singolo capitolo). Restano da fare in P15: OAuth per studi privati/unlisted, riferimento remoto Lichess sullo studio locale e re-import con sovrascrittura varianti senza duplicazione. Restano fuori: sincronizzazione automatica periodica, posizioni di partenza non standard nei capitoli, import file `.pgn` locale ed export PGN (sezione 19 del planning).
+### 5.3 Import PGN e studi Lichess — ✅ RISOLTO (P13-P15)
+P13 ✅ copre PGN con varianti annidate (commenti/NAG ignorati senza rompere il parsing). P14 ✅ importa da link a **studio pubblico Lichess** (`https://lichess.org/study/{studyId}`) o a **capitolo** (`/study/{studyId}/{chapterId}`): fetch frontend degli endpoint PGN pubblici, parsing che riusa `parsePgnTree`, salvataggio locale via endpoint transazionale `POST /api/studies/import` (o `POST /api/studies/{id}/variants` per il singolo capitolo). P15 ✅ aggiunge **OAuth Lichess (PKCE)** per studi privati/unlisted, il **riferimento remoto** sullo studio locale e il **re-import come upsert** (`POST /api/studies/import/lichess`) che sostituisce le varianti preservando i metadati locali, senza duplicazione. Restano fuori: sincronizzazione automatica periodica, posizioni di partenza non standard nei capitoli, import file `.pgn` locale ed export PGN (sezione 19 del planning).
 
 ### 5.4 UX e sicurezza azioni distruttive — ✅ RISOLTO (P9)
 Conferma su elimina variante e su elimina sottoalbero; guard modifiche non salvate; feedback errori via toast; stati loading/saving. Resta margine per skeleton di caricamento ed empty-state curati (proposte UX sezione 17 del planning).
 
-### 5.5 Test E2E formalizzati — ✅ in gran parte (P10, ampliati fino a P12)
-Suite automatica ampliata (backend 41, frontend 91, incluse utilità `move-tree`, studi e audio) e **checklist manuale** in `checklist-e2e.md`. Resta rinviato il solo runner E2E browser (Playwright/Cypress).
+### 5.5 Test E2E formalizzati — ✅ in gran parte (P10, ampliati fino a P19)
+Suite automatica ampliata (backend **66**, frontend **168**, incluse utilità albero/PGN/Lichess/UCI, servizi, componenti e helper SM-2/stats) e **checklist manuale** in `checklist-e2e.md` (37 flussi). Resta rinviato il solo runner E2E browser (Playwright/Cypress), da rivalutare in terza tornata con la CI/CD.
 
 ### 5.6 Responsive e qualità visiva — ⏳ proposte da validare
 Il difetto responsive principale (board fissa a 720px tra ~800-1280px, pannello sotto la piega) e le altre proposte grafiche sono in **sezione 17 del planning**, subordinate a validazione dell'utente (non nei rilasci).
@@ -221,8 +221,11 @@ Entità `Study` 1-N con `Variant`, **cancellazione a cascata**, studio di defaul
 ### 5.9 Audio mosse — ✅ RISOLTO (P12)
 `MoveSoundService` usa gli asset **Lichess standard** vendorizzati localmente (`Move` e `Capture`, OGG con fallback MP3), con default attivo, toggle globale e preferenza persistita in `localStorage`. Il codice è testato; resta solo una verifica percettiva manuale dell'effetto audio su browser reale.
 
-### 5.10 Post-MVP ancora fuori
-P15 Lichess OAuth/sync è ora il prossimo passo operativo. Stockfish (P16) viene subito dopo. Persistenza sessioni (P17), statistiche (P18) e spaced repetition (P19) restano pianificate dopo Stockfish; multiutente applicativo, Supabase Auth, Supabase PostgreSQL e Docker restano per la terza tornata.
+### 5.10 Fase D · apprendimento — ✅ RISOLTO (P17-P19)
+Persistenza sessioni (P17), statistiche/reportistica (P18) e spaced repetition (P19) sono implementate e verificate. Lo scheduling SM-2 semplificato aggiorna la `ReviewSchedule` a fine di ogni allenamento; la vista «Ripeti oggi» e l'indicatore nel dettaglio chiudono il ciclo di ripetizione single-user.
+
+### 5.11 Post-MVP ancora fuori (terza tornata)
+Restano pianificati per la terza tornata: multiutente applicativo, **Supabase Auth**, migrazione a **Supabase PostgreSQL**, migrazioni versionate (**Liquibase**), **Docker** e CI/CD; più gli elementi opzionali del TODO/idee del planning (spostamento varianti tra studi, export PGN, import `.pgn` locale, sync Lichess periodica, proposte UX/responsive).
 
 ---
 
@@ -238,8 +241,10 @@ P15 Lichess OAuth/sync è ora il prossimo passo operativo. Stockfish (P16) viene
 | R14 | Modello Studi / cancellazione | **Chiuso (P11-P12)**: entità, FK `study_id`, delete a cascata, studio di default, UI lista/dettaglio e creazione varianti nello studio |
 | R15 | Import PGN ramificato | **Chiuso (P13)**: parser frontend `parsePgnTree` con varianti annidate (ADR 0007) |
 | R20 | Import studio Lichess pubblico | **Chiuso (P14)**: link pubblico studio/capitolo, fetch PGN Lichess, import transazionale locale (ADR 0006); **verificato live** con `study/OR3CU5Je` (CORS OK senza proxy) |
-| R21 | Import Lichess privati/unlisted + sync | **Da fare (P15)**: OAuth Lichess, riferimento remoto su `Study`, re-import come upsert transazionale senza duplicati |
+| R21 | Import Lichess privati/unlisted + sync | **Chiuso (P15)**: OAuth Lichess (PKCE), riferimento remoto su `Study`, re-import upsert transazionale senza duplicati (ADR 0008) |
 | R19 | Asset/audio mossa | **Chiuso (P12)**: asset Lichess standard vendorizzati con attribuzione, OGG/MP3, toggle locale |
+| — | Motore Stockfish | **Chiuso (P16)**: client-side asm.js single-thread, mai in allenamento (ADR 0009) |
+| R17 | Persistenza dati di apprendimento | **Chiuso (P17-P19)**: `TrainingSession`/`TrainingMove`, statistiche aggregate, `ReviewSchedule` SM-2 (`userId` nullable inattivo) — ADR 0010/0011/0012 |
 | R16 | Responsive scacchiera | Aperto (proposta UX da validare) |
 | R8/R9/R10 | Supabase DB / Auth / Docker | Rinviati (terza tornata) |
 
@@ -247,13 +252,15 @@ P15 Lichess OAuth/sync è ora il prossimo passo operativo. Stockfish (P16) viene
 
 ## 7. Prossimi passi consigliati
 
-1. **P15** — import Lichess privati/unlisted via OAuth + sync/upsert: se lo studio remoto esiste gia' localmente, sostituire le varianti e preservare i dati locali dello studio.
-2. **P16** — Stockfish: motore client-side, barra valutazione e "gioca contro il computer" in nuova tab, mai in allenamento.
-3. **P17-P19** — sessioni di training, statistiche e spaced repetition.
-4. Quando opportuno, sottoporre all'utente le **proposte grafiche** (sezione 17 del planning), esclusa la verifica mobile/tablet che non è richiesta.
+La roadmap Parte 2 (P7-P19) è chiusa. I passi successivi non sono più prototipi di funzionalità ma la **terza tornata** (infrastruttura) e gli affinamenti opzionali:
+
+1. **Migrazioni versionate (Liquibase)** prima di lasciare H2: oggi `ddl-auto=update` non allarga le colonne esistenti (drift già emerso su `source_pgn`), quindi conviene fissare lo schema in changelog prima della migrazione DB.
+2. **Supabase PostgreSQL** come database, poi **Supabase Auth** e attivazione del `userId` (già predisposto nullable in sessioni e schedule) per il multiutente.
+3. **Containerizzazione Docker** e impostazione di una **CI/CD** (in cui rivalutare un runner E2E browser Playwright/Cypress).
+4. Quando opportuno, sottoporre all'utente le **proposte grafiche/responsive** (sezione 17 del planning) e gli elementi del TODO (export PGN, import `.pgn` locale, spostamento varianti tra studi, sync Lichess periodica).
 
 ---
 
 ## 8. Stato finale
 
-La webapp ha completato la Parte 1, l'intera **fase A di consolidamento della Parte 2**, la **fase B · Studi** (P11-P12) e la prima parte della **fase C · import PGN/Lichess** (P13-P14). Il backend valida la legalità delle mosse, il modello ad albero è consolidato, gli Studi vivono in DB con CRUD e cancellazione a cascata, l'audio mosse è integrato con toggle locale, l'import PGN legge varianti annidate e l'import da studio Lichess pubblico è verificato. Il progetto è ora pronto per **P15 · import Lichess privati/unlisted + sync**, prima di Stockfish.
+La webapp ha completato la **Parte 1** e l'**intera Parte 2 (P7-P19)**: validazione scacchistica backend, consolidamento del modello ad albero, robustezza delle azioni distruttive e suite di test (fase A); Studi in DB con CRUD, cancellazione a cascata e audio mosse (fase B); import PGN ramificato e import/sync da studi Lichess pubblici e privati con OAuth (fase C); motore Stockfish client-side (mai in allenamento); e l'intera fase di apprendimento — persistenza delle sessioni, statistiche/reportistica e spaced repetition SM-2 con vista «Ripeti oggi» (fase D). Backend e frontend restano due progetti separati che comunicano solo via REST. Suite verdi (backend 66, frontend 168) e verifiche live superate. Il progetto è pronto per la **terza tornata** (Liquibase, Supabase DB/Auth, Docker, CI/CD), che riguarda l'infrastruttura più che nuove funzionalità di prodotto.

@@ -18,12 +18,31 @@ Backend e frontend sono **due progetti fisicamente separati** (vedi
 
 ## Stato
 
-Cartella predisposta (Prototipo 0). Lo scaffold Spring Boot verrà generato qui.
+Scaffold Spring Boot presente e operativo. Parte 1 (Prototipi 0-6) e **Parte 2
+(P7-P19)** implementate. Persistenza su **H2 file** (`backend/data/scacchi`,
+`ddl-auto=update`, `open-in-view: false`). Suite: **66 test** verdi.
 
-## Avvio (quando lo scaffold sarà presente)
+Package principali (sotto `com.scacchi.backend`):
+
+- `ping` — health check (`GET /api/ping`);
+- `variant` — varianti/albero mosse, validazione legalità con `chesslib`;
+- `study` — studi 1-N con varianti, cascata, import bulk e upsert Lichess;
+- `training` — sessioni di allenamento (`POST/GET /api/training-sessions`);
+- `stats` — aggregazioni statistiche (`GET /api/stats/...`);
+- `review` — spaced repetition SM-2 (`GET /api/reviews/due`, `/variants/{id}`).
+
+## Avvio
 
 ```
-mvn spring-boot:run
+mvnw.cmd spring-boot:run
 ```
 
-Backend atteso su `http://localhost:8080`.
+In locale impostare `MAVEN_OPTS=-Djavax.net.ssl.trustStoreType=Windows-ROOT`
+(intercettazione TLS) e usare **PowerShell** per i comandi di rete/build.
+Backend su `http://localhost:8080` (console H2 su `/h2-console`).
+
+## Test
+
+```
+mvnw.cmd test
+```

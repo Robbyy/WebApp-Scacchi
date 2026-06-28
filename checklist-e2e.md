@@ -1,6 +1,6 @@
 # Checklist E2E manuale - WebApp Scacchi
 
-> Checklist ripetibile per la validazione manuale end-to-end (aggiornata fino al Prototipo 12).
+> Checklist ripetibile per la validazione manuale end-to-end (aggiornata fino al Prototipo 19).
 > Eseguibile in pochi minuti dopo ogni rilascio significativo, prima di dichiararlo completato.
 > Complementare ai test automatici (vedi sezione "Copertura automatica" in fondo).
 
@@ -72,8 +72,8 @@
 
 Questi flussi sono coperti anche da test automatici (da eseguire prima della checklist manuale):
 
-- **Backend** (`mvnw.cmd test`): CRUD varianti, validazione legalità (mainline e albero, `400` strutturato), round-trip albero `tree → DB → DTO`, `MoveNode`/mainline, CRUD studi, creazione variante nello studio e cancellazione a cascata.
-- **Frontend** (`npm test -- --watch=false`): scacchiera (click, drag, promozione, hide-on-drag, audio), editor (mosse, varianti, promuovi a mainline, conferma cancellazione, guard, creazione in studio), training (mosse corrette/errate, rami, completamento, audio), studi (lista/dettaglio/creazione/eliminazione), `MoveSoundService`, utilità `move-tree`, import PGN anche dentro uno studio.
+- **Backend** (`mvnw.cmd test` — **66 test**): CRUD varianti, validazione legalità (mainline e albero, `400` strutturato), round-trip albero `tree → DB → DTO`, `MoveNode`/mainline, CRUD studi (creazione variante nello studio, cancellazione a cascata, import bulk e upsert Lichess), sessioni di allenamento (`TrainingSessionControllerTest`), statistiche (`StatsControllerTest`), spaced repetition (`ReviewSchedulerTest` SM-2 puro + `ReviewControllerTest`).
+- **Frontend** (`npm test -- --watch=false` — **168 test**): scacchiera (click, drag, promozione, hide-on-drag, audio), editor (mosse, varianti, promuovi a mainline, conferma cancellazione, guard, creazione in studio), training (mosse corrette/errate, rami, completamento, audio, submit sessione), studi (lista/dettaglio/creazione/eliminazione), import PGN (anche in studio) e parser `pgn`, import/auth Lichess (`lichess`, `lichess-import`, `lichess-auth`), motore (`uci`, `play`), statistiche (`stats-format`, `stats.service`, `variant-stats`, `study-stats`), ripetizione (`review-format`, `review.service`, `review-due`), più i servizi `StudyService`/`MoveSoundService` e le utilità `move-tree`.
 
 ### Runner E2E browser (rinviato)
 Un runner E2E completo (Playwright/Cypress) è **rinviato**: richiede tooling e download aggiuntivi non prioritari in questa fase. La combinazione *test unit/integrazione + questa checklist + verifica live nel preview* copre i percorsi critici. Da rivalutare quando l'app si avvicina all'uso reale o all'integrazione CI/CD (terza tornata).

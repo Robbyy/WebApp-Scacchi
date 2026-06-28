@@ -25,13 +25,30 @@ cornice legno, pezzi Staunton SVG, layout a pannelli). Libreria regole/PGN:
 
 ## Stato
 
-Cartella predisposta (Prototipo 0). Lo scaffold Angular verrà generato qui con
-CLI locale (`npx @angular/cli new ...`).
+Scaffold Angular presente e operativo (componenti **standalone**, signals,
+`OnPush`). Parte 1 (Prototipi 0-6) e **Parte 2 (P7-P19)** implementate. Suite:
+**168 test** (Vitest) verdi.
 
-## Avvio (quando lo scaffold sarà presente)
+Aree principali (sotto `src/app`):
+
+- `chessboard` — scacchiera custom (click/drag/promozione) + barra valutazione;
+- `variants` — lista/dettaglio/editor/training/import PGN;
+- `studies` — home a studi, dettaglio, import e OAuth Lichess;
+- `stats` — viste statistiche variante/studio;
+- `reviews` — vista «Ripeti oggi» (spaced repetition);
+- `play` — gioca contro il computer (Stockfish client-side);
+- `core` — servizi e modelli (varianti, studi, training, stats, review, motore).
+
+## Avvio
 
 ```
 npm start
 ```
 
-Frontend atteso su `http://localhost:4200`, con proxy verso `http://localhost:8080`.
+Frontend su `http://localhost:4200`, con proxy verso `http://localhost:8080`.
+
+## Test
+
+```
+npm test -- --watch=false
+```
