@@ -10,13 +10,13 @@
 
 - **Parte 1 (Prototipi 0-6) + estensioni anticipate**: completa e verificata (vedi sezione 2).
 - **Parte 2 pianificata**: roadmap P7-P19 + sezioni TODO/idee, descritta nel planning (sezioni 11-19). Fasi: A consolidamento, B studi, C import PGN/Lichess, D apprendimento, E motore Stockfish.
-- **Parte 2 implementata finora**: **P7-P10** (fase A) + **P11-P12** (fase B · Studi) + **P13-P15** (fase C · import PGN/Lichess + sync) + **P16** (Stockfish client-side) + **P17** (persistenza sessioni di allenamento). Prossimo: **P18** (statistiche e reportistica).
+- **Parte 2 implementata finora**: **P7-P10** (fase A) + **P11-P12** (fase B · Studi) + **P13-P15** (fase C · import PGN/Lichess + sync) + **P16** (Stockfish client-side) + **P17-P18** (fase D · sessioni di allenamento + statistiche). Prossimo: **P19** (spaced repetition) — ultimo della Parte 2.
 
 Alla verifica del 2026-06-25:
 
 - repository in lavorazione con le modifiche del P12 e della documentazione da consolidare;
 - backend e frontend verificati tramite suite automatiche locali;
-- **test backend: 54 passati**; **test frontend: 149 passati**;
+- **test backend: 57 passati**; **test frontend: 159 passati**;
 - checklist manuale E2E formalizzata in `checklist-e2e.md`;
 - verifiche browser dei flussi principali senza errori console.
 
@@ -158,10 +158,16 @@ Tutti completati e verificati. Sintesi:
 
 **Verifica:** backend **54** (+6: `TrainingSessionControllerTest`); frontend **149** (+5: `training-session.service.spec`, submit in `variant-training.spec`). **Validazione live superata** (2026-06-27): completato l'allenamento di una variante reale → sessione registrata (`moveCount=8`, `studyId` risolto, mosse con ply corretti) e rileggibile via `GET` (lista filtrata + dettaglio).
 
-### Prototipi 18-19 — da fare
+### Prototipo 18 — Statistiche e reportistica ✅
 
-- **P18** Statistiche e reportistica (aggregazioni per variante/studio dai dati P17).
-- **P19** Spaced repetition (scheduling ripetizioni).
+- Backend: nuovo package `stats`, aggregazioni **server-side** dalle sessioni P17. `GET /api/stats/variants/{id}` e `GET /api/stats/studies/{id}` → metriche (allenamenti, completati, errori totali/medi, **precisione** = mosse corrette/totali, ultima esecuzione, **mosse più sbagliate** top‑5). Lo studio somma le sue varianti + dettaglio per variante. Variante/studio senza dati → 200 a zero. Decisione in **ADR 0011**.
+- Frontend: viste `/variants/:id/stats` e `/studies/:id/stats` (card metriche, evidenza mosse problematiche, tabella per‑variante con nome risolto); link «Statistiche» da dettaglio variante e studio; helper di formattazione puri (`stats-format.ts`).
+
+**Verifica:** backend **57** (+3: `StatsControllerTest` — aggregazioni, top‑mistakes, somma studio); frontend **159** (+10: `stats-format`, `stats.service`, `variant-stats`, `study-stats`). **Validazione live superata** (2026-06-28): con 3 sessioni su una variante reale, la vista mostra 3 allenamenti, **80% precisione**, «Nf3 3× sbagliata», ultima esecuzione formattata; l'aggregato di studio somma correttamente la variante.
+
+### Prototipo 19 — da fare (ultimo della Parte 2)
+
+- **P19** Spaced repetition: scheduling delle ripetizioni per variante (`ReviewSchedule`), vista «da ripetere oggi».
 
 ---
 

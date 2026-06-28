@@ -481,3 +481,48 @@ per le future statistiche per studio (P18).
 - Verifica live (2026-06-27): completando l'allenamento di una variante, la sessione
   è registrata (`moveCount=8`, `studyId` risolto, mosse con ply corretti) e
   rileggibile via `GET` (lista filtrata e dettaglio).
+
+---
+
+## 0011 — Statistiche di allenamento aggregate lato server (P18)
+
+**Data:** 2026-06-28 · **Stato:** Accettata e implementata (P18) · **Contesto:** Prototipo 18 (Parte 2).
+
+### Decisione
+Le metriche di allenamento (per variante e aggregate per studio) sono calcolate
+**lato server** da `StatsService` sopra le sessioni P17, ed esposte da
+`GET /api/stats/variants/{id}` e `GET /api/stats/studies/{id}`. Una variante/studio
+senza allenamenti risponde **200 con metriche a zero** (non 404).
+
+### Alternative valutate
+- **Calcolo lato frontend dai dati grezzi delle sessioni:** scartato — la lista
+  sessioni è un riepilogo (senza mosse), quindi le "mosse più sbagliate"
+  richiederebbero N fetch di dettaglio (N+1). L'aggregazione server è più efficiente
+  e centralizza la logica.
+- **Query SQL aggregate (JPQL/native):** rinviate — per la scala personale, aggregare
+  in Java dalle sessioni caricate (in transazione di lettura) è semplice e
+  sufficiente; ottimizzabili se i dati cresceranno.
+- **Tabella di metriche precalcolate:** non necessaria ora (i dati grezzi bastano,
+  come previsto in sezione 7 del planning).
+
+### Note di implementazione
+- Metriche per variante: `sessionCount`, `completedCount`, `totalMistakes`,
+  `avgMistakes`, `accuracy` (mosse corrette / totali, null se nessuna mossa),
+  `lastTrainedAt`, `topMistakes` (mosse attese più spesso sbagliate, top 5).
+- Studio: i totali sommano le sessioni con quello `studyId`; `variants[]` dà il
+  dettaglio per variante. La validazione "lo studio somma le sue varianti" è
+  garantita perché entrambi derivano dalle stesse sessioni.
+- Letture `@Transactional(readOnly=true)` (mosse LAZY, vedi ADR 0010).
+- Frontend: viste `/variants/:id/stats` e `/studies/:id/stats` (card metriche +
+  evidenza mosse sbagliate + tabella per-variante); il nome variante nella tabella
+  studio è risolto dal dettaglio studio già caricato (il backend stats resta
+  name-free). Helper di formattazione puri e testati (`stats-format.ts`).
+
+### Conseguenze
+- L'utente vede metriche utili e corrette sui propri allenamenti, per variante e
+  per studio, con evidenza delle mosse problematiche.
+- Verifica live (2026-06-28): con 3 sessioni su una variante reale, la vista mostra
+  3 allenamenti, 80% di precisione e "Nf3 3× sbagliata"; l'aggregato di studio somma
+  correttamente la variante.
+- Fuori perimetro (per scelta): analisi qualitativa col motore, confronto tra utenti
+  (single-user), grafici complessi.

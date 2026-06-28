@@ -8,6 +8,8 @@ import { VariantEditor } from './variants/variant-editor';
 import { PgnImport } from './variants/pgn-import';
 import { VariantDetail } from './variants/variant-detail';
 import { VariantTraining } from './variants/variant-training';
+import { VariantStats } from './stats/variant-stats';
+import { StudyStats } from './stats/study-stats';
 import { PlayVsComputer } from './play/play';
 import { canLeaveEditor } from './variants/can-deactivate.guard';
 
@@ -16,6 +18,7 @@ export const routes: Routes = [
   { path: 'play', component: PlayVsComputer },
   { path: 'lichess/callback', component: LichessCallback },
   { path: 'studies/import-lichess', component: LichessImport },
+  { path: 'studies/:id/stats', component: StudyStats },
   { path: 'studies/:id', component: StudyDetail },
   { path: 'variants', component: VariantList },
   { path: 'variants/new', component: VariantEditor, canDeactivate: [canLeaveEditor] },
@@ -23,5 +26,6 @@ export const routes: Routes = [
   { path: 'variants/:id', component: VariantDetail },
   { path: 'variants/:id/edit', component: VariantEditor, canDeactivate: [canLeaveEditor] },
   { path: 'variants/:id/train', component: VariantTraining },
+  { path: 'variants/:id/stats', component: VariantStats },
   { path: '**', redirectTo: '' },
 ];

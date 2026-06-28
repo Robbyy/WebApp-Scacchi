@@ -92,6 +92,30 @@
   cursor: default;
 }
 
+.study-subnav {
+  margin-bottom: 1rem;
+}
+
+.study-subnav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--wood-dark);
+  text-decoration: none;
+}
+
+.study-subnav a svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.study-subnav a:hover {
+  text-decoration: underline;
+}
+
 .actions {
   display: flex;
   gap: 0.5rem;

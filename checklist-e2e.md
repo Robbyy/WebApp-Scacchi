@@ -32,7 +32,7 @@
 
 ---
 
-## Flussi aggiunti (Parte 2: P7-P17)
+## Flussi aggiunti (Parte 2: P7-P18)
 
 - [ ] **13. Validazione backend (P7)** — tentare di salvare via API un payload con mossa illegale (es. `moves: ["e4","e4"]`): risposta **400** con `{ field, ply, message }`. Nell'editor/import un eventuale errore di validazione viene mostrato come messaggio.
 - [ ] **14. Drag and drop pulito (P7)** — trascinare un pezzo: viene trascinato **solo il pezzo** (niente sfondo della casa) e la casa di partenza resta **vuota** durante il trascinamento. La cornice della scacchiera è sottile, coordinate leggibili.
@@ -55,6 +55,8 @@
 - [ ] **31. Gioca contro il computer (P16)** — premere **«Gioca contro il computer»**: si apre una **nuova tab** `/play?fen=...` con la posizione corrente (la tab originale resta invariata). Giocando una mossa legale, il computer risponde; «Ricomincia» riparte dalla posizione iniziale.
 - [ ] **32. Niente motore in allenamento (P16)** — avviare un allenamento: **non** devono esserci toggle motore, barra di valutazione né «gioca contro il computer».
 - [ ] **33. Registrazione sessione di allenamento (P17)** — completare un allenamento: al termine compare «Sessione registrata ✓». Via API `GET /api/training-sessions?variantId={id}` la sessione è presente con esito, numero errori e conteggio mosse; `GET /api/training-sessions/{id}` mostra le mosse tentate (anche quelle sbagliate). Un allenamento senza alcuna mossa giocata **non** crea sessioni.
+- [ ] **34. Statistiche variante (P18)** — dal dettaglio variante → «Statistiche»: dopo qualche allenamento si vedono allenamenti, completati, errori totali/medi, **precisione %**, ultima esecuzione e l'elenco delle **mosse più sbagliate**. Una variante mai allenata mostra l'invito ad allenarla.
+- [ ] **35. Statistiche studio (P18)** — dal dettaglio studio → «Statistiche dello studio»: i totali aggregano le varianti dello studio e la tabella per‑variante riporta le metriche (con link alle statistiche di ciascuna variante). L'aggregato somma correttamente le varianti.
 
 ---
 

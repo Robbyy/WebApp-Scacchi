@@ -129,6 +129,12 @@
           </svg>
           Modifica variante
         </a>
+        <a class="edit-link" routerLink="/variants/{{ v.id }}/stats">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 20V10h3v10H4zm6.5 0V4h3v16h-3zM17 20v-7h3v7h-3z" />
+          </svg>
+          Statistiche
+        </a>
         <a class="back-link" [routerLink]="v.studyId ? ['/studies', v.studyId] : ['/']"
           >&#8592; {{ v.studyId ? 'Torna allo studio' : 'Studi' }}</a
         >

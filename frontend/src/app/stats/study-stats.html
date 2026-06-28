@@ -1,0 +1,81 @@
+@if (loading()) {
+  <p class="stats-muted">Caricamento&#8230;</p>
+} @else if (error()) {
+  <p class="stats-error">{{ error() }} — <a routerLink="/">torna agli studi</a></p>
+} @else if (study(); as st) {
+  <section class="stats">
+    <nav class="crumbs">
+      <a [routerLink]="['/studies', st.id]">{{ st.name }}</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb-current">Statistiche</span>
+    </nav>
+
+    <header class="stats-head">
+      <p class="stats-kicker">Statistiche studio</p>
+      <h2 class="stats-title">{{ st.name }}</h2>
+    </header>
+
+    @if (!hasData()) {
+      <p class="stats-muted">
+        Ancora nessun allenamento in questo studio. Allena le sue varianti per vedere le statistiche.
+      </p>
+    } @else if (stats(); as s) {
+      <div class="cards">
+        <div class="card"><span class="card-num">{{ s.sessionCount }}</span><span class="card-lbl">Allenamenti</span></div>
+        <div class="card"><span class="card-num">{{ s.completedCount }}</span><span class="card-lbl">Completati</span></div>
+        <div class="card"><span class="card-num">{{ s.totalMistakes }}</span><span class="card-lbl">Errori totali</span></div>
+        <div class="card"><span class="card-num">{{ s.avgMistakes }}</span><span class="card-lbl">Errori medi</span></div>
+        <div class="card">
+          <span class="card-num">{{ accuracyPct() !== null ? accuracyPct() + '%' : '—' }}</span>
+          <span class="card-lbl">Precisione</span>
+        </div>
+      </div>
+
+      <p class="stats-last">Ultima esecuzione: <strong>{{ lastTrained() }}</strong></p>
+
+      <div class="panel">
+        <h3 class="panel-title">Per variante</h3>
+        <table class="study-variants">
+          <thead>
+            <tr>
+              <th>Variante</th>
+              <th class="num">Allen.</th>
+              <th class="num">Compl.</th>
+              <th class="num">Errori</th>
+              <th class="num">Precis.</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of rows(); track r.variantId) {
+              <tr>
+                <td><a [routerLink]="['/variants', r.variantId, 'stats']">{{ r.name }}</a></td>
+                <td class="num">{{ r.sessionCount }}</td>
+                <td class="num">{{ r.completedCount }}</td>
+                <td class="num">{{ r.totalMistakes }}</td>
+                <td class="num">{{ r.accuracyPct !== null ? r.accuracyPct + '%' : '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (s.topMistakes.length > 0) {
+        <div class="panel">
+          <h3 class="panel-title">Mosse più sbagliate (studio)</h3>
+          <ul class="mistakes">
+            @for (m of s.topMistakes; track m.expectedSan) {
+              <li class="mistake">
+                <span class="mistake-san">{{ m.expectedSan }}</span>
+                <span class="mistake-count">{{ m.count }}× sbagliata</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    }
+
+    <div class="stats-actions">
+      <a class="back-link" [routerLink]="['/studies', st.id]">&#8592; Torna allo studio</a>
+    </div>
+  </section>
+}
