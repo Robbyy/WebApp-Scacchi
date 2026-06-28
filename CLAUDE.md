@@ -1,22 +1,41 @@
 # Istruzioni progetto per Claude
 
-Quando inizializzi una sessione in questa cartella, leggi prima il file:
+## Ordine di lettura
 
-- `preanalisi-progetto.md`
+Per ogni sessione, leggi nell'ordine:
 
-Quel documento contiene la descrizione iniziale del progetto, le funzionalità previste, lo stack tecnologico scelto e le priorità di sviluppo.
+1. `README.md` — panoramica progetto, stack, struttura repo
+2. `docs/stato-corrente.md` — cosa esiste oggi, funzionalità, aree delicate
+3. Documento specifico per il task:
+   - architettura / API / dati → `docs/architettura.md` (+ il codice, che è la fonte autorevole)
+   - setup e test → `backend/README.md`, `frontend/README.md`, `docs/checklist-e2e.md`
+   - decisioni tecniche → `docs/adr/decisioni-tecniche.md` (solo se il task tocca decisioni architetturali)
+   - roadmap / pianificazione futura → `docs/roadmap.md`
+   - contesto storico → `docs/archive/` (solo se necessario)
 
-Contesto operativo:
+## Contesto operativo
 
 - La webapp è un'app personale per l'allenamento delle aperture di scacchi.
-- La struttura prevista è separata tra backend Spring Boot e frontend Angular.
-- Lo sviluppo iniziale sarà locale, con database H2 in memoria.
-- In seguito il database passerà a Supabase PostgreSQL.
-- L'autenticazione con Supabase Auth è prevista in una fase successiva.
-- Il progetto dovrà restare ordinato e predisposto per una futura containerizzazione con Docker.
+- Backend Spring Boot (Java 21) e frontend Angular 22, **fisicamente separati**: build indipendenti, comunicazione solo via HTTP REST.
+- Database H2 su file in locale (`backend/data/scacchi`). Prossimamente: Supabase PostgreSQL.
+- Autenticazione Supabase Auth prevista nella terza tornata.
+- Il progetto dovrà restare ordinato e predisposto per la containerizzazione Docker.
 
-Nota di collaborazione:
+## Nota di collaborazione
 
-- A questo progetto lavoreranno sia Claude sia Codex.
-- Prima di modificare file esistenti, controlla sempre lo stato del repository e non sovrascrivere modifiche non tue.
-- Mantieni aggiornata la documentazione progettuale quando vengono prese decisioni architetturali rilevanti.
+- A questo progetto lavorano sia Claude sia Codex.
+- Prima di modificare file esistenti, controlla sempre lo stato del repository e non sovrascrivere modifiche altrui.
+
+## Disciplina di aggiornamento documentale
+
+- Se cambi la firma di un controller o aggiungi/rimuovi un endpoint → **aggiorna la Panoramica API di `docs/architettura.md`** nello stesso commit (o rigenera l'OpenAPI quando sarà disponibile).
+- Se cambi un'entità o una relazione → aggiorna la Mappa entità in `docs/architettura.md`.
+- Aggiorna `docs/stato-corrente.md` solo se lo stato reale del progetto è cambiato (nuove funzionalità, test, aree delicate).
+- Non aggiornare mai `docs/archive/` come documento vivo: è storico.
+
+## Regole operative
+
+- Non introdurre nuove librerie senza decisione esplicita.
+- Non introdurre cambi infrastrutturali (Supabase, Docker, Liquibase) senza specifica dedicata.
+- Nessuna modifica incrociata tra backend e frontend (niente import diretti tra i due progetti).
+- Stockfish non è mai disponibile in modalità allenamento (vincolo costruttivo — non indebolirlo).

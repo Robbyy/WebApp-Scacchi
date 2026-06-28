@@ -9,7 +9,7 @@ codice o file di build del backend (nessun `pom.xml`, nessun sorgente Java).
 ## Vincolo strutturale
 
 Backend e frontend sono **due progetti fisicamente separati** (vedi
-`planning-prototipi-webapp.md`, sezione 1 - "Struttura del repository"):
+`README.md` e `docs/architettura.md`):
 
 - build indipendenti (qui npm/Angular CLI, nel backend Maven);
 - nessuna dipendenza di build incrociata;
@@ -19,7 +19,7 @@ Backend e frontend sono **due progetti fisicamente separati** (vedi
 ## Riferimento visivo
 
 Palette e layout seguono il riferimento Lovable documentato in
-`preanalisi-progetto.md` (palette pergamena, case `#f0d9b5` / `#b58863`,
+`docs/archive/preanalisi-progetto.md` (palette pergamena, case `#f0d9b5` / `#b58863`,
 cornice legno, pezzi Staunton SVG, layout a pannelli). Libreria regole/PGN:
 `chess.js` (NON `react-chessboard`, legata a React).
 

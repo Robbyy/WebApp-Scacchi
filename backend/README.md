@@ -9,7 +9,7 @@ codice o file di build del frontend (nessun `package.json`, nessun
 ## Vincolo strutturale
 
 Backend e frontend sono **due progetti fisicamente separati** (vedi
-`planning-prototipi-webapp.md`, sezione 1 - "Struttura del repository"):
+`README.md` e `docs/architettura.md`):
 
 - build indipendenti (qui Maven, nel frontend npm/Angular CLI);
 - nessuna dipendenza di build incrociata;
