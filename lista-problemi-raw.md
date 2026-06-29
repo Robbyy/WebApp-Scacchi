@@ -566,3 +566,38 @@ annidamento — devono poter essere proposte durante l'allenamento (coerente con
 10. d4 Qf6
 11. Qd1 *
 ```
+
+---
+
+## 21. Scheletro di navigazione a tre sezioni (Aperture / Mediogioco / Finale) — DA FARE TRA I PRIMI
+
+> Collegato al punto 16 (direzione strategica multi-fase): ne è il **primo slice
+> navigazionale**, indipendente e da realizzare per primo. Le sezioni vere di
+> mediogioco e finale restano nel punto 16 (con artefatti OpenSpec).
+
+**Pagina/area:** topbar dell'applicazione + routing.
+**Descrizione:** introdurre nella parte alta della videata **tre pulsanti/link**:
+**Aperture**, **Mediogioco**, **Finale**. Servono a predisporre fin da subito la
+struttura a tre fasi del gioco, anche se due sezioni non sono ancora implementate.
+**Comportamento:**
+- **Aperture** → porta alla pagina degli studi attuale (la home `/`).
+- **Mediogioco** → porta a una pagina segnaposto con scritto «In fase di
+  implementazione».
+- **Finale** → idem, pagina segnaposto «In fase di implementazione».
+
+**Proposta realizzativa:** un unico componente segnaposto riusabile (es.
+`coming-soon`) che mostra il nome della sezione + il messaggio «In fase di
+implementazione», montato su due route dedicate (es. `/mediogioco`, `/finale`). I tre
+pulsanti vivono nella topbar vicino al brand «WebApp Scacchi»; il pulsante della
+sezione corrente è evidenziato (stato attivo). Stile coerente con la topbar esistente.
+
+**Priorità:** **una delle primissime cose da fare nei rilasci** — è lo scaffold su cui
+si innesteranno le sezioni future, ed è a costo/rischio bassi.
+
+**Fuori perimetro (resta nel punto 16):** la struttura dati di posizioni, l'editor con
+FEN custom e commenti, il gioco contro il motore dalle posizioni. Qui **solo** i tre
+pulsanti, il routing e la pagina segnaposto.
+
+**Ambiguità da sciogliere in analisi:** percorsi esatti delle route; testo esatto del
+segnaposto; se i tre controlli sono pulsanti o tab; posizione precisa nella topbar
+rispetto al cluster suono/«?»/ingranaggio.
