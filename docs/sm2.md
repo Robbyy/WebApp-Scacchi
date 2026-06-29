@@ -31,12 +31,13 @@ governano l'algoritmo sono tre, più due date:
 | Parametro | Tipo | Significato | Valore iniziale |
 |-----------|------|-------------|-----------------|
 | `easeFactor` (EF) | `double` | Quanto è "facile" la variante. Più è alto, più gli intervalli crescono in fretta. | `2.5` (mai sotto `1.3`) |
-| `intervalDays` | `int` | Giorni di attesa fino al prossimo ripasso. `0` = ripeti **oggi**. | `0` |
+| `intervalDays` | `int` | Giorni di attesa fino al prossimo ripasso. `0` = ripeti **oggi**; massimo **6**. | `0` |
 | `repetitions` | `int` | Quante volte di fila la variante è stata superata con esito positivo. Azzerato a ogni esito negativo. | `0` |
 | `nextReviewDate` | `LocalDate` | Data del prossimo ripasso (`oggi + intervalDays`). | — |
 | `lastReviewedAt` | `Instant` | Timestamp dell'ultimo allenamento che ha aggiornato la schedule. | — |
 
-Costanti (in `ReviewScheduler`): `INITIAL_EASE = 2.5`, `MIN_EASE = 1.3`.
+Costanti (in `ReviewScheduler`): `INITIAL_EASE = 2.5`, `MIN_EASE = 1.3`,
+`MAX_INTERVAL_DAYS = 6`.
 
 ---
 
@@ -83,6 +84,11 @@ Poi `repetitions` viene incrementato di 1.
 > Nota: la moltiplicazione usa l'`easeFactor` **corrente** (quello memorizzato dal passo
 > precedente), prima dell'aggiornamento descritto sotto.
 
+Il risultato finale viene sempre limitato a **6 giorni**. Quindi una variante eseguita
+correttamente molte volte non potrà mai essere pianificata oltre `oggi + 6 giorni`.
+Le schedule create prima dell'introduzione del tetto vengono normalizzate dal changeset
+Liquibase `0002-cap-review-schedules`.
+
 ### Esito negativo (qualità < 3) — *relearning*
 
 `repetitions` torna a **0** e l'intervallo viene messo a **0**: la variante è dovuta
@@ -124,20 +130,21 @@ Una variante sbagliata di continuo vede il proprio EF scendere fino al pavimento
 |:-----------:|:--------:|:----------:|:----------:|------------------|:---------:|:---------:|:-------:|
 | 1° | 2.5 | 0 | 0 | reps 0 → 1 giorno | **1** | 1 | 2.6 |
 | 2° | 2.6 | 1 | 1 | reps 1 → 6 giorni | **6** | 2 | 2.7 |
-| 3° | 2.7 | 2 | 6 | round(6 × 2.7) | **16** | 3 | 2.8 |
-| 4° | 2.8 | 3 | 16 | round(16 × 2.8) | **45** | 4 | 2.9 |
+| 3° | 2.7 | 2 | 6 | min(6, round(6 × 2.7)) | **6** | 3 | 2.8 |
+| 4° | 2.8 | 3 | 6 | min(6, round(6 × 2.8)) | **6** | 4 | 2.9 |
 
-Gli intervalli si allargano rapidamente: 1 → 6 → 16 → 45 giorni.
+Gli intervalli si allargano fino al tetto pratico: 1 → 6 → 6 → 6 giorni. Anche dopo
+100 allenamenti perfetti, la prossima ripetizione resta entro 6 giorni.
 
 ### Variante consolidata, poi un allenamento con 4 errori
 
-Partendo da `EF=2.5, intervalDays=15, repetitions=3`, un allenamento completato con 4
+Partendo da `EF=2.5, intervalDays=6, repetitions=3`, un allenamento completato con 4
 errori dà voto 2 (negativo):
 
 - `repetitions` → **0**, intervallo → **0** (dovuta oggi);
 - `EF` → `2.5 − 0.32` = **2.18**.
 
-L'intervallo crolla da 15 giorni a "oggi": la variante torna immediatamente in coda di
+L'intervallo crolla da 6 giorni a "oggi": la variante torna immediatamente in coda di
 ripasso. (Verifica live in ADR 0012.)
 
 ---

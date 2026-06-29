@@ -1,0 +1,19 @@
+# Correzione dati per schedule create prima del tetto massimo a 6 giorni.
+databaseChangeLog:
+  - changeSet:
+      id: 0002-cap-review-schedules
+      author: scacchi
+      comment: Riporta entro 6 giorni le ripetizioni gia' pianificate troppo lontano.
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists:
+            tableName: review_schedule
+      changes:
+        - sql:
+            dbms: h2
+            sql: >
+              UPDATE review_schedule
+              SET interval_days = 6,
+                  next_review_date = DATEADD('DAY', 6, CURRENT_DATE)
+              WHERE interval_days > 6
+                 OR next_review_date > DATEADD('DAY', 6, CURRENT_DATE)

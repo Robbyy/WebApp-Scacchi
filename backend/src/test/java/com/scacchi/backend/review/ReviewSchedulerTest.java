@@ -36,11 +36,31 @@ class ReviewSchedulerTest {
     }
 
     @Test
-    void laterSuccessMultipliesByEaseFactor() {
-        // reps >= 2: intervallo = round(intervallo * easeFactor) = round(6 * 2.5) = 15.
+    void laterSuccessIsCappedAtMaximumInterval() {
+        // reps >= 2: round(6 * 2.5) supererebbe il massimo praticabile.
         Outcome o = ReviewScheduler.next(2.5, 6, 2, 5);
-        assertThat(o.intervalDays()).isEqualTo(15);
+        assertThat(o.intervalDays()).isEqualTo(ReviewScheduler.MAX_INTERVAL_DAYS);
         assertThat(o.repetitions()).isEqualTo(3);
+    }
+
+    @Test
+    void hundredPerfectReviewsStayWithinMaximumInterval() {
+        double ease = ReviewScheduler.INITIAL_EASE;
+        int interval = 0;
+        int repetitions = 0;
+        Outcome outcome = null;
+
+        for (int i = 0; i < 100; i++) {
+            outcome = ReviewScheduler.next(ease, interval, repetitions, 5);
+            assertThat(outcome.intervalDays()).isLessThanOrEqualTo(ReviewScheduler.MAX_INTERVAL_DAYS);
+            ease = outcome.easeFactor();
+            interval = outcome.intervalDays();
+            repetitions = outcome.repetitions();
+        }
+
+        assertThat(outcome).isNotNull();
+        assertThat(outcome.intervalDays()).isEqualTo(ReviewScheduler.MAX_INTERVAL_DAYS);
+        assertThat(outcome.repetitions()).isEqualTo(100);
     }
 
     @Test

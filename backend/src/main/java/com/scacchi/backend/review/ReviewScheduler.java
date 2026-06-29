@@ -8,7 +8,7 @@ package com.scacchi.backend.review;
  * <p>Adattamento "relearning": un esito negativo (qualità &lt; 3) azzera le ripetizioni e
  * imposta l'intervallo a <b>0</b> (ripeti oggi), così che la variante torni subito nella
  * lista "da ripetere"; gli esiti positivi seguono gli intervalli SM-2 (1, 6, poi
- * {@code intervallo * easeFactor}).
+ * {@code intervallo * easeFactor}) con un tetto massimo di 6 giorni.
  */
 public final class ReviewScheduler {
 
@@ -17,6 +17,9 @@ public final class ReviewScheduler {
 
     /** Limite inferiore del fattore di facilità (vincolo SM-2). */
     public static final double MIN_EASE = 1.3;
+
+    /** Intervallo massimo pianificabile: oltre diventa poco pratico per il repertorio. */
+    public static final int MAX_INTERVAL_DAYS = 6;
 
     private ReviewScheduler() {
     }
@@ -67,7 +70,11 @@ public final class ReviewScheduler {
         if (ef < MIN_EASE) {
             ef = MIN_EASE;
         }
-        return new Outcome(round2(ef), Math.max(0, interval), reps);
+        return new Outcome(round2(ef), clampInterval(interval), reps);
+    }
+
+    private static int clampInterval(int interval) {
+        return Math.min(MAX_INTERVAL_DAYS, Math.max(0, interval));
     }
 
     private static double round2(double value) {

@@ -547,7 +547,7 @@ pianificata, così il frontend non genera errori in console).
   `5 - errori`, con minimo 2. Soglia di promozione: qualità ≥ 3 (da **3 errori** in su l'esito
   è "negativo").
 - Esito **positivo**: intervalli SM-2 classici (1 giorno, poi 6, poi `intervallo * easeFactor`),
-  `easeFactor` aggiornato e mai sotto **1.3**.
+  con tetto pratico a **6 giorni**; `easeFactor` aggiornato e mai sotto **1.3**.
 - Esito **negativo** (adattamento "relearning"): azzera `repetitions` e imposta l'intervallo a
   **0**, cioè ripeti **oggi**. Così una variante appena sbagliata rientra subito nella lista
   "Ripeti oggi" (e la validazione "molti errori accorciano l'intervallo" è dimostrabile senza
@@ -572,6 +572,10 @@ pianificata, così il frontend non genera errori in console).
 - Frontend: vista `/reviews` ("Ripeti oggi" con avvio rapido del training), badge conteggio
   in home, e indicatore "prossima ripetizione" nel dettaglio variante; helper di formattazione
   puri e testati (`review-format.ts`).
+- Aggiornamento 2026-06-29: `ReviewScheduler.MAX_INTERVAL_DAYS = 6` garantisce che anche
+  molte ripetizioni corrette consecutive non spostino la prossima ripetizione oltre 6 giorni.
+  Il changeset Liquibase `0002-cap-review-schedules` normalizza anche le schedule gia'
+  persistite con intervalli o date future fuori limite.
 
 ### Conseguenze
 - Il ciclo di ripetizione spaziata funziona end-to-end in locale single-user (criterio P19).
