@@ -1,4 +1,4 @@
-# Backlog tecnico — punti 1-19
+# Backlog tecnico — punti 1-20
 
 > Derivato dalla raccolta grezza `lista-problemi-raw.md` (input non strutturato).
 > Questo file è il **backlog controllabile**: schede per issue, classificazione,
@@ -160,6 +160,13 @@ dicevano erroneamente "non viene committato".
 - **Accettazione:** dipendenza in `pom.xml`; `ddl-auto=validate|none`; changelog baseline = schema corrente; il backend si avvia applicando le migrazioni; convenzione changeset documentata.
 - **Ambiguità:** baseline generata dall'H2 corrente vs scritta a mano; convivenza tra DB di esempio committato (che includerà `DATABASECHANGELOG`) e changelog.
 
+### ISSUE-020 — Allenamento: sotto-varianti annidate mai proposte
+- **Tipo:** bug (funzionale) · **Area:** frontend (training loop `variant-training`); da verificare se coinvolge anche il backend (validazione mosse) · **R.tecnico:** medio · **Impatto:** medio-alto (linee memorizzate non allenabili)
+- **Dipendenze:** nessuna; tocca il traversal del modello `MoveNode` (non lo schema) · **Prerequisiti:** nessuno
+- **Dati:** no (l'albero è salvato correttamente; è un bug di enumerazione/traversal) · **Migrazione:** no · **Test:** sì (caso pronto: variante 293 / PGN nella raccolta grezza) · **1 sessione:** sì
+- **Accettazione:** durante l'allenamento ogni linea dell'albero, a qualunque profondità di annidamento, è proponibile; in particolare `11…Nxa1 12.Qd5+ Ke7 13.Qxe5+ Kd7 14.Qe6#` su `/variants/293`.
+- **Ambiguità:** se è solo frontend (`variant-training`) o coinvolge la validazione backend delle mosse attese; come l'allenamento enumera i rami allenabili (sotto-varianti di primo livello vs annidate, eventuale limite di profondità).
+
 ---
 
 ## Tabella riassuntiva
@@ -185,6 +192,7 @@ dicevano erroneamente "non viene committato".
 | 017 | Impostazioni + SM-2 | feat/infra | FE/BE/DB | m-alto | medio | sì† | sì† | sì | no | dopo Liquibase |
 | 018 | Revisione sicurezza | audit | sicurezza | basso | b/alto‡ | no | no | no | sì | subito |
 | 019 | Liquibase | infra | DB | medio | alto‡ | no | sì | sì | sì | ✅ fatto |
+| 020 | Sotto-varianti annidate in allenamento | bug | FE | medio | m-a | no | no | sì | sì | subito |
 
 <sub>\* difficile in headless · ° borderline · † solo se persistenza su DB · ‡ impatto su stabilità/sicurezza, non UX</sub>
 
@@ -193,7 +201,7 @@ dicevano erroneamente "non viene committato".
 ## Raggruppamenti
 
 **1. Fattibili subito** (no schema, no spec, rischio basso/medio, singola sessione):
-ISSUE-001, 002, 003, 004, 005, 006, 007, 008, 009, 010, 011, 012, 013, 015, 018, **019**.
+ISSUE-001, 002, 003, 004, 005, 006, 007, 008, 009, 010, 011, 012, 013, 015, 018, **020** (019 ✅ già fatto).
 
 **2. Solo dopo Liquibase (ISSUE-019)** (toccano schema / nuove tabelle):
 ISSUE-017 (`app_settings`), ISSUE-016 (nuove entità + campo `comment`), ISSUE-014 *condizionale* (se i parametri motore sono persistiti su DB).
@@ -234,7 +242,7 @@ ISSUE-016 (bloccata da OpenSpec + Liquibase). ISSUE-017 e ISSUE-014 bloccate *so
 
 1. ~~**Sciogliere l'incoerenza del punto 19**~~ ✅ fatto — DB di esempio confermato tracciato, doc allineati.
 2. ~~**ISSUE-019 (Liquibase)**~~ ✅ fatto (commit `85b4a54`): catena dati sbloccata.
-3. **In parallelo, indipendenti da Liquibase:** batch layout/UX (001, 002, 003, 006, 007, 008, 009) e batch audio (004, 005). ← *prossimo naturale*
+3. **In parallelo, indipendenti da Liquibase:** batch layout/UX (001, 002, 003, 006, 007, 008, 009), batch audio (004, 005) e il bug allenamento **020** (sotto-varianti annidate, caso di test pronto). ← *prossimo naturale*
 4. **Anticipare ISSUE-018 (security audit):** indipendente, basso costo, alto valore (skill `/security-review`).
 5. **Ora sbloccati da Liquibase:** ISSUE-017 (decidendo `app_settings` vs `localStorage`), poi ISSUE-014.
 6. **ISSUE-016 solo dopo** gli artefatti OpenSpec.

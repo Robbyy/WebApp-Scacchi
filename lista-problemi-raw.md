@@ -505,3 +505,64 @@ ambiente di sviluppo sia sempre allineato allo schema corrente.
 **Relazione con altri punti:** prerequisito diretto per il punto 16 (nuove entità
 per mediogioco/finale) e per la migrazione a Supabase PostgreSQL (terza tornata).
 Va pianificato e completato prima di qualsiasi altro punto che modifichi il modello dati.
+
+---
+
+## 20. Allenamento: le sotto-varianti annidate non vengono mai proposte
+
+**Pagina:** allenamento variante ("Allena questa variante"), es. `/variants/293`
+**Tipo:** bug funzionale dell'allenamento (training loop).
+**Descrizione:** durante l'allenamento di una variante, una linea **memorizzata
+nell'albero** non viene **mai** proposta se è una sotto-variante annidata dentro
+un'altra sotto-variante. Caso concreto sulla variante 293: la linea di matto
+`11…Nxa1 12.Qd5+ Ke7 13.Qxe5+ Kd7 14.Qe6#` è presente nell'albero ma l'allenamento
+non la propone mai, mentre le linee di primo livello sì.
+**Pinpoint strutturale:** nell'albero (`MoveNode`, `children[0]`=mainline) la linea
+mancante è una **sideline di una sideline**:
+- mainline a mossa 9: `9…c6` (`children[0]`);
+- prima sideline: `9…Nxc2 10.Bxd5+ Kd6 11.Bb3 …` (un altro figlio del nodo dopo `9.O-O`);
+- dentro quella, a mossa 11 il ramo prosegue con `11…c6 12.Bxc2` (mainline locale) **e**
+  con `11…Nxa1 12.Qd5+ … 14.Qe6#` (sideline locale → **profondità 2**).
+
+L'ipotesi (da verificare in analisi) è che la logica di selezione dei rami
+dell'allenamento attraversi le sotto-varianti di **primo livello** ma non quelle
+**annidate** (o si fermi a una certa profondità), pur essendo l'albero memorizzato
+correttamente. Da chiarire se il problema è solo frontend (`variant-training`,
+costruzione dell'insieme di linee allenabili) o coinvolge anche la validazione
+backend delle mosse attese.
+
+**Atteso:** tutte le foglie/linee presenti nell'albero — a qualunque profondità di
+annidamento — devono poter essere proposte durante l'allenamento (coerente con il
+"supporto rami multipli" già dichiarato). In particolare la linea di matto sopra.
+
+**Dati di test:** variante `/variants/293`. PGN completo:
+
+```pgn
+[Event "?"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "?"]
+[Black "?"]
+[Result "*"]
+
+1. e4 e5
+2. Nf3 Nc6
+3. Bc4 Nf6
+4. Ng5 d5
+5. exd5 Nxd5
+6. Nxf7 Kxf7
+7. Qf3+ Ke6
+8. Nc3 Nb4
+9. O-O c6
+   (9... Nxc2
+    10. Bxd5+ Kd6
+    11. Bb3 c6
+       (11... Nxa1
+        12. Qd5+ Ke7
+        13. Qxe5+ Kd7
+        14. Qe6#)
+    12. Bxc2)
+10. d4 Qf6
+11. Qd1 *
+```
