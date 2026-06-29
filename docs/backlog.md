@@ -7,21 +7,17 @@
 
 ---
 
-## ⚠️ Nota di coerenza (blocca ISSUE-019)
+## ✓ Nota di coerenza (RISOLTA con ISSUE-019)
 
-Il punto 19 della raccolta assume che `backend/data/scacchi.mv.db` *"non venga
-committato (escluso da `.gitignore`)"*. **Falso allo stato attuale:**
+> Risolta il 2026-06-29. Il `scacchi.mv.db` è confermato **tracciato di proposito**
+> (`.gitignore` lo ri-include con `!backend/data/*.mv.db`) come DB di esempio. La
+> baseline Liquibase usa una precondizione `MARK_RAN` per convivere col DB committato;
+> il DB è stato ri-committato una volta con `DATABASECHANGELOG`. `architettura.md` e
+> `stato-corrente.md` sono stati allineati. Dettagli in [`specs/liquibase.md`](specs/liquibase.md).
 
-- il `.gitignore` contiene regole di **ri-inclusione** esplicite
-  (`!backend/data/*.mv.db`) che mantengono il file **tracciato** di proposito;
-- `git ls-files` conferma che il file è versionato;
-- nel punto 18 il DB è stato definito un **DB di esempio** da tenere nel repo;
-- `docs/architettura.md` e `docs/stato-corrente.md` affermano (erroneamente) "non
-  viene committato".
-
-**Implicazione per Liquibase:** il DB di esempio committato conterrà la tabella di
-tracking `DATABASECHANGELOG`. La strategia di baseline va progettata di conseguenza.
-**Da decidere prima di eseguire ISSUE-019**, e poi allineare la documentazione.
+Storico del problema (per memoria): il punto 19 assumeva che il file *"non venisse
+committato (escluso da `.gitignore`)"*, mentre era tracciato di proposito; i doc
+dicevano erroneamente "non viene committato".
 
 ---
 
@@ -154,6 +150,10 @@ tracking `DATABASECHANGELOG`. La strategia di baseline va progettata di consegue
 - **Ambiguità:** profondità dello scan dipendenze (ora vs CI/CD).
 
 ### ISSUE-019 — Introduzione Liquibase (PRIORITÀ MASSIMA)
+> ✅ **FATTO (2026-06-29).** Commit `85b4a54`. Schema gestito da Liquibase (`spring-boot-liquibase`),
+> baseline `0001-baseline.yaml` con precondizione `MARK_RAN`, `ddl-auto: none`. 66 test verdi;
+> avvio dev sul DB committato verificato (MARK_RAN, dati intatti). Spec: [`specs/liquibase.md`](specs/liquibase.md).
+> **Sblocca:** ISSUE-016, ISSUE-017, ISSUE-014 (persistenza su DB).
 - **Tipo:** infrastruttura · **Area:** database/backend · **R.tecnico:** medio · **Impatto:** basso diretto / alto per stabilità multi-postazione
 - **Dipendenze:** nessuna a monte; **prerequisito** di ISSUE-016, ISSUE-017, ISSUE-014(se DB) · **Prerequisiti:** risolvere prima l'incoerenza DB-esempio/`.gitignore` (vedi nota in apertura); **specifica dedicata** (vincolo CLAUDE.md: nessun cambio infrastrutturale senza spec)
 - **Dati:** no (cattura lo schema attuale come baseline) · **Migrazione:** sì (introduce framework + baseline) · **Test:** sì (avvio applica changelog) · **1 sessione:** sì (scope minimo)
@@ -184,7 +184,7 @@ tracking `DATABASECHANGELOG`. La strategia di baseline va progettata di consegue
 | 016 | Direzione multi-fase | visione | prodotto | alto | alto | sì | sì | sì | no | non ancora |
 | 017 | Impostazioni + SM-2 | feat/infra | FE/BE/DB | m-alto | medio | sì† | sì† | sì | no | dopo Liquibase |
 | 018 | Revisione sicurezza | audit | sicurezza | basso | b/alto‡ | no | no | no | sì | subito |
-| 019 | Liquibase | infra | DB | medio | alto‡ | no | sì | sì | sì | subito (priorità) |
+| 019 | Liquibase | infra | DB | medio | alto‡ | no | sì | sì | sì | ✅ fatto |
 
 <sub>\* difficile in headless · ° borderline · † solo se persistenza su DB · ‡ impatto su stabilità/sicurezza, non UX</sub>
 
@@ -232,9 +232,9 @@ ISSUE-016 (bloccata da OpenSpec + Liquibase). ISSUE-017 e ISSUE-014 bloccate *so
 
 ## Sequenza consigliata
 
-1. **Sciogliere l'incoerenza del punto 19** (DB di esempio tracciato vs "non committato") — decisione, poi allineare `architettura.md`/`stato-corrente.md`.
-2. **ISSUE-019 (Liquibase)** previa specifica dedicata (vincolo CLAUDE.md): sblocca la catena dati.
-3. **In parallelo, indipendenti da Liquibase:** batch layout/UX (001, 002, 003, 006, 007, 008, 009) e batch audio (004, 005).
+1. ~~**Sciogliere l'incoerenza del punto 19**~~ ✅ fatto — DB di esempio confermato tracciato, doc allineati.
+2. ~~**ISSUE-019 (Liquibase)**~~ ✅ fatto (commit `85b4a54`): catena dati sbloccata.
+3. **In parallelo, indipendenti da Liquibase:** batch layout/UX (001, 002, 003, 006, 007, 008, 009) e batch audio (004, 005). ← *prossimo naturale*
 4. **Anticipare ISSUE-018 (security audit):** indipendente, basso costo, alto valore (skill `/security-review`).
-5. **Dopo Liquibase:** ISSUE-017 (decidendo `app_settings` vs `localStorage`), poi ISSUE-014.
+5. **Ora sbloccati da Liquibase:** ISSUE-017 (decidendo `app_settings` vs `localStorage`), poi ISSUE-014.
 6. **ISSUE-016 solo dopo** gli artefatti OpenSpec.
