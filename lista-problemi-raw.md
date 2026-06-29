@@ -455,3 +455,48 @@ Lichess) o informazioni rilevanti.
 **Nota:** è un punto di **revisione**: l'output è un elenco di criticità classificate
 per gravità. Le eventuali correzioni diventeranno punti/azioni a sé. Non implementare
 nulla prima del report.
+
+---
+
+## 19. Introduzione Liquibase per le migrazioni del database — PRIORITÀ MASSIMA
+
+> **⚠️ Priorità massima per la prossima analisi di pianificazione.**
+> Questo punto deve essere affrontato prima di qualsiasi altra modifica che tocchi
+> il modello dati, e prima di introdurre Supabase PostgreSQL.
+
+**Tipo:** infrastruttura — prerequisito bloccante per lo sviluppo multi-postazione e
+per la migrazione futura a PostgreSQL.
+
+**Descrizione del problema:** il database H2 risiede su file locale (`backend/data/scacchi.mv.db`)
+e non viene committato nel repository remoto (escluso per convenzione da `.gitignore`).
+Lo schema viene gestito da `spring.jpa.hibernate.ddl-auto=update`, che applica in modo
+silenzioso e non tracciato le modifiche strutturali solo sulla postazione dove vengono
+sviluppate. Il rischio concreto è il seguente: una modifica al modello dati (nuova colonna,
+nuova tabella, cambio tipo) viene sviluppata e testata su una postazione; dopo un `git pull`
+sull'altra postazione, il backend si avvia ma il database locale è disallineato —
+`ddl-auto=update` non sempre è in grado di applicare tutte le modifiche necessarie
+(non allarga colonne esistenti, non rimuove colonne obsolete, non gestisce dati preesistenti),
+con il risultato che l'applicazione si comporta in modo inconsistente o non si avvia affatto.
+Il problema è già emerso in passato (drift su `source_pgn`, corretto manualmente con ALTER).
+
+**Rischio attuale:** ogni modifica al modello dati è potenzialmente rompente per le
+postazioni di sviluppo non aggiornate. Più il progetto cresce (punto 16 in particolare
+introduce nuove entità) più il rischio si accumula.
+
+**Proposta:** introdurre **Liquibase** come sistema di migrazioni versionate.
+Ogni modifica strutturale al database viene codificata in un changelog versionato
+e committato nel repository. Al successivo avvio del backend su qualsiasi postazione,
+Liquibase applica automaticamente le migrazioni mancanti, garantendo che ogni
+ambiente di sviluppo sia sempre allineato allo schema corrente.
+
+**Scope minimo del punto:**
+- Aggiungere la dipendenza Liquibase a `pom.xml` (già disponibile nell'ecosistema
+  Spring Boot, nessuna libreria esterna di terze parti).
+- Disabilitare `ddl-auto=update` (impostare `validate` o `none`).
+- Produrre il changelog iniziale che rappresenta lo schema corrente (baseline),
+  da cui partire per tutte le migrazioni future.
+- Documentare la convenzione per aggiungere nuovi changeset.
+
+**Relazione con altri punti:** prerequisito diretto per il punto 16 (nuove entità
+per mediogioco/finale) e per la migrazione a Supabase PostgreSQL (terza tornata).
+Va pianificato e completato prima di qualsiasi altro punto che modifichi il modello dati.
