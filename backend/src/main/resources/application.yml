@@ -16,5 +16,10 @@ spring:
       path: /h2-console
   jpa:
     hibernate:
-      ddl-auto: update
+      # Lo schema è gestito interamente da Liquibase (ISSUE-019); Hibernate non lo
+      # tocca. `none` (non `validate`) perché su H2 le colonne `columnDefinition="text"`
+      # diventano CLOB mentre il validate Hibernate si aspetta VARCHAR: attrito noto
+      # H2/Hibernate sul keyword `text`, non risolvibile pulito. Fallback previsto
+      # dalla spec (docs/specs/liquibase.md, D3). I test esercitano CRUD reale.
+      ddl-auto: none
     open-in-view: false

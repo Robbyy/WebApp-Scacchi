@@ -10,7 +10,11 @@ spring:
     password: ""
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      # Schema creato da Liquibase anche nei test (fedeltà alle migrazioni reali, D4):
+      # su H2 in-memory vuoto la precondizione del baseline è soddisfatta e il changeset
+      # crea lo schema. `none` per lo stesso motivo del profilo dev (attrito H2 text/CLOB
+      # con validate, vedi docs/specs/liquibase.md D3): i test verificano via CRUD reale.
+      ddl-auto: none
     open-in-view: false
   h2:
     console:

@@ -1,6 +1,6 @@
 # Stato corrente — WebApp Scacchi
 
-> Aggiornato al: **2026-06-28** (fine Parte 2, P0–P19).
+> Aggiornato al: **2026-06-29** (fine Parte 2, P0–P19; + ISSUE-019 Liquibase).
 > Non è un diario cronologico. La storia per-prototipo è in `docs/archive/stato-avanzamento-2026-06-28.md` e nel git log.
 
 ---
@@ -9,7 +9,7 @@
 
 La webapp è funzionante in locale. **Parte 1 (P0–P6) e Parte 2 (P7–P19) completate e verificate.**
 Suite automatica verde: backend **66 test**, frontend **168 test**.
-Il progetto è pronto per la **terza tornata** (infrastruttura: Liquibase, Supabase, Docker, CI/CD).
+La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE-019); restano Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
 
 ---
 
@@ -54,7 +54,7 @@ Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **37 f
 
 ## Problemi noti
 
-Nessun bug bloccante attivo. Il file `backend/data/scacchi.mv.db` non viene committato per convenzione (drift runtime).
+Nessun bug bloccante attivo. Il file `backend/data/scacchi.mv.db` **è committato** come database di esempio (il `.gitignore` lo ri-include di proposito): un clone parte con dati reali.
 
 ---
 
@@ -62,7 +62,7 @@ Nessun bug bloccante attivo. Il file `backend/data/scacchi.mv.db` non viene comm
 
 | Area | Dettaglio |
 |------|-----------|
-| **H2 schema drift** | `ddl-auto=update` non allarga colonne esistenti. Drift già emerso su `source_pgn` (VARCHAR→text, corretta con ALTER). Prima di PostgreSQL → Liquibase. |
+| **Schema via Liquibase** | Lo schema è gestito da **Liquibase** (ISSUE-019), `ddl-auto: none`. Le modifiche allo schema vanno fatte con un nuovo changeset in `db/changelog/changes/` (mai modificare il baseline rilasciato). Storico: il vecchio `ddl-auto=update` causò drift su `source_pgn`, ora prevenuto. |
 | **LAZY loading** | `open-in-view: false` — tutte le letture che toccano collezioni LAZY richiedono `@Transactional(readOnly=true)` sul metodo di servizio. |
 | **Stockfish mai in allenamento** | Vincolo costruttivo: `variant-training` non importa `StockfishService` né `EvalBar`. Non indebolire questa separazione. |
 | **`userId` inattivo** | Predisposto nullable su `TrainingSession` e `ReviewSchedule`. Inattivo finché non arriva Supabase Auth. |
@@ -72,7 +72,6 @@ Nessun bug bloccante attivo. Il file `backend/data/scacchi.mv.db` non viene comm
 
 ## Non ancora implementato
 
-- Migrazioni versionate (Liquibase) — necessarie prima di lasciare H2.
 - Supabase PostgreSQL e Supabase Auth.
 - Attivazione multiutente (`userId`).
 - Docker e CI/CD.
@@ -88,8 +87,8 @@ Nessun bug bloccante attivo. Il file `backend/data/scacchi.mv.db` non viene comm
 
 Terza tornata — infrastruttura. Ordine consigliato:
 
-1. **Liquibase** — migrazioni versionate, prerequisito per tutto il resto.
-2. **Supabase PostgreSQL** — migrazione da H2.
+1. ~~**Liquibase** — migrazioni versionate~~ ✓ fatto (ISSUE-019): schema gestito da Liquibase, baseline in `db/changelog/`.
+2. **Supabase PostgreSQL** — migrazione da H2 (il changelog Liquibase usa tipi astratti, portabili).
 3. **Supabase Auth + `userId`** — multiutente.
 4. **Docker** — containerizzazione FE/BE.
 5. **CI/CD** — e rivalutare un runner E2E browser.

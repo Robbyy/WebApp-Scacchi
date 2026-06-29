@@ -1,0 +1,7 @@
+# Changelog master Liquibase (ISSUE-019).
+# Spring Boot lo individua di default in classpath:/db/changelog/db.changelog-master.yaml
+# e lo esegue all'avvio. I changeset vivono in changes/ con naming NNNN-descrizione e
+# vanno inclusi qui esplicitamente, in ordine (un `include` per changeset).
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/0001-baseline.yaml

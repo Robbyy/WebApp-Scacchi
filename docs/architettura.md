@@ -141,8 +141,9 @@ Variant 1──1 ReviewSchedule
 
 ## Note su H2 e schema
 
-- DB: `backend/data/scacchi` (file, non in-memory). Il file `scacchi.mv.db` non viene committato (drift runtime).
-- `ddl-auto=update` aggiunge nuove colonne automaticamente ma **non allarga colonne esistenti**. Drift già emerso su `source_pgn` (era VARCHAR(255), corretta con ALTER manuale). Prima di migrare a PostgreSQL servono **migrazioni versionate (Liquibase)** per rendere lo schema ripetibile.
+- DB: `backend/data/scacchi` (file, non in-memory). Il file `scacchi.mv.db` **è committato** come database di esempio (il `.gitignore` lo ri-include con `!backend/data/*.mv.db`), così un clone ha subito dati con cui lavorare.
+- **Schema gestito da Liquibase** (ISSUE-019): changelog in `backend/src/main/resources/db/changelog/`, baseline `0001-baseline.yaml`; `ddl-auto: none` (Hibernate non tocca lo schema). Su un DB nuovo il baseline crea le tabelle; sul DB di esempio esistente la precondizione `MARK_RAN` lo registra senza rieseguirlo. Convenzione changeset in [`backend/README.md`](../backend/README.md); decisioni in [`docs/specs/liquibase.md`](specs/liquibase.md).
+- Storico: con il precedente `ddl-auto=update` il drift su `source_pgn` (VARCHAR(255)→text) fu corretto con ALTER manuale. Liquibase rende ora lo schema ripetibile e versionato (prerequisito per PostgreSQL).
 - `open-in-view: false` → tutte le letture con collezioni LAZY richiedono `@Transactional(readOnly=true)` sul metodo di servizio.
 
 ---

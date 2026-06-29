@@ -20,7 +20,8 @@ Backend e frontend sono **due progetti fisicamente separati** (vedi
 
 Scaffold Spring Boot presente e operativo. Parte 1 (Prototipi 0-6) e **Parte 2
 (P7-P19)** implementate. Persistenza su **H2 file** (`backend/data/scacchi`,
-`ddl-auto=update`, `open-in-view: false`). Suite: **66 test** verdi.
+`open-in-view: false`); **schema gestito da Liquibase**, `ddl-auto: none`
+(ISSUE-019). Suite: **66 test** verdi.
 
 Package principali (sotto `com.scacchi.backend`):
 
@@ -30,6 +31,27 @@ Package principali (sotto `com.scacchi.backend`):
 - `training` — sessioni di allenamento (`POST/GET /api/training-sessions`);
 - `stats` — aggregazioni statistiche (`GET /api/stats/...`);
 - `review` — spaced repetition SM-2 (`GET /api/reviews/due`, `/variants/{id}`).
+
+## Migrazioni di schema (Liquibase)
+
+Lo schema del database è gestito da **Liquibase** (ISSUE-019), non da Hibernate
+(`ddl-auto: none`). I changelog stanno in `src/main/resources/db/changelog/`:
+
+- `db.changelog-master.yaml` — master, include i changeset in ordine;
+- `changes/0001-baseline.yaml` — baseline (fotografia dello schema iniziale); ha una
+  precondizione `MARK_RAN` che, su un DB già popolato (es. il `scacchi.mv.db` di
+  esempio committato), la registra come applicata senza rieseguirla.
+
+**Convenzione per una modifica di schema** (nuova colonna/tabella/indice):
+
+1. crea `changes/NNNN-descrizione.yaml` (numero progressivo a 4 cifre, es. `0002-...`);
+2. aggiungi un `include` al master, **in coda**;
+3. **non modificare mai** un changeset già rilasciato (Liquibase ne traccia il checksum):
+   ogni cambiamento è un nuovo changeset;
+4. usa tipi astratti Liquibase (`VARCHAR`, `CLOB`, `BIGINT`, `BOOLEAN`, `TIMESTAMP`,
+   `DATE`) per restare portabili verso PostgreSQL.
+
+Decisioni e dettagli: [`docs/specs/liquibase.md`](../docs/specs/liquibase.md).
 
 ## Avvio
 

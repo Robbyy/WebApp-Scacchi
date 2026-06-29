@@ -67,6 +67,13 @@
 			<artifactId>h2</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+		<!-- Migrazioni di schema versionate (ISSUE-019): in Spring Boot 4 l'auto-config
+		     Liquibase è in un modulo dedicato (non più in spring-boot-autoconfigure).
+		     Questo modulo porta con sé liquibase-core. Versione gestita dal BOM. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-liquibase</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
