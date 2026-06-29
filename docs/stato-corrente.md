@@ -54,7 +54,7 @@ Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **37 f
 
 ## Problemi noti
 
-Nessun bug bloccante attivo. Il file `backend/data/scacchi.mv.db` **è committato** come database di esempio (il `.gitignore` lo ri-include di proposito): un clone parte con dati reali.
+Nessun bug bloccante attivo. **Policy DB**: finché non si migra a Supabase, il file `backend/data/scacchi.mv.db` **è versionato su Git** (il `.gitignore` lo ri-include di proposito) ed è la fonte dei dati del repertorio condivisa tra le postazioni; va committato dopo modifiche a repertorio o schema.
 
 ---
 

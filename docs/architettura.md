@@ -141,7 +141,7 @@ Variant 1──1 ReviewSchedule
 
 ## Note su H2 e schema
 
-- DB: `backend/data/scacchi` (file, non in-memory). Il file `scacchi.mv.db` **è committato** come database di esempio (il `.gitignore` lo ri-include con `!backend/data/*.mv.db`), così un clone ha subito dati con cui lavorare.
+- DB: `backend/data/scacchi` (file, non in-memory). Il file `scacchi.mv.db` **è versionato su Git** (il `.gitignore` lo ri-include con `!backend/data/*.mv.db`). **Policy: finché non si migra a Supabase PostgreSQL, il DB H2 resta versionato** — è la fonte dei dati del repertorio condivisa tra le postazioni e funge da backup; va committato dopo modifiche a repertorio o schema.
 - **Schema gestito da Liquibase** (ISSUE-019): changelog in `backend/src/main/resources/db/changelog/`, baseline `0001-baseline.yaml`; `ddl-auto: none` (Hibernate non tocca lo schema). Su un DB nuovo il baseline crea le tabelle; sul DB di esempio esistente la precondizione `MARK_RAN` lo registra senza rieseguirlo. Convenzione changeset in [`backend/README.md`](../backend/README.md); decisioni in [`docs/specs/liquibase.md`](specs/liquibase.md).
 - Storico: con il precedente `ddl-auto=update` il drift su `source_pgn` (VARCHAR(255)→text) fu corretto con ALTER manuale. Liquibase rende ora lo schema ripetibile e versionato (prerequisito per PostgreSQL).
 - `open-in-view: false` → tutte le letture con collezioni LAZY richiedono `@Transactional(readOnly=true)` sul metodo di servizio.

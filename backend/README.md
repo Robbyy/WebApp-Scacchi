@@ -23,6 +23,11 @@ Scaffold Spring Boot presente e operativo. Parte 1 (Prototipi 0-6) e **Parte 2
 `open-in-view: false`); **schema gestito da Liquibase**, `ddl-auto: none`
 (ISSUE-019). Suite: **66 test** verdi.
 
+> **Policy DB:** finché non si migra a Supabase, il file `data/scacchi.mv.db` è
+> **versionato su Git** (ri-incluso nel `.gitignore`): è la fonte dei dati del
+> repertorio condivisa tra le postazioni. Committarlo dopo modifiche al repertorio o
+> allo schema.
+
 Package principali (sotto `com.scacchi.backend`):
 
 - `ping` — health check (`GET /api/ping`);

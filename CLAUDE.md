@@ -17,7 +17,7 @@ Per ogni sessione, leggi nell'ordine:
 
 - La webapp è un'app personale per l'allenamento delle aperture di scacchi.
 - Backend Spring Boot (Java 21) e frontend Angular 22, **fisicamente separati**: build indipendenti, comunicazione solo via HTTP REST.
-- Database H2 su file in locale (`backend/data/scacchi`). Prossimamente: Supabase PostgreSQL.
+- Database H2 su file (`backend/data/scacchi`), schema gestito da Liquibase. **Versionato su Git** finché non si migra a Supabase PostgreSQL: è la fonte dei dati del repertorio condivisa tra le postazioni.
 - Autenticazione Supabase Auth prevista nella terza tornata.
 - Il progetto dovrà restare ordinato e predisposto per la containerizzazione Docker.
 
@@ -37,5 +37,6 @@ Per ogni sessione, leggi nell'ordine:
 
 - Non introdurre nuove librerie senza decisione esplicita.
 - Non introdurre cambi infrastrutturali (Supabase, Docker, Liquibase) senza specifica dedicata.
+- Finché non si migra a Supabase, il file del database H2 (`backend/data/scacchi.mv.db`) **va versionato su Git** (è già ri-incluso nel `.gitignore` con `!backend/data/*.mv.db`): committa il file aggiornato dopo modifiche al repertorio o allo schema, così le altre postazioni restano allineate. In caso di conflitto sul binario, scegli la versione corretta (non rigenerare il file).
 - Nessuna modifica incrociata tra backend e frontend (niente import diretti tra i due progetti).
 - Stockfish non è mai disponibile in modalità allenamento (vincolo costruttivo — non indebolirlo).
