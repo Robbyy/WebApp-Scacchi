@@ -581,3 +581,28 @@ pianificata, così il frontend non genera errori in console).
   mostrano badge "Ripeti oggi 1", la card "Da ripetere oggi" e l'indicatore di dettaglio.
 - Fuori perimetro (per scelta): notifiche push/email, sincronizzazione multi-dispositivo (cloud,
   terza tornata).
+
+---
+
+## 0013 — Migrazioni di schema versionate con Liquibase (ISSUE-019)
+
+**Data:** 2026-06-29 · **Stato:** Accettata e implementata · **Contesto:** prima issue della terza tornata (infrastruttura), prerequisito per PostgreSQL e per ogni modifica al modello dati.
+
+### Decisione
+Lo schema del database è gestito da **Liquibase**, non più da Hibernate `ddl-auto`. Changelog in `backend/src/main/resources/db/changelog/` (`db.changelog-master.yaml` con `include` espliciti; baseline `changes/0001-baseline.yaml` = fotografia delle 5 tabelle attuali). `ddl-auto: none` su dev e test. Specifica e decisioni di dettaglio (D1–D6): [`docs/specs/liquibase.md`](../specs/liquibase.md).
+
+### Punti chiave
+- **Precondizione `MARK_RAN`** sul baseline (`not tableExists variant`): un solo changelog vale sia su DB nuovo (esegue e crea lo schema) sia sul `scacchi.mv.db` di esempio committato / DB dev esistenti (lo registra come applicato senza rieseguirlo). Il DB di esempio è stato ri-committato una volta con `DATABASECHANGELOG`.
+- **`ddl-auto: none` (non `validate`):** su H2 le colonne `columnDefinition="text"` diventano `CLOB` mentre Hibernate validate si aspetta `VARCHAR` (attrito noto sul keyword `text`). Liquibase è la sola fonte dello schema; i 66 test CRUD fanno da rete.
+- **Modulo `spring-boot-liquibase`:** in Spring Boot 4 l'auto-config Liquibase è in un modulo dedicato, non più in `spring-boot-autoconfigure`; il solo `liquibase-core` non attiva nulla.
+- **Tipi astratti** nel changelog (`VARCHAR`, `CLOB`, `BIGINT`, `BOOLEAN`, `TIMESTAMP`, `DATE`) per la portabilità verso PostgreSQL.
+
+### Alternative valutate
+- **Mantenere `ddl-auto=update`:** scartata — drift silenzioso e non ripetibile tra postazioni (già emerso su `source_pgn`, vedi area delicata).
+- **Flyway:** equivalente; Liquibase scelto per i changelog dichiarativi (YAML) e le precondizioni, comode per la convivenza col DB di esempio.
+- **Smettere di tracciare il DB di esempio:** scartata — si perderebbero i dati di esempio ricchi; il `MARK_RAN` permette di tenerli.
+
+### Conseguenze
+- Schema ripetibile e versionato su ogni postazione; baseline pronta per la migrazione a PostgreSQL.
+- Ogni modifica di schema è un nuovo changeset (`NNNN-*.yaml`), mai un ALTER manuale o la modifica di un changeset rilasciato. Convenzione in [`backend/README.md`](../../backend/README.md).
+- Verifica (2026-06-29): 66 test backend verdi (baseline eseguito su H2 in-memory); avvio dev sul DB committato → log `MARK_RAN`, nessuna ricreazione, 11 studi intatti.

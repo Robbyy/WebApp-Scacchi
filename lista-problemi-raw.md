@@ -460,6 +460,11 @@ nulla prima del report.
 
 ## 19. Introduzione Liquibase per le migrazioni del database — PRIORITÀ MASSIMA
 
+> ✅ **FATTO (2026-06-29)** — commit `85b4a54`. Schema gestito da Liquibase, baseline
+> versionata, 66 test verdi + avvio dev verificato. Stato e dettagli in
+> [`docs/backlog.md`](docs/backlog.md) (ISSUE-019) e [`docs/specs/liquibase.md`](docs/specs/liquibase.md).
+> Testo originale della segnalazione qui sotto.
+
 > **⚠️ Priorità massima per la prossima analisi di pianificazione.**
 > Questo punto deve essere affrontato prima di qualsiasi altra modifica che tocchi
 > il modello dati, e prima di introdurre Supabase PostgreSQL.

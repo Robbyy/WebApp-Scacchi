@@ -72,7 +72,7 @@ Aree principali sotto `src/app`:
 - Frontend e backend **fisicamente separati**: nessun import diretto tra i due progetti.
 - Nessuna libreria React nel frontend.
 - Nessuna modifica infrastrutturale (Supabase, Docker) senza specifica dedicata.
-- H2 file è lo schema **di sviluppo locale**: non è lo schema definitivo. Prima di migrare a PostgreSQL servono migrazioni versionate (vedi §Note H2).
+- H2 file è lo schema **di sviluppo locale**: non è lo schema definitivo. Lo schema è gestito da **migrazioni Liquibase versionate** (ISSUE-019, vedi §Note H2); la migrazione a PostgreSQL resta nella terza tornata.
 - `userId` è predisposto nullable su `TrainingSession` e `ReviewSchedule` ma **inattivo**: si attiverà con Supabase Auth.
 
 ---
@@ -158,5 +158,7 @@ Le decisioni architetturali sono documentate in [`docs/adr/decisioni-tecniche.md
 - ADR 0006–0008: import Lichess, parser PGN, OAuth PKCE
 - ADR 0009: Stockfish client-side
 - ADR 0010–0012: sessioni di allenamento, statistiche, SM-2 relearning
+- ADR 0013: migrazioni di schema con Liquibase (ISSUE-019)
 
 Per il funzionamento dettagliato della ripetizione spaziata (parametri, formule, esempi, flusso) → [`docs/sm2.md`](sm2.md).
+Per le migrazioni di schema (baseline, convenzione changeset, decisioni) → [`docs/specs/liquibase.md`](specs/liquibase.md).
