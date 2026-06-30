@@ -36,7 +36,7 @@ Per ogni sessione, leggi nell'ordine:
 ## Regole operative
 
 - Non introdurre nuove librerie senza decisione esplicita.
-- Non introdurre cambi infrastrutturali (Supabase, Docker, Liquibase) senza specifica dedicata.
+- Non introdurre cambi infrastrutturali (Supabase, Docker, …) senza specifica dedicata (es. Liquibase, ISSUE-019: fatto con spec dedicata).
 - Finché non si migra a Supabase, il file del database H2 (`backend/data/scacchi.mv.db`) **va versionato su Git** (è già ri-incluso nel `.gitignore` con `!backend/data/*.mv.db`): committa il file aggiornato dopo modifiche al repertorio o allo schema, così le altre postazioni restano allineate. In caso di conflitto sul binario, scegli la versione corretta (non rigenerare il file).
 - Nessuna modifica incrociata tra backend e frontend (niente import diretti tra i due progetti).
 - Stockfish non è mai disponibile in modalità allenamento (vincolo costruttivo — non indebolirlo).

@@ -357,7 +357,7 @@ futura, una volta disponibili gli artefatti OpenSpec.
 di impostazioni con sezioni.
 **Descrizione:** non esiste un punto centrale per configurare l'app. In particolare i
 parametri dell'algoritmo di ripetizione spaziata SM-2 sono **costanti hardcoded** nel
-codice e non modificabili dall'utente (vedi [`docs/sm2.md`](docs/sm2.md)). L'utente
+codice e non modificabili dall'utente (vedi [`docs/sm2.md`](../sm2.md)). L'utente
 vuole un'interfaccia dedicata, accessibile da un classico pulsante a forma di
 **ingranaggio**, in cui modificare e salvare le impostazioni in modo persistente.
 **Proposta utente:** aggiungere nella topbar un pulsante **ingranaggio** ("Impostazioni")
@@ -462,7 +462,7 @@ nulla prima del report.
 
 > ✅ **FATTO (2026-06-29)** — commit `85b4a54`. Schema gestito da Liquibase, baseline
 > versionata, 66 test verdi + avvio dev verificato. Stato e dettagli in
-> [`docs/backlog.md`](docs/backlog.md) (ISSUE-019) e [`docs/specs/liquibase.md`](docs/specs/liquibase.md).
+> [`docs/backlog.md`](../backlog.md) (ISSUE-019) e [`docs/specs/liquibase.md`](../specs/liquibase.md).
 > Testo originale della segnalazione qui sotto.
 
 > **⚠️ Priorità massima per la prossima analisi di pianificazione.**
