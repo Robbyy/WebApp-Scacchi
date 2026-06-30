@@ -43,6 +43,6 @@ Ordine consigliato di lettura:
    - setup e test → [`backend/README.md`](backend/README.md), [`frontend/README.md`](frontend/README.md)
    - checklist manuale → [`docs/checklist-e2e.md`](docs/checklist-e2e.md)
 4. [`docs/adr/decisioni-tecniche.md`](docs/adr/decisioni-tecniche.md) — decisioni architetturali (ADR 0001–0013)
-5. [`docs/roadmap.md`](docs/roadmap.md) — cosa viene dopo · [`docs/backlog.md`](docs/backlog.md) — backlog tecnico (ISSUE-001..019)
+5. [`docs/roadmap.md`](docs/roadmap.md) — cosa viene dopo · [`docs/backlog.md`](docs/backlog.md) — backlog (indice; classi in [`docs/backlog/`](docs/backlog/): bug, manutenzione evolutiva, sviluppi importanti)
 
 Storico: [`docs/archive/`](docs/archive/) · git log
