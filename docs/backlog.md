@@ -25,13 +25,13 @@
 
 | ID | Titolo | Classe | Destinazione | Stato |
 |----|--------|--------|--------------|-------|
-| 001 | Layout `/play` errato su Full HD | bug | GitHub | da fare |
-| 002 | Pulsanti motore fuori viewport | bug | GitHub | da fare |
-| 003 | Header home: wrap titolo/pulsanti | bug | GitHub | da fare |
-| 004 | Nessun suono dopo ritorno focus | bug | GitHub | da fare |
-| 005 | Nessun suono mosse del computer | bug | GitHub | da fare |
-| 006 | Badge "Misto": contrasto testo | bug | GitHub | da fare |
-| 020 | Sotto-varianti annidate non allenate | bug | GitHub | da fare |
+| 001 | Layout `/play` errato su Full HD | bug | GitHub | [#1](https://github.com/Robbyy/WebApp-Scacchi/issues/1) |
+| 002 | Pulsanti motore fuori viewport | bug | GitHub | [#2](https://github.com/Robbyy/WebApp-Scacchi/issues/2) |
+| 003 | Header home: wrap titolo/pulsanti | bug | GitHub | [#3](https://github.com/Robbyy/WebApp-Scacchi/issues/3) |
+| 004 | Nessun suono dopo ritorno focus | bug | GitHub | [#4](https://github.com/Robbyy/WebApp-Scacchi/issues/4) |
+| 005 | Nessun suono mosse del computer | bug | GitHub | [#5](https://github.com/Robbyy/WebApp-Scacchi/issues/5) |
+| 006 | Badge "Misto": contrasto testo | bug | GitHub | [#6](https://github.com/Robbyy/WebApp-Scacchi/issues/6) |
+| 020 | Sotto-varianti annidate non allenate | bug | GitHub | [#7](https://github.com/Robbyy/WebApp-Scacchi/issues/7) |
 | 021 | Scaffold navigazione 3 sezioni ⭐ | manutenzione | diretto | da fare (primo) |
 | 007 | "Nascondi barra" ridondante | manutenzione | diretto | da fare |
 | 008 | Rimuovere "Auto-play" | manutenzione | diretto | da fare |
