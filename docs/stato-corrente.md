@@ -1,6 +1,6 @@
 # Stato corrente — WebApp Scacchi
 
-> Aggiornato al: **2026-06-29** (fine Parte 2, P0–P19; + ISSUE-019 Liquibase).
+> Aggiornato al: **2026-07-03** (fine Parte 2, P0–P19; + ISSUE-019 Liquibase).
 > Non è un diario cronologico. La storia per-prototipo è in `docs/archive/stato-avanzamento-2026-06-28.md` e nel git log.
 
 ---
@@ -8,7 +8,7 @@
 ## Sintesi
 
 La webapp è funzionante in locale. **Parte 1 (P0–P6) e Parte 2 (P7–P19) completate e verificate.**
-Suite automatica verde: backend **66 test**, frontend **168 test**.
+Suite automatica verde: backend **67 test**, frontend **168 test**.
 La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE-019); restano Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
 
 ---
@@ -29,7 +29,7 @@ La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE
 
 - **Stack**: Java 21 · Spring Boot 4.1.0 · Maven · JPA/Hibernate · H2 file (`backend/data/scacchi`) · chesslib (JitPack).
 - **Package**: `ping`, `variant`, `study`, `training`, `stats`, `review`.
-- **Test**: 66 verdi (`mvnw.cmd test`). Copertura: CRUD varianti/studi, validazione legalità, round-trip albero, import bulk/upsert Lichess, sessioni, statistiche, SM-2.
+- **Test**: 67 verdi (`mvnw.cmd test`). Copertura: CRUD varianti/studi, validazione legalità, round-trip albero, import bulk/upsert Lichess, sessioni, statistiche, SM-2.
 - **Avvio locale**: `mvnw.cmd spring-boot:run` (PowerShell; impostare `MAVEN_OPTS=-Djavax.net.ssl.trustStoreType=Windows-ROOT`).
 
 ---
