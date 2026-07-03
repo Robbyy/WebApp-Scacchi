@@ -41,7 +41,7 @@
 | 010 | Pannello varianti nel dettaglio (3 col) | manutenzione | OpenSpec? da decidere | da fare |
 | 011 | Unifica creazione studio + import Lichess | manutenzione | OpenSpec? da decidere | da fare |
 | 013 | Menu contestuale editor | manutenzione | OpenSpec? da decidere | da fare |
-| 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | da fare |
+| 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | spezzata in change incrementali |
 | 017 | Menu "Impostazioni" + SM-2 | sviluppo | OpenSpec | da fare |
 | 014 | Parametri motore Stockfish (UCI) | sviluppo | OpenSpec | da fare |
 | 018 | Revisione di sicurezza | audit | a sé | da fare |
@@ -61,7 +61,7 @@
 **Fase 2 — sviluppi importanti** (solo dopo la Fase 1, con OpenSpec):
 
 5. **ISSUE-017** (hub Impostazioni + SM-2) → poi **ISSUE-014** (parametri motore, sezione del medesimo hub).
-6. **ISSUE-016** (mediogioco/finale) — il più ampio: spezzato in più change OpenSpec incrementali; ISSUE-021 ne ha già preparato lo scaffold di navigazione.
+6. **ISSUE-016** (mediogioco/finale) — il più ampio: spezzato in change OpenSpec incrementali (`phase-domain-model`, FEN custom, commenti mosse, sezione Mediogioco, sezione Finale, gioco vs motore); ISSUE-021 ne prepara lo scaffold di navigazione.
 
 ---
 
@@ -79,7 +79,7 @@
 
 ## Rischi principali
 
-1. **ISSUE-016** — scope ampio, modello dati nuovo; senza OpenSpec rischio di sovra-ingegnerizzazione. Spezzare in change piccoli.
+1. **ISSUE-016** — scope ampio, modello dati nuovo; senza OpenSpec rischio di sovra-ingegnerizzazione. Mitigazione: partire da `issue-016-phase-domain-model`, poi procedere con slice piccoli.
 2. **ISSUE-014** — incertezza sulle opzioni UCI realmente esposte dalla build asm.js. Mitigazione: audit prima della UI.
 3. **ISSUE-017** — refactor di `ReviewScheduler` da statico a parametrizzato tocca logica testata (66 test BE): rischio regressione SM-2.
 4. **ISSUE-004** — `AudioContext` browser-dipendente, difficile da coprire in headless.

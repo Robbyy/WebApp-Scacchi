@@ -7,8 +7,9 @@ registrazione sessioni, statistiche e spaced repetition SM-2.
 ## Stato
 
 Parte 1 e Parte 2 (P0–P19) completate e verificate in locale.
-Backend: 66 test verdi. Frontend: 168 test verdi.
+Backend: 67 test verdi. Frontend: 168 test verdi.
 Terza tornata (infrastruttura) avviata: **schema gestito da Liquibase** (ISSUE-019, fatto).
+OpenSpec è installato e lo scaffold `openspec/` è pronto per le change di maggiore impatto.
 Prossimi: Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
 
 ## Stack
@@ -26,6 +27,7 @@ Prossimi: Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
 backend/    Spring Boot (Maven) — API REST, persistenza JPA, validazione scacchistica
 frontend/   Angular — scacchiera, editor, training, import, statistiche, spaced repetition
 docs/       Documentazione operativa e archivio storico
+openspec/   Change/spec per evoluzioni medio-grandi (schema spec-driven)
 ```
 
 Backend e frontend sono **fisicamente separati**: build indipendenti, comunicazione solo via HTTP REST.
@@ -42,6 +44,7 @@ Ordine consigliato di lettura:
    - migrazioni schema (Liquibase) → [`docs/specs/liquibase.md`](docs/specs/liquibase.md)
    - setup e test → [`backend/README.md`](backend/README.md), [`frontend/README.md`](frontend/README.md)
    - checklist manuale → [`docs/checklist-e2e.md`](docs/checklist-e2e.md)
+   - change/spec → [`openspec/`](openspec/) (CLI `openspec`, comandi Claude `/opsx:*`)
 4. [`docs/adr/decisioni-tecniche.md`](docs/adr/decisioni-tecniche.md) — decisioni architetturali (ADR 0001–0013)
 5. [`docs/roadmap.md`](docs/roadmap.md) — cosa viene dopo · [`docs/backlog.md`](docs/backlog.md) — backlog (indice; classi in [`docs/backlog/`](docs/backlog/): bug, manutenzione evolutiva, sviluppi importanti)
 

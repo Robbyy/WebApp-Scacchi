@@ -12,7 +12,7 @@
 
 | ID | Titolo | Impatto | Stato pre-OpenSpec |
 |----|--------|:-------:|--------------------|
-| 016 | Tutte le fasi del gioco (mediogioco/finale) | alto | richiede OpenSpec |
+| 016 | Tutte le fasi del gioco (mediogioco/finale) | alto | spezzata in change OpenSpec incrementali |
 | 017 | Menu "Impostazioni" (hub) + parametrizzazione SM-2 | medio-alto | richiede OpenSpec |
 | 014 | Personalizzazione parametri motore Stockfish (UCI) | medio | richiede audit + OpenSpec |
 
@@ -42,6 +42,25 @@
 specifiche funzionali, contratti API, modello dati e criteri di accettazione.
 **Note:** è la visione strategica del prodotto; va spezzata in più change OpenSpec
 incrementali (non una singola sessione).
+
+### Scomposizione OpenSpec proposta
+
+`ISSUE-016` resta il contenitore strategico. L'implementazione va gestita con change
+OpenSpec piccole, ordinate e revisionabili:
+
+| Change OpenSpec | Obiettivo | Dipende da | Output atteso |
+|-----------------|-----------|------------|---------------|
+| `issue-016-phase-domain-model` | Decidere il modello di dominio per fasi del gioco: riuso/estensione di `Study`/`Variant` con campo `phase` oppure entità dedicate per studi/posizioni. | Liquibase ✅ | Decisione dati/API, confini tra aperture e sezioni posizionali, impatto su training/statistiche/review. |
+| `issue-016-navigation-scaffold` | Introdurre la navigazione Aperture/Mediogioco/Finale e i segnaposto, se **ISSUE-021** non è già stato completato come lavoro diretto. | Nessuna; preferito prima degli slice funzionali. | Route e topbar pronte senza nuovo modello dati. |
+| `issue-016-custom-starting-fen` | Consentire posizioni con FEN di partenza personalizzato, con UI e validazione backend/frontend. | `issue-016-phase-domain-model` | Creazione/modifica di una posizione da FEN custom valido. |
+| `issue-016-move-comments` | Aggiungere commenti e annotazioni alle mosse (`!`, `?`, `!!`, `??`, `!?`, `?!`). | `issue-016-phase-domain-model` | Estensione `MoveNode`, migration se necessaria, UI di lettura/modifica commenti. |
+| `issue-016-middlegame-section` | Rendere reale la sezione Mediogioco: studi e posizioni navigabili, senza training né SM-2. | Modello deciso + FEN custom minimo. | Vista lista/dettaglio/editor per posizioni di mediogioco. |
+| `issue-016-endgame-section` | Rendere reale la sezione Finale riusando il modello e le componenti definite per Mediogioco. | `issue-016-middlegame-section` o componenti condivise già estratte. | Vista lista/dettaglio/editor per posizioni di finale. |
+| `issue-016-play-position-vs-engine` | Avviare il gioco contro Stockfish dalla posizione salvata. | FEN custom + sezioni reali. | Integrazione con `/play?fen=...` o flusso equivalente, senza introdurre training/review. |
+
+La prima change da aprire è `issue-016-phase-domain-model`: deve produrre una proposta
+approvata prima di creare tabelle, endpoint o UI definitive. Gli slice successivi non
+devono ridecidere il dominio, ma applicare la decisione presa lì.
 
 ## ISSUE-017 — Menu "Impostazioni" (hub) + parametrizzazione SM-2
 **Why (problema):** non esiste un punto centrale di configurazione; i parametri
