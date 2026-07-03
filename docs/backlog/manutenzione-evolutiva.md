@@ -37,7 +37,9 @@ sezione attiva è evidenziata; stile coerente con la topbar.
 altre due aprono il segnaposto; sezione attiva evidenziata.
 **Relazione:** è il **primo slice navigazionale di ISSUE-016** (sviluppi importanti), ma
 indipendente e a basso costo; ISSUE-016 in seguito sostituisce i segnaposto con le sezioni
-vere. **Fuori perimetro:** posizioni, FEN custom, commenti, gioco vs motore (restano in 016).
+vere. **Fuori perimetro:** studi/capitoli reali di Mediogioco/Finale, editor manuale
+posizione/FEN tecnico, commenti, gioco vs motore e import Lichess per sezioni non Aperture
+(restano in 016).
 **Ambiguità:** route esatte; testo del segnaposto; pulsanti vs tab; posizione nel cluster
 topbar (suono/«?»/ingranaggio).
 

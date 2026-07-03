@@ -61,7 +61,7 @@
 **Fase 2 — sviluppi importanti** (solo dopo la Fase 1, con OpenSpec):
 
 5. **ISSUE-017** (hub Impostazioni + SM-2) → poi **ISSUE-014** (parametri motore, sezione del medesimo hub).
-6. **ISSUE-016** (mediogioco/finale) — il più ampio: spezzato in change OpenSpec incrementali (`phase-domain-model`, FEN custom, commenti mosse, sezione Mediogioco, sezione Finale, gioco vs motore); ISSUE-021 ne prepara lo scaffold di navigazione.
+6. **ISSUE-016** (mediogioco/finale) — il più ampio: spezzato in change OpenSpec incrementali (`phase-domain-model`, editor manuale posizione/FEN tecnico, commenti mosse, sezione Mediogioco, sezione Finale, gioco vs motore). Mediogioco e Finale riusano l'organizzazione studi/capitoli delle aperture, ma senza import Lichess; ISSUE-021 ne prepara lo scaffold di navigazione.
 
 ---
 
