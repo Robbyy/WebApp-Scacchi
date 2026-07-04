@@ -89,25 +89,27 @@ Base URL: `/api`. Per dettagli di request/response → controller e DTO nel codi
 | POST | `/api/variants` | Crea variante |
 | PUT | `/api/variants/{id}` | Aggiorna variante |
 | DELETE | `/api/variants/{id}` | Elimina variante |
-| GET | `/api/studies` | Lista studi (con conteggio varianti) |
+| GET | `/api/studies` | Lista studi (con conteggio varianti); filtro opzionale `?phase=OPENING\|MIDDLEGAME\|ENDGAME` |
 | GET | `/api/studies/{id}` | Dettaglio studio + varianti |
-| POST | `/api/studies` | Crea studio |
-| PUT | `/api/studies/{id}` | Aggiorna studio |
+| POST | `/api/studies` | Crea studio (campo opzionale `phase`, default `OPENING`) |
+| PUT | `/api/studies/{id}` | Aggiorna studio (nome/descrizione/colore; `phase` immutabile → 400 se diversa da quella persistita) |
 | DELETE | `/api/studies/{id}` | Elimina studio (cascata sulle varianti) |
-| POST | `/api/studies/{id}/variants` | Crea variante nello studio |
-| POST | `/api/studies/import` | Import bulk: studio + varianti in transazione |
-| POST | `/api/studies/import/lichess` | Import/upsert studio Lichess con riferimento remoto |
-| POST | `/api/training-sessions` | Registra sessione di allenamento conclusa |
+| POST | `/api/studies/{id}/variants` | Crea variante/posizione nello studio (fase ereditata dallo studio) |
+| POST | `/api/studies/import` | Import bulk: studio + varianti in transazione (sempre fase `OPENING`) |
+| POST | `/api/studies/import/lichess` | Import/upsert studio Lichess con riferimento remoto (sempre fase `OPENING`) |
+| POST | `/api/training-sessions` | Registra sessione di allenamento conclusa (solo varianti di studi `OPENING` o legacy senza studio → 400 altrimenti) |
 | GET | `/api/training-sessions` | Storico sessioni (filtri `?variantId` / `?studyId`) |
 | GET | `/api/training-sessions/{id}` | Dettaglio sessione con mosse |
-| GET | `/api/stats/variants/{id}` | Statistiche aggregata per variante |
-| GET | `/api/stats/studies/{id}` | Statistiche aggregate per studio |
+| GET | `/api/stats/variants/{id}` | Statistiche aggregata per variante (solo varianti di studi `OPENING` o legacy senza studio; `404` per variante inesistente o di studio non `OPENING`) |
+| GET | `/api/stats/studies/{id}` | Statistiche aggregate per studio (solo studi `OPENING`; `404` per studio inesistente o non `OPENING`) |
 | GET | `/api/reviews/due` | Varianti dovute per spaced repetition |
 | GET | `/api/reviews/variants/{id}` | Schedule SM-2 di una variante (204 se non ancora pianificata) |
 
 **Errore di validazione strutturato (400):** `{ field, ply, branchPath, message }`.
 
 Nota: lo spostamento di varianti tra studi (`PUT /api/variants/{id}/study`) è fuori dalla roadmap attuale.
+
+**Fasi di gioco (ISSUE-016):** ogni studio ha una `phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), scelta alla creazione e immutabile; i suoi elementi figli (`Variant`) ereditano la fase dallo studio. Import/sync Lichess, training e review SM-2 restano applicati solo alle Aperture. Vedi [ADR 0014](adr/decisioni-tecniche.md).
 
 ---
 
@@ -118,6 +120,7 @@ Per i campi esatti → entità JPA in `backend/src/main/java/com/scacchi/backend
 ```
 Study 1──N Variant
   Study:   id, name, description?, color (WHITE/BLACK/MIXED)?,
+           phase (OPENING/MIDDLEGAME/ENDGAME, immutabile dopo la creazione),
            createdAt, sourceProvider?, sourceStudyId?, sourceUrl?, lastImportedAt?
 
   Variant: id, name, color (WHITE/BLACK), moves (mainline JSON), tree (MoveNode JSON),
@@ -134,6 +137,7 @@ Variant 1──1 ReviewSchedule
 ```
 
 - `Study → Variant`: **delete a cascata** (eliminare uno studio elimina le sue varianti).
+- `Variant` non ha una propria `phase`: si deriva sempre dallo studio padre (`studyId` → `Study.phase`); le varianti legacy senza `studyId` sono trattate come `OPENING` (ISSUE-016).
 - `Variant → TrainingSession`: cascade su `TrainingMove`.
 - `MoveNode`: `{ san: string, children: MoveNode[] }` — `children[0]` è la mainline.
 
@@ -159,6 +163,7 @@ Le decisioni architetturali sono documentate in [`docs/adr/decisioni-tecniche.md
 - ADR 0009: Stockfish client-side
 - ADR 0010–0012: sessioni di allenamento, statistiche, SM-2 relearning
 - ADR 0013: migrazioni di schema con Liquibase (ISSUE-019)
+- ADR 0014: fase di gioco dello studio, `Study.phase` (ISSUE-016)
 
 Per il funzionamento dettagliato della ripetizione spaziata (parametri, formule, esempi, flusso) → [`docs/sm2.md`](sm2.md).
 Per le migrazioni di schema (baseline, convenzione changeset, decisioni) → [`docs/specs/liquibase.md`](specs/liquibase.md).

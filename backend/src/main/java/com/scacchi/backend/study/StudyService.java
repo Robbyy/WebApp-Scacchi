@@ -49,7 +49,15 @@ public class StudyService {
         entity.setName(request.name().trim());
         entity.setDescription(normalize(request.description()));
         entity.setColor(parseColor(request.color()));
+        entity.setPhase(parsePhase(request.phase()));
         return toDto(repository.save(entity), 0, null);
+    }
+
+    /** Studi di una fase (ISSUE-016), con solo il conteggio varianti (come {@link #findAll()}). */
+    public List<StudyDto> findAllByPhase(GamePhase phase) {
+        return repository.findByPhaseOrderByIdAsc(phase).stream()
+            .map(s -> toDto(s, (int) variantService.countByStudyId(s.getId()), null))
+            .toList();
     }
 
     /**
@@ -71,11 +79,13 @@ public class StudyService {
      */
     @Transactional
     public StudyDto importStudy(ImportStudyRequest request) {
-        validate(new CreateStudyRequest(request.name(), request.description(), request.color()));
+        validate(new CreateStudyRequest(request.name(), request.description(), request.color(), null));
         Study entity = new Study();
         entity.setName(request.name().trim());
         entity.setDescription(normalize(request.description()));
         entity.setColor(parseColor(request.color()));
+        // Import PGN in blocco (Prototipo 14): sempre Aperture (ISSUE-016).
+        entity.setPhase(GamePhase.OPENING);
         Study saved = repository.save(entity);
         for (CreateVariantRequest variant : request.variants()) {
             variantService.createInStudy(saved.getId(), variant);
@@ -108,7 +118,7 @@ public class StudyService {
             study.setSourceUrl(request.sourceUrl());
             study.setLastImportedAt(Instant.now());
         } else {
-            validate(new CreateStudyRequest(request.name(), request.description(), request.color()));
+            validate(new CreateStudyRequest(request.name(), request.description(), request.color(), null));
             study = new Study();
             study.setName(request.name().trim());
             study.setDescription(normalize(request.description()));
@@ -117,6 +127,8 @@ public class StudyService {
             study.setSourceStudyId(request.sourceStudyId());
             study.setSourceUrl(request.sourceUrl());
             study.setLastImportedAt(Instant.now());
+            // Import/sync Lichess (Prototipo 15): sempre Aperture (ISSUE-016).
+            study.setPhase(GamePhase.OPENING);
         }
         Study saved = repository.save(study);
         for (CreateVariantRequest variant : request.variants()) {
@@ -132,12 +144,28 @@ public class StudyService {
     public Optional<StudyDto> update(Long id, CreateStudyRequest request) {
         validate(request);
         return repository.findById(id).map(entity -> {
+            ensurePhaseUnchanged(entity, request.phase());
             entity.setName(request.name().trim());
             entity.setDescription(normalize(request.description()));
             entity.setColor(parseColor(request.color()));
             Study saved = repository.save(entity);
             return toDto(saved, (int) variantService.countByStudyId(saved.getId()), null);
         });
+    }
+
+    /**
+     * La fase è scelta alla creazione e non modificabile (ISSUE-016): se la richiesta
+     * di update ne indica una diversa da quella persistita, l'update viene rifiutato
+     * senza toccare nulla.
+     */
+    private static void ensurePhaseUnchanged(Study entity, String requestedPhase) {
+        if (requestedPhase == null || requestedPhase.isBlank()) {
+            return;
+        }
+        if (GamePhase.valueOf(requestedPhase) != entity.getPhase()) {
+            throw new InvalidStudyException(new ValidationError(
+                "phase", null, null, "La fase dello studio non può essere modificata dopo la creazione."));
+        }
     }
 
     /** Cancellazione a cascata: prima le varianti dello studio, poi lo studio stesso. */
@@ -166,6 +194,16 @@ public class StudyService {
                     "color", null, null, "Colore non valido: \"" + color + "\"."));
             }
         }
+        // La fase è opzionale (default OPENING in creazione), ma se presente deve essere valida.
+        String phase = request.phase();
+        if (phase != null && !phase.isBlank()) {
+            try {
+                GamePhase.valueOf(phase);
+            } catch (IllegalArgumentException e) {
+                throw new InvalidStudyException(new ValidationError(
+                    "phase", null, null, "Fase non valida: \"" + phase + "\"."));
+            }
+        }
     }
 
     private static StudyColor parseColor(String color) {
@@ -173,6 +211,14 @@ public class StudyService {
             return null;
         }
         return StudyColor.valueOf(color);
+    }
+
+    /** Fase richiesta in creazione, con default {@code OPENING} se assente (ISSUE-016). */
+    private static GamePhase parsePhase(String phase) {
+        if (phase == null || phase.isBlank()) {
+            return GamePhase.OPENING;
+        }
+        return GamePhase.valueOf(phase);
     }
 
     private static String normalize(String text) {
@@ -189,6 +235,7 @@ public class StudyService {
             s.getName(),
             s.getDescription(),
             s.getColor() == null ? null : s.getColor().name(),
+            s.getPhase() == null ? null : s.getPhase().name(),
             variantCount,
             variants,
             s.getSourceProvider(),

@@ -4,7 +4,9 @@ import { of } from 'rxjs';
 import { VariantDetail } from './variant-detail';
 import { VariantService } from '../core/variant.service';
 import { ReviewService } from '../core/review.service';
+import { StudyService } from '../core/study.service';
 import { Variant } from '../core/variant.model';
+import { Study } from '../core/study.model';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -33,13 +35,14 @@ const branched: Variant = {
   ],
 };
 
-function setup(v: Variant) {
+function setup(v: Variant, studyService: Partial<StudyService> = {}) {
   TestBed.configureTestingModule({
     imports: [VariantDetail],
     providers: [
       provideRouter([]),
       { provide: VariantService, useValue: { getVariant: () => of(v) } },
       { provide: ReviewService, useValue: { getForVariant: () => of(null) } },
+      { provide: StudyService, useValue: studyService },
       { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: String(v.id) }) } } },
     ],
   });
@@ -88,5 +91,28 @@ describe('VariantDetail', () => {
   it('orients the board for the black side', () => {
     const { cmp } = setup({ ...linear, color: 'BLACK' });
     expect(cmp.orientation()).toBe('black');
+  });
+
+  it('shows training/review/stats for a legacy variant without a study (ISSUE-016)', () => {
+    const { cmp } = setup(linear);
+    expect(cmp.isOpening()).toBe(true);
+  });
+
+  it('shows training/review/stats for a variant in an opening study', () => {
+    const study: Study = { id: 5, name: 'Repertorio', phase: 'OPENING', variantCount: 1 };
+    const { cmp } = setup(
+      { ...linear, studyId: 5 },
+      { getStudy: () => of(study) },
+    );
+    expect(cmp.isOpening()).toBe(true);
+  });
+
+  it('hides training/review/stats for a position in a middlegame study', () => {
+    const study: Study = { id: 6, name: 'Mediogioco', phase: 'MIDDLEGAME', variantCount: 1 };
+    const { cmp } = setup(
+      { ...linear, studyId: 6 },
+      { getStudy: () => of(study) },
+    );
+    expect(cmp.isOpening()).toBe(false);
   });
 });

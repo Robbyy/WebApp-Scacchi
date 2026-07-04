@@ -55,22 +55,24 @@
         >
       </header>
 
-      <a class="train-cta" routerLink="/variants/{{ v.id }}/train">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
-        Allena questa variante
-      </a>
+      @if (isOpening()) {
+        <a class="train-cta" routerLink="/variants/{{ v.id }}/train">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+          Allena questa variante
+        </a>
 
-      @if (review(); as r) {
-        <p class="review-hint" [class.review-hint--due]="r.due">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          @if (r.due) {
-            <span>Da ripetere — <a routerLink="/reviews">vai a Ripeti oggi</a></span>
-          } @else {
-            <span>Prossima ripetizione: <strong>{{ reviewDate() }}</strong> ({{ reviewLabel() }})</span>
-          }
-        </p>
+        @if (review(); as r) {
+          <p class="review-hint" [class.review-hint--due]="r.due">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            @if (r.due) {
+              <span>Da ripetere — <a routerLink="/reviews">vai a Ripeti oggi</a></span>
+            } @else {
+              <span>Prossima ripetizione: <strong>{{ reviewDate() }}</strong> ({{ reviewLabel() }})</span>
+            }
+          </p>
+        }
       }
 
       <div class="panel">
@@ -142,12 +144,14 @@
           </svg>
           Modifica variante
         </a>
-        <a class="edit-link" routerLink="/variants/{{ v.id }}/stats">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 20V10h3v10H4zm6.5 0V4h3v16h-3zM17 20v-7h3v7h-3z" />
-          </svg>
-          Statistiche
-        </a>
+        @if (isOpening()) {
+          <a class="edit-link" routerLink="/variants/{{ v.id }}/stats">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 20V10h3v10H4zm6.5 0V4h3v16h-3zM17 20v-7h3v7h-3z" />
+            </svg>
+            Statistiche
+          </a>
+        }
         <a class="back-link" [routerLink]="v.studyId ? ['/studies', v.studyId] : ['/']"
           >&#8592; {{ v.studyId ? 'Torna allo studio' : 'Studi' }}</a
         >

@@ -14,6 +14,7 @@ public record StudyDto(
     String name,
     String description,
     String color,            // "WHITE" | "BLACK" | "MIXED" | null
+    String phase,             // "OPENING" | "MIDDLEGAME" | "ENDGAME" (ISSUE-016)
     int variantCount,
     List<VariantDto> variants,
     String sourceProvider,   // es. "LICHESS" (Prototipo 15), null se locale

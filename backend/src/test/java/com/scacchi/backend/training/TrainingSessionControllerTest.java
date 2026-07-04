@@ -104,6 +104,44 @@ class TrainingSessionControllerTest {
             .andExpect(status().isNotFound());
     }
 
+    @Test
+    void rejectsTrainingForAMiddlegamePosition() throws Exception {
+        int variantId = createVariantInStudyWithPhase("MIDDLEGAME");
+        String body = """
+            {"variantId":%d,"result":"COMPLETED","mistakesCount":0,"moves":[]}""".formatted(variantId);
+        mockMvc.perform(post("/api/training-sessions").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("variantId"));
+    }
+
+    @Test
+    void rejectsTrainingForAnEndgamePosition() throws Exception {
+        int variantId = createVariantInStudyWithPhase("ENDGAME");
+        String body = """
+            {"variantId":%d,"result":"COMPLETED","mistakesCount":0,"moves":[]}""".formatted(variantId);
+        mockMvc.perform(post("/api/training-sessions").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("variantId"));
+    }
+
+    /** Crea uno studio della fase indicata con una variante agganciata, e ne restituisce l'id. */
+    private int createVariantInStudyWithPhase(String phase) throws Exception {
+        String studyBody = "{\"name\":\"Studio %s\",\"phase\":\"%s\"}".formatted(phase, phase);
+        MvcResult study = mockMvc.perform(
+                post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(studyBody))
+            .andExpect(status().isCreated())
+            .andReturn();
+        int studyId = JsonPath.read(study.getResponse().getContentAsString(), "$.id");
+
+        String variantBody = """
+            {"name":"Posizione","color":"WHITE","moves":["e4"]}""";
+        MvcResult variant = mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(variantBody))
+            .andExpect(status().isCreated())
+            .andReturn();
+        return JsonPath.read(variant.getResponse().getContentAsString(), "$.id");
+    }
+
     private int firstVariantId() throws Exception {
         MvcResult result = mockMvc.perform(get("/api/variants"))
             .andExpect(status().isOk())

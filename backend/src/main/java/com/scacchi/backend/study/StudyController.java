@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -34,9 +35,21 @@ public class StudyController {
         this.variantValidator = variantValidator;
     }
 
+    /**
+     * Elenco studi, opzionalmente filtrato per fase (ISSUE-016), in preparazione
+     * delle sezioni dedicate Aperture/Mediogioco/Finale.
+     */
     @GetMapping
-    public List<StudyDto> list() {
-        return service.findAll();
+    public List<StudyDto> list(@RequestParam(required = false) String phase) {
+        if (phase == null || phase.isBlank()) {
+            return service.findAll();
+        }
+        try {
+            return service.findAllByPhase(GamePhase.valueOf(phase));
+        } catch (IllegalArgumentException e) {
+            throw new InvalidStudyException(
+                new ValidationError("phase", null, null, "Fase non valida: \"" + phase + "\"."));
+        }
     }
 
     @GetMapping("/{id}")

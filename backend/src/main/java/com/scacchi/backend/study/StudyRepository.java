@@ -1,5 +1,6 @@
 package com.scacchi.backend.study;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -10,4 +11,7 @@ public interface StudyRepository extends JpaRepository<Study, Long> {
 
     /** Ritrova lo studio importato da una stessa origine remota (Prototipo 15, upsert). */
     Optional<Study> findBySourceProviderAndSourceStudyId(String sourceProvider, String sourceStudyId);
+
+    /** Studi di una fase (ISSUE-016), in preparazione delle sezioni Aperture/Mediogioco/Finale. */
+    List<Study> findByPhaseOrderByIdAsc(GamePhase phase);
 }

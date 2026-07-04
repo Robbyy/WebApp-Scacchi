@@ -11,7 +11,7 @@ import { ToastService } from '../core/toast.service';
 
 const v1: Variant = { id: 11, name: 'Italiana', color: 'WHITE', moves: ['e4', 'e5'], startingFen: '', studyId: 1 };
 const v2: Variant = { id: 12, name: 'Spagnola', color: 'WHITE', moves: ['e4'], startingFen: '', studyId: 1 };
-const study: Study = { id: 1, name: 'Repertorio', variantCount: 2, variants: [v1, v2] };
+const study: Study = { id: 1, name: 'Repertorio', phase: 'OPENING', variantCount: 2, variants: [v1, v2] };
 
 function setup(
   studyService: Partial<StudyService>,
@@ -42,6 +42,24 @@ describe('StudyDetail', () => {
     const { cmp } = setup({ getStudy: () => of(study) });
     expect(cmp.study()?.name).toBe('Repertorio');
     expect(cmp.variants().length).toBe(2);
+  });
+
+  it('shows the Lichess import and stats links for an opening study', () => {
+    const { fixture } = setup({ getStudy: () => of(study) });
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Importa da Lichess');
+    expect(text).toContain('Statistiche dello studio');
+  });
+
+  it('hides the Lichess import and stats links for a non-opening study (ISSUE-016)', () => {
+    const middlegameStudy: Study = { ...structuredClone(study), phase: 'MIDDLEGAME' };
+    const { fixture } = setup({ getStudy: () => of(middlegameStudy) });
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).not.toContain('Importa da Lichess');
+    expect(text).not.toContain('Statistiche dello studio');
+    // Le posizioni restano creabili manualmente (P16-016): "Nuova variante"/"Importa PGN" restano visibili.
+    expect(text).toContain('Nuova variante');
+    expect(text).toContain('Importa PGN');
   });
 
   it('removes a variant after confirmation and updates the count', async () => {

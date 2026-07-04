@@ -1,0 +1,18 @@
+# ISSUE-016: fase di gioco dello studio (OPENING/MIDDLEGAME/ENDGAME).
+# addColumn con defaultValue valorizza anche le righe esistenti (studi già presenti
+# diventano OPENING), poi la colonna resta NOT NULL per gli inserimenti successivi.
+databaseChangeLog:
+  - changeSet:
+      id: 0003-study-phase
+      author: scacchi
+      comment: Aggiunge la fase di gioco allo studio; gli studi esistenti diventano OPENING.
+      changes:
+        - addColumn:
+            tableName: study
+            columns:
+              - column:
+                  name: phase
+                  type: VARCHAR(16)
+                  defaultValue: OPENING
+                  constraints:
+                    nullable: false

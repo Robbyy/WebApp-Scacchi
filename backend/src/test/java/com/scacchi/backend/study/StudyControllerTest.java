@@ -29,9 +29,11 @@ class StudyControllerTest {
     @Test
     void listReturnsTheDefaultStudyWithItsSeededVariants() throws Exception {
         // Il seed crea lo studio di default "Repertorio" e vi aggancia le 2 varianti seed.
+        // ISSUE-016: gli studi esistenti/legacy sono trattati come OPENING.
         mockMvc.perform(get("/api/studies"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].name").value("Repertorio"))
+            .andExpect(jsonPath("$[0].phase").value("OPENING"))
             .andExpect(jsonPath("$[0].variantCount").value(2))
             .andExpect(jsonPath("$[0].variants").doesNotExist());
     }
@@ -63,8 +65,53 @@ class StudyControllerTest {
             .andExpect(jsonPath("$.name").value("Siciliana"))
             .andExpect(jsonPath("$.description").value("Repertorio col Nero"))
             .andExpect(jsonPath("$.color").value("BLACK"))
+            // ISSUE-016: fase assente nel payload -> default OPENING.
+            .andExpect(jsonPath("$.phase").value("OPENING"))
             .andExpect(jsonPath("$.variantCount").value(0))
             .andExpect(jsonPath("$.createdAt").isNotEmpty());
+    }
+
+    @Test
+    void createAcceptsAnExplicitNonOpeningPhase() throws Exception {
+        String body = """
+            {"name":"Finali di torre","phase":"ENDGAME"}""";
+        mockMvc.perform(post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("Finali di torre"))
+            .andExpect(jsonPath("$.phase").value("ENDGAME"));
+    }
+
+    @Test
+    void createRejectsAnInvalidPhase() throws Exception {
+        String body = """
+            {"name":"Strana fase","phase":"BOH"}""";
+        mockMvc.perform(post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("phase"));
+    }
+
+    @Test
+    void listCanBeFilteredByPhase() throws Exception {
+        createStudyWithPhase("Mediogioco tipico", "MIDDLEGAME");
+        createStudyWithPhase("Un altro di finale", "ENDGAME");
+
+        mockMvc.perform(get("/api/studies").param("phase", "MIDDLEGAME"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].name").value("Mediogioco tipico"))
+            .andExpect(jsonPath("$[0].phase").value("MIDDLEGAME"));
+
+        // Lo studio seed di default resta filtrabile come OPENING.
+        mockMvc.perform(get("/api/studies").param("phase", "OPENING"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].name").value("Repertorio"));
+    }
+
+    @Test
+    void listRejectsAnInvalidPhaseFilter() throws Exception {
+        mockMvc.perform(get("/api/studies").param("phase", "BOH"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("phase"));
     }
 
     @Test
@@ -99,6 +146,46 @@ class StudyControllerTest {
             .andExpect(jsonPath("$.name").value("Rinominato"))
             .andExpect(jsonPath("$.description").value("aggiornata"))
             .andExpect(jsonPath("$.color").value("MIXED"));
+    }
+
+    @Test
+    void updateWithoutPhaseKeepsTheExistingPhase() throws Exception {
+        int id = createStudyWithPhase("Studio finali", "ENDGAME");
+
+        String update = """
+            {"name":"Studio finali rinominato"}""";
+        mockMvc.perform(put("/api/studies/" + id).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Studio finali rinominato"))
+            .andExpect(jsonPath("$.phase").value("ENDGAME"));
+    }
+
+    @Test
+    void updateAcceptingTheSamePhaseSucceeds() throws Exception {
+        int id = createStudyWithPhase("Studio mediogioco", "MIDDLEGAME");
+
+        String update = """
+            {"name":"Rinominato","phase":"MIDDLEGAME"}""";
+        mockMvc.perform(put("/api/studies/" + id).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.phase").value("MIDDLEGAME"));
+    }
+
+    @Test
+    void updateRejectsChangingThePhase() throws Exception {
+        int id = createStudyWithPhase("Studio apertura", "OPENING");
+
+        String update = """
+            {"name":"Provo a cambiare fase","phase":"MIDDLEGAME"}""";
+        mockMvc.perform(put("/api/studies/" + id).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("phase"));
+
+        // La fase persistita non è cambiata.
+        mockMvc.perform(get("/api/studies/" + id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.phase").value("OPENING"))
+            .andExpect(jsonPath("$.name").value("Studio apertura"));
     }
 
     @Test
@@ -161,6 +248,8 @@ class StudyControllerTest {
         mockMvc.perform(post("/api/studies/import").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.name").value("Repertorio Lichess"))
+            // ISSUE-016: l'import in blocco crea sempre uno studio OPENING.
+            .andExpect(jsonPath("$.phase").value("OPENING"))
             .andExpect(jsonPath("$.variantCount").value(2))
             .andExpect(jsonPath("$.variants.length()").value(2))
             .andExpect(jsonPath("$.variants[0].name").value("Cap. 1"))
@@ -203,6 +292,8 @@ class StudyControllerTest {
         mockMvc.perform(post("/api/studies/import/lichess").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.name").value("Da Lichess"))
+            // ISSUE-016: import/sync Lichess crea sempre uno studio OPENING.
+            .andExpect(jsonPath("$.phase").value("OPENING"))
             .andExpect(jsonPath("$.sourceProvider").value("LICHESS"))
             .andExpect(jsonPath("$.sourceStudyId").value("abcd1234"))
             .andExpect(jsonPath("$.lastImportedAt").isNotEmpty())
@@ -232,6 +323,7 @@ class StudyControllerTest {
         mockMvc.perform(post("/api/studies/import/lichess").contentType(MediaType.APPLICATION_JSON).content(second))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(id))
+            .andExpect(jsonPath("$.phase").value("OPENING"))
             .andExpect(jsonPath("$.variantCount").value(1))
             .andExpect(jsonPath("$.variants[0].name").value("C"));
 
@@ -345,5 +437,10 @@ class StudyControllerTest {
             .andExpect(status().isCreated())
             .andReturn();
         return JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+    }
+
+    private int createStudyWithPhase(String name, String phase) throws Exception {
+        String body = "{\"name\":\"%s\",\"phase\":\"%s\"}".formatted(name, phase);
+        return createStudy(body);
     }
 }

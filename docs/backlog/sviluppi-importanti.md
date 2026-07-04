@@ -80,7 +80,7 @@ OpenSpec piccole, ordinate e revisionabili:
 
 | Change OpenSpec | Obiettivo | Dipende da | Output atteso |
 |-----------------|-----------|------------|---------------|
-| `issue-016-phase-domain-model` | Decidere il modello di dominio per fasi del gioco: riuso/estensione di `Study`/`Variant` con campo `phase` oppure entità dedicate per studi/posizioni. | Liquibase ✅ | Decisione dati/API, organizzazione studio -> capitoli/posizioni, confini tra aperture e sezioni posizionali, import Lichess limitato alle aperture, impatto su training/statistiche/review. |
+| `issue-016-phase-domain-model` ✅ | Decidere il modello di dominio per fasi del gioco: riuso/estensione di `Study`/`Variant` con campo `phase` oppure entità dedicate per studi/posizioni. | Liquibase ✅ | Decisione dati/API, organizzazione studio -> capitoli/posizioni, confini tra aperture e sezioni posizionali, import Lichess limitato alle aperture, impatto su training/statistiche/review. |
 | `issue-016-navigation-scaffold` | Introdurre la navigazione Aperture/Mediogioco/Finale e i segnaposto, se **ISSUE-021** non è già stato completato come lavoro diretto. | Nessuna; preferito prima degli slice funzionali. | Route e topbar pronte senza nuovo modello dati. |
 | `issue-016-custom-starting-fen` | Consentire la creazione manuale della posizione iniziale tramite editor scacchiera; il FEN è il formato tecnico salvato/validato, non il flusso primario. | `issue-016-phase-domain-model` | Creazione/modifica da editor scacchiera: palette pezzi a destra, selezione pezzo e click sulla casa in stile Fritz/ChessBase, cursore con miniatura del pezzo solo dentro la scacchiera quando un pezzo è selezionato, sostituzione se la casa contiene un pezzo diverso, rimozione se contiene lo stesso pezzo dello stesso colore, spostamento/rimozione pezzi, pulizia scacchiera, colore al tratto, orientamento bianco/nero, apertura automatica dell'editor alla creazione di una posizione Mediogioco/Finale, salvataggio come FEN valido solo quando la posizione è legalmente possibile; salvataggio disabilitato per posizioni impossibili e validazione confermata lato backend. Copia/incolla FEN secondario; esclusi ASCII, Bianco/Nero, Re/Donna, aiuto dedicato e numero mossa UI. |
 | `issue-016-move-comments` | Aggiungere commenti e annotazioni alle mosse (`!`, `?`, `!!`, `??`, `!?`, `?!`). | `issue-016-phase-domain-model` | Estensione `MoveNode`, migration se necessaria, UI di lettura/modifica commenti. |
@@ -91,6 +91,8 @@ OpenSpec piccole, ordinate e revisionabili:
 La prima change da aprire è `issue-016-phase-domain-model`: deve produrre una proposta
 approvata prima di creare tabelle, endpoint o UI definitive. Gli slice successivi non
 devono ridecidere il dominio, ma applicare la decisione presa lì.
+
+**`issue-016-phase-domain-model` implementata (2026-07-04):** `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`, immutabile), `Variant` riusata come elemento figlio comune, import/sync Lichess e training/review/statistiche limitati alle Aperture. Decisione e alternative in [ADR 0014](../adr/decisioni-tecniche.md). Gli slice successivi (`issue-016-custom-starting-fen`, `issue-016-move-comments`, `issue-016-middlegame-section`, `issue-016-endgame-section`, `issue-016-play-position-vs-engine`) restano da aprire.
 
 ## ISSUE-017 — Menu "Impostazioni" (hub) + parametrizzazione SM-2
 **Why (problema):** non esiste un punto centrale di configurazione; i parametri

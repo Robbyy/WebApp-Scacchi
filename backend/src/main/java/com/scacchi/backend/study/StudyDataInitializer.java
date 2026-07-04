@@ -48,6 +48,8 @@ public class StudyDataInitializer implements CommandLineRunner {
         study.setName(DEFAULT_STUDY_NAME);
         study.setDescription("Studio predefinito con le varianti esistenti.");
         study.setColor(StudyColor.MIXED);
+        // Varianti legacy senza studio: trattate come Aperture (ISSUE-016).
+        study.setPhase(GamePhase.OPENING);
         return studies.save(study);
     }
 }

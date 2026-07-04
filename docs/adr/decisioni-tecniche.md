@@ -610,3 +610,29 @@ Lo schema del database è gestito da **Liquibase**, non più da Hibernate `ddl-a
 - Schema ripetibile e versionato su ogni postazione; baseline pronta per la migrazione a PostgreSQL.
 - Ogni modifica di schema è un nuovo changeset (`NNNN-*.yaml`), mai un ALTER manuale o la modifica di un changeset rilasciato. Convenzione in [`backend/README.md`](../../backend/README.md).
 - Verifica (2026-06-29): 66 test backend verdi (baseline eseguito su H2 in-memory); avvio dev sul DB committato → log `MARK_RAN`, nessuna ricreazione, 11 studi intatti.
+
+---
+
+## 0014 — Fase di gioco dello studio: `Study.phase` invece di entità dedicate (ISSUE-016)
+
+**Data:** 2026-07-04 · **Stato:** Accettata e implementata · **Contesto:** prima decisione di dominio della terza tornata per estendere l'app oltre le Aperture a Mediogioco e Finale. Dettagli completi in `openspec/changes/issue-016-phase-domain-model/design.md`.
+
+### Decisione
+Si introduce un'enum di dominio `GamePhase` (`OPENING`, `MIDDLEGAME`, `ENDGAME`) e un campo `phase` su `Study`, scelto alla creazione e **immutabile**. `Variant` resta l'elemento figlio comune: in uno studio `OPENING` è una variante/capitolo allenabile, in uno studio `MIDDLEGAME`/`ENDGAME` è una posizione creata manualmente. La fase dell'elemento figlio si **deriva sempre dallo studio padre** (nessuna denormalizzazione su `Variant`). Le varianti legacy senza `studyId` sono trattate come `OPENING`. Import/sync Lichess producono sempre studi `OPENING`; training, review SM-2 e statistiche restano applicati solo alle Aperture (rifiuto lato backend per le altre fasi, non solo nascondimento in UI).
+
+### Alternative valutate
+- **`phase` su `Variant` anziché su `Study`:** scartata — permetterebbe studi con fasi miste, difficili da spiegare e da validare a ogni inserimento.
+- **Entità dedicate (`MiddlegameStudy`, `EndgameStudy`, `Position`):** scartate per ora — duplicherebbero CRUD, API, UI e test pur avendo una struttura quasi identica a `Study`/`Variant`; rivalutabile se Mediogioco/Finale svilupperanno esigenze realmente divergenti.
+- **Tre tabelle separate per fase:** scartata — aumenta il costo di evoluzione e ostacola il riuso dei componenti comuni.
+- **Fase modificabile dopo la creazione:** scartata — cambiare fase altera la semantica di import/training/review/statistiche; una regola immutabile evita casi limite non necessari ora.
+
+### Note di implementazione
+- Migration Liquibase additiva `changes/0003-study-phase.yaml`: colonna `phase VARCHAR(16) NOT NULL DEFAULT 'OPENING'`, che valorizza anche le righe esistenti.
+- `StudyService` rifiuta la modifica della fase in update (`InvalidStudyException`, campo `phase`) e forza `OPENING` nei flussi di import/sync Lichess.
+- `TrainingSessionService` rifiuta la creazione di sessioni per varianti di studi non `OPENING`; `StatsController` risponde `404` sia per le statistiche di studio (`/api/stats/studies/{id}`) sia per quelle di variante (`/api/stats/variants/{id}`) quando lo studio non è `OPENING` (non presentate come statistiche di posizione).
+- Frontend: `Study.phase` tipizzato (`GamePhase`), entrypoint di import Lichess/training/review/statistiche nascosti quando la fase non è `OPENING`; creazione/modifica di varianti resta invece disponibile in ogni fase (è il meccanismo con cui si creano le posizioni).
+
+### Conseguenze
+- Modello unico e minimale per Aperture/Mediogioco/Finale, pronto per le change successive (`issue-016-custom-starting-fen`, `issue-016-middlegame-section`, `issue-016-endgame-section`, `issue-016-play-position-vs-engine`) senza anticiparne l'implementazione.
+- Un campo `phase` solo su `Study` richiede risolvere lo studio padre per sapere se una variante è allenabile: accettato perché i flussi critici (`TrainingSessionService`, `StatsService`, viste frontend) lo risolvono già o possono farlo con una query in più.
+- Verifica (2026-07-04): 83 test backend e 174 test frontend verdi.

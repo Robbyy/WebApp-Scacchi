@@ -8,8 +8,8 @@ import { ReviewService } from '../core/review.service';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
 
-const s1: Study = { id: 1, name: 'Repertorio', variantCount: 2 };
-const s2: Study = { id: 2, name: 'Siciliana', color: 'BLACK', variantCount: 0 };
+const s1: Study = { id: 1, name: 'Repertorio', phase: 'OPENING', variantCount: 2 };
+const s2: Study = { id: 2, name: 'Siciliana', color: 'BLACK', phase: 'OPENING', variantCount: 0 };
 
 function setup(service: Partial<StudyService>, confirmResult = true) {
   TestBed.configureTestingModule({
@@ -36,7 +36,7 @@ describe('StudyList', () => {
 
   it('creates a study and appends it to the list', () => {
     let captured: unknown = null;
-    const created: Study = { id: 9, name: 'Nuovo', color: 'WHITE', variantCount: 0 };
+    const created: Study = { id: 9, name: 'Nuovo', color: 'WHITE', phase: 'OPENING', variantCount: 0 };
     const { cmp } = setup({
       getStudies: () => of([s1]),
       createStudy: (req: unknown) => {

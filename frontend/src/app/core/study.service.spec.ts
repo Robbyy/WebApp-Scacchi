@@ -23,7 +23,7 @@ describe('StudyService', () => {
 
   it('lists studies via GET /api/studies', () => {
     const studies: Study[] = [
-      { id: 1, name: 'Repertorio', variantCount: 2 },
+      { id: 1, name: 'Repertorio', phase: 'OPENING', variantCount: 2 },
     ];
     let received: Study[] | undefined;
     service.getStudies().subscribe((s) => (received = s));
@@ -49,7 +49,16 @@ describe('StudyService', () => {
     const req = httpMock.expectOne('/api/studies');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ name: 'Nuovo', color: 'WHITE' });
-    req.flush({ id: 9, name: 'Nuovo', color: 'WHITE', variantCount: 0 });
+    req.flush({ id: 9, name: 'Nuovo', color: 'WHITE', phase: 'OPENING', variantCount: 0 });
+  });
+
+  it('creates a non-opening study with an explicit phase (ISSUE-016)', () => {
+    let received: Study | undefined;
+    service.createStudy({ name: 'Finali di torre', phase: 'ENDGAME' }).subscribe((s) => (received = s));
+    const req = httpMock.expectOne('/api/studies');
+    expect(req.request.body).toEqual({ name: 'Finali di torre', phase: 'ENDGAME' });
+    req.flush({ id: 10, name: 'Finali di torre', phase: 'ENDGAME', variantCount: 0 });
+    expect(received?.phase).toBe('ENDGAME');
   });
 
   it('updates a study via PUT /api/studies/:id', () => {

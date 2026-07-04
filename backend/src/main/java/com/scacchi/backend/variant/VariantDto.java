@@ -8,6 +8,12 @@ import java.util.List;
  * {@code tree}; quest'ultimo contiene l'intero albero con le sotto-varianti.
  * I campi {@code sourcePgn} e {@code createdAt} sono predisposti per evoluzioni
  * future e possono essere null.
+ *
+ * <p><b>Fase (ISSUE-016):</b> {@code Variant} non ha un proprio campo fase. La fase
+ * (Apertura/Mediogioco/Finale) si deriva sempre dallo studio padre ({@code studyId} →
+ * {@code Study.phase}): in uno studio {@code OPENING} l'elemento è una variante/capitolo
+ * allenabile, in uno studio {@code MIDDLEGAME}/{@code ENDGAME} è una posizione creata
+ * manualmente. Le varianti legacy senza {@code studyId} sono trattate come {@code OPENING}.
  */
 public record VariantDto(
     Long id,

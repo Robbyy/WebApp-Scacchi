@@ -1,6 +1,6 @@
 # Stato corrente — WebApp Scacchi
 
-> Aggiornato al: **2026-07-03** (fine Parte 2, P0–P19; + ISSUE-019 Liquibase).
+> Aggiornato al: **2026-07-04** (fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi).
 > Non è un diario cronologico. La storia per-prototipo è in `docs/archive/stato-avanzamento-2026-06-28.md` e nel git log.
 
 ---
@@ -8,8 +8,9 @@
 ## Sintesi
 
 La webapp è funzionante in locale. **Parte 1 (P0–P6) e Parte 2 (P7–P19) completate e verificate.**
-Suite automatica verde: backend **67 test**, frontend **168 test**.
+Suite automatica verde: backend **83 test**, frontend **174 test**.
 La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE-019); restano Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
+In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre le Aperture: **ISSUE-016 (`issue-016-phase-domain-model`)** introduce `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), immutabile dopo la creazione — vedi [ADR 0014](adr/decisioni-tecniche.md).
 
 ---
 
@@ -22,6 +23,7 @@ La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE
 - **Motore Stockfish client-side**: toggle nel dettaglio/editor, barra valutazione, «Gioca contro il computer» in nuova tab. Mai disponibile in allenamento.
 - **Statistiche**: aggregazioni per variante e studio (allenamenti, completati, precisione %, mosse più sbagliate).
 - **Spaced repetition SM-2**: scheduling dopo ogni allenamento, vista «Ripeti oggi», indicatore prossima ripetizione nel dettaglio variante.
+- **Modello a fasi di gioco (ISSUE-016)**: ogni studio ha una `phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), scelta alla creazione e immutabile. `Variant` resta l'elemento figlio comune (variante/capitolo in `OPENING`, posizione creata manualmente in `MIDDLEGAME`/`ENDGAME`). Import/sync Lichess, training, review SM-2 e statistiche restano applicati solo alle Aperture; per le altre fasi il backend rifiuta la richiesta (non solo nascondimento in UI).
 
 ---
 
@@ -29,7 +31,7 @@ La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE
 
 - **Stack**: Java 21 · Spring Boot 4.1.0 · Maven · JPA/Hibernate · H2 file (`backend/data/scacchi`) · chesslib (JitPack).
 - **Package**: `ping`, `variant`, `study`, `training`, `stats`, `review`.
-- **Test**: 67 verdi (`mvnw.cmd test`). Copertura: CRUD varianti/studi, validazione legalità, round-trip albero, import bulk/upsert Lichess, sessioni, statistiche, SM-2.
+- **Test**: 83 verdi (`mvnw.cmd test`). Copertura: CRUD varianti/studi, validazione legalità, round-trip albero, import bulk/upsert Lichess, sessioni, statistiche, SM-2, fasi di gioco (ISSUE-016).
 - **Avvio locale**: `mvnw.cmd spring-boot:run` (PowerShell; impostare `MAVEN_OPTS=-Djavax.net.ssl.trustStoreType=Windows-ROOT`).
 
 ---
@@ -39,7 +41,7 @@ La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE
 - **Stack**: Angular 22 · TypeScript · Vitest · componenti standalone · signals · OnPush · chess.js · Stockfish asm.js.
 - **Aree**: `chessboard`, `variants`, `studies`, `stats`, `reviews`, `play`, `core`.
 - **Routing**: `/` → lista studi, `/studies/:id` → dettaglio studio, `/variants/:id` → dettaglio variante, `/variants/:id/training`, `/variants/:id/stats`, `/studies/:id/stats`, `/reviews`, `/play`.
-- **Test**: 168 verdi (`npm test -- --watch=false`, Vitest headless).
+- **Test**: 174 verdi (`npm test -- --watch=false`, Vitest headless).
 - **Avvio locale**: `npm start` (frontend su `http://localhost:4200`, con proxy verso `http://localhost:8080`).
 
 ---
@@ -67,6 +69,7 @@ Nessun bug bloccante attivo. **Policy DB**: finché non si migra a Supabase, il 
 | **Stockfish mai in allenamento** | Vincolo costruttivo: `variant-training` non importa `StockfishService` né `EvalBar`. Non indebolire questa separazione. |
 | **`userId` inattivo** | Predisposto nullable su `TrainingSession` e `ReviewSchedule`. Inattivo finché non arriva Supabase Auth. |
 | **Responsive scacchiera** | Board fissa a 720px tra ~800–1280px: il pannello scende sotto la piega su laptop. Proposta UX in archivio (planning §17), da validare prima di modificare. |
+| **`Study.phase` immutabile** | Scelta alla creazione, non modificabile (ISSUE-016): un update con una `phase` diversa da quella persistita viene rifiutato (400). `GET /api/stats/studies/{id}` e `GET /api/stats/variants/{id}` rispondono `404` per studi/varianti non `OPENING` (le statistiche di training non vanno presentate come statistiche di posizione). |
 
 ---
 
@@ -80,6 +83,8 @@ Nessun bug bloccante attivo. **Policy DB**: finché non si migra a Supabase, il 
 - Spostamento varianti tra studi.
 - Sync Lichess periodica.
 - Runner E2E browser (Playwright/Cypress) — rinviato alla terza tornata.
+- Editor manuale di posizione e input/UI per FEN custom (Mediogioco/Finale) — prossima change `issue-016-custom-starting-fen`.
+- Viste/sezioni complete Mediogioco e Finale, commenti alle mosse, gioco contro il motore da una posizione salvata, tag/categorie — change successive a ISSUE-016 (vedi `docs/roadmap.md`).
 
 ---
 

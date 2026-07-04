@@ -93,6 +93,66 @@ class StatsControllerTest {
             .andExpect(jsonPath("$.variants[0].totalMistakes").value(3));
     }
 
+    @Test
+    void variantStatsReturns404ForAMissingVariant() throws Exception {
+        mockMvc.perform(get("/api/stats/variants/999999"))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void variantStatsReturns404ForAMiddlegamePosition() throws Exception {
+        int variantId = createVariantInStudyWithPhase("MIDDLEGAME");
+        mockMvc.perform(get("/api/stats/variants/" + variantId))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void variantStatsReturns404ForAnEndgamePosition() throws Exception {
+        int variantId = createVariantInStudyWithPhase("ENDGAME");
+        mockMvc.perform(get("/api/stats/variants/" + variantId))
+            .andExpect(status().isNotFound());
+    }
+
+    /** Crea uno studio della fase indicata con una variante agganciata, e ne restituisce l'id. */
+    private int createVariantInStudyWithPhase(String phase) throws Exception {
+        String studyBody = "{\"name\":\"Studio %s\",\"phase\":\"%s\"}".formatted(phase, phase);
+        MvcResult study = mockMvc.perform(
+                post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(studyBody))
+            .andExpect(status().isCreated())
+            .andReturn();
+        int studyId = JsonPath.read(study.getResponse().getContentAsString(), "$.id");
+
+        String variantBody = """
+            {"name":"Posizione","color":"WHITE","moves":["e4"]}""";
+        MvcResult variant = mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(variantBody))
+            .andExpect(status().isCreated())
+            .andReturn();
+        return JsonPath.read(variant.getResponse().getContentAsString(), "$.id");
+    }
+
+    @Test
+    void studyStatsReturns404ForANonOpeningStudy() throws Exception {
+        String studyBody = """
+            {"name":"Studio mediogioco","phase":"MIDDLEGAME"}""";
+        MvcResult study = mockMvc.perform(
+                post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(studyBody))
+            .andExpect(status().isCreated())
+            .andReturn();
+        int studyId = JsonPath.read(study.getResponse().getContentAsString(), "$.id");
+
+        // ISSUE-016: le statistiche di training non sono presentate come statistiche
+        // di posizione per studi non OPENING.
+        mockMvc.perform(get("/api/stats/studies/" + studyId))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void studyStatsReturns404ForAMissingStudy() throws Exception {
+        mockMvc.perform(get("/api/stats/studies/999999"))
+            .andExpect(status().isNotFound());
+    }
+
     private int firstVariantId() throws Exception {
         MvcResult result = mockMvc.perform(get("/api/variants")).andReturn();
         return JsonPath.read(result.getResponse().getContentAsString(), "$[0].id");

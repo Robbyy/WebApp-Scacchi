@@ -15,6 +15,7 @@ import { VariantService } from '../core/variant.service';
 import { MoveSoundService } from '../core/move-sound.service';
 import { StockfishService } from '../core/stockfish.service';
 import { ReviewService } from '../core/review.service';
+import { StudyService } from '../core/study.service';
 import { MoveNode, Variant } from '../core/variant.model';
 import { ReviewSchedule } from '../core/review.model';
 import { formatReviewDate, reviewLabel } from '../reviews/review-format';
@@ -40,6 +41,7 @@ export class VariantDetail implements OnDestroy {
   private readonly moveSound = inject(MoveSoundService);
   private readonly stockfish = inject(StockfishService);
   private readonly reviews = inject(ReviewService);
+  private readonly studyService = inject(StudyService);
 
   /** Stato del motore Stockfish (Prototipo 16): solo aiuto allo studio, mai in allenamento. */
   protected readonly engineOn = signal(false);
@@ -50,6 +52,13 @@ export class VariantDetail implements OnDestroy {
 
   protected readonly variant = signal<Variant | null>(null);
   protected readonly error = signal<string | null>(null);
+  /**
+   * La variante appartiene a uno studio OPENING (o è legacy, senza studio)? (ISSUE-016)
+   * Determina se training, review e statistiche vanno mostrati: per le posizioni di
+   * Mediogioco/Finale non si allena e non si ripete con SM-2. Default true finché la
+   * fase dello studio non è stata risolta (evita un lampeggio dei controlli).
+   */
+  protected readonly isOpening = signal(true);
   /** Schedule di ripetizione della variante (P19), null se mai allenata. */
   protected readonly review = signal<ReviewSchedule | null>(null);
   protected readonly reviewLabel = computed(() => {
@@ -89,7 +98,16 @@ export class VariantDetail implements OnDestroy {
   constructor() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.service.getVariant(id).subscribe({
-      next: (v) => this.variant.set(v),
+      next: (v) => {
+        this.variant.set(v);
+        if (v.studyId != null) {
+          // Fase derivata dallo studio padre (ISSUE-016): niente denormalizzazione su Variant.
+          this.studyService.getStudy(v.studyId).subscribe({
+            next: (s) => this.isOpening.set(s.phase === 'OPENING'),
+            error: () => this.isOpening.set(true),
+          });
+        }
+      },
       error: () => this.error.set('Variante non trovata.'),
     });
     // Schedule di ripetizione (P19): best-effort, l'assenza non è un errore.

@@ -94,7 +94,7 @@ describe('LichessImport', () => {
       fetchStudyPgn: () => of(STUDY_PGN),
     }, {
       getStudies: () => of([]),
-      importLichess: (req: unknown) => { captured = req; return of({ id: 42, name: 'Repertorio', variantCount: 2 }); },
+      importLichess: (req: unknown) => { captured = req; return of({ id: 42, name: 'Repertorio', phase: 'OPENING', variantCount: 2 }); },
     });
     const router = TestBed.inject(Router);
     let navTarget: unknown[] | null = null;
@@ -115,7 +115,7 @@ describe('LichessImport', () => {
 
   it('flags an already-imported study as an update (no duplicate)', () => {
     const existing = {
-      id: 9, name: 'Mio Repertorio', variantCount: 2,
+      id: 9, name: 'Mio Repertorio', phase: 'OPENING' as const, variantCount: 2,
       sourceProvider: 'LICHESS', sourceStudyId: 'OR3CU5Je',
     };
     let captured: any = null;

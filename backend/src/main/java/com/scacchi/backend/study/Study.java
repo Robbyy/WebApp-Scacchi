@@ -36,6 +36,15 @@ public class Study {
     private StudyColor color;
 
     /**
+     * Fase di gioco dello studio (ISSUE-016): {@code OPENING}, {@code MIDDLEGAME} o
+     * {@code ENDGAME}. Scelta alla creazione e immutabile (vedi {@code StudyService}).
+     * Tutti gli elementi figli ({@code Variant}) ereditano questa fase dallo studio.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private GamePhase phase;
+
+    /**
      * Provenienza remota (Prototipo 15): per gli studi importati da Lichess
      * {@code sourceProvider="LICHESS"} e {@code sourceStudyId} è l'id Lichess.
      * La coppia (provider, sourceStudyId) identifica univocamente l'origine ed
@@ -89,6 +98,14 @@ public class Study {
 
     public void setColor(StudyColor color) {
         this.color = color;
+    }
+
+    public GamePhase getPhase() {
+        return phase;
+    }
+
+    public void setPhase(GamePhase phase) {
+        this.phase = phase;
     }
 
     public String getSourceProvider() {

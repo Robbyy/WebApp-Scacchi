@@ -1,6 +1,9 @@
 package com.scacchi.backend.training;
 
 import com.scacchi.backend.review.ReviewService;
+import com.scacchi.backend.study.GamePhase;
+import com.scacchi.backend.study.Study;
+import com.scacchi.backend.study.StudyRepository;
 import com.scacchi.backend.training.CreateTrainingSessionRequest.TrainingMoveInput;
 import com.scacchi.backend.training.TrainingSessionDto.TrainingMoveDto;
 import com.scacchi.backend.variant.ValidationError;
@@ -24,18 +27,25 @@ public class TrainingSessionService {
 
     private final TrainingSessionRepository repository;
     private final VariantRepository variantRepository;
+    private final StudyRepository studyRepository;
     private final ReviewService reviewService;
 
     public TrainingSessionService(
         TrainingSessionRepository repository,
         VariantRepository variantRepository,
+        StudyRepository studyRepository,
         ReviewService reviewService) {
         this.repository = repository;
         this.variantRepository = variantRepository;
+        this.studyRepository = studyRepository;
         this.reviewService = reviewService;
     }
 
-    /** Registra una sessione conclusa; {@code empty} se la variante non esiste (→ 404). */
+    /**
+     * Registra una sessione conclusa; {@code empty} se la variante non esiste (→ 404).
+     * Rifiuta (ISSUE-016) le varianti/posizioni di studi {@code MIDDLEGAME}/{@code ENDGAME}:
+     * training e review SM-2 restano solo per le Aperture.
+     */
     @Transactional
     public Optional<TrainingSessionDto> create(CreateTrainingSessionRequest request) {
         validate(request);
@@ -43,6 +53,7 @@ public class TrainingSessionService {
         if (variant.isEmpty()) {
             return Optional.empty();
         }
+        ensureOpeningPhase(variant.get());
         TrainingSession session = new TrainingSession();
         session.setVariantId(variant.get().getId());
         session.setStudyId(variant.get().getStudyId());
@@ -81,6 +92,24 @@ public class TrainingSessionService {
     @Transactional(readOnly = true)
     public Optional<TrainingSessionDto> findById(Long id) {
         return repository.findById(id).map(s -> toDto(s, true));
+    }
+
+    /**
+     * Le varianti legacy senza studio sono trattate come Aperture (ISSUE-016). Una
+     * variante orfana (studio cancellato senza cascata, caso non atteso) è trattata
+     * allo stesso modo, per non rompere l'allenamento esistente.
+     */
+    private void ensureOpeningPhase(Variant variant) {
+        Long studyId = variant.getStudyId();
+        if (studyId == null) {
+            return;
+        }
+        GamePhase phase = studyRepository.findById(studyId).map(Study::getPhase).orElse(GamePhase.OPENING);
+        if (phase != GamePhase.OPENING) {
+            throw new InvalidTrainingSessionException(new ValidationError(
+                "variantId", null, null,
+                "Il training non è disponibile per le posizioni di Mediogioco/Finale."));
+        }
     }
 
     private static void validate(CreateTrainingSessionRequest request) {
