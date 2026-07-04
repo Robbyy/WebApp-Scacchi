@@ -58,6 +58,9 @@ out/
 # ---------- Claude Code ----------
 .claude/settings.local.json
 
+# ---------- Work items / issue task artifacts ----------
+docs/work-items/**/*.source.json
+
 # ---------- Sistema operativo ----------
 .DS_Store
 Thumbs.db
