@@ -1,48 +1,48 @@
 # Task: ISSUE-002 — Pulsanti motore fuori viewport (dettaglio variante)
 
-Source: https://github.com/Robbyy/WebApp-Scacchi/issues/2
+Fonte: https://github.com/Robbyy/WebApp-Scacchi/issues/2
 Repository: Robbyy/WebApp-Scacchi
 Issue: #2
-State: open
-Labels: bug
-Fetched: 2026-07-04T20:31:53Z
+Stato: open
+Label: bug
+Scaricato: 2026-07-04T21:10:07Z
 
-## Summary
-
-Nel dettaglio variante (`/variants/:id`), i due pulsanti sotto la scacchiera ("Motore" e "Gioca contro il computer") spingono il layout oltre l'altezza visibile e attivano la scrollbar verticale.
-
-## Current Understanding
+## Sintesi
 
 Nel dettaglio variante (`/variants/:id`), i due pulsanti sotto la scacchiera ("Motore" e "Gioca contro il computer") spingono il layout oltre l'altezza visibile e attivano la scrollbar verticale.
 
-Current behavior: scrollbar verticale per i pulsanti sotto la board.
+## Comprensione attuale
 
-Expected behavior: i due pulsanti nel pannello laterale destro (con "Modifica variante", "Torna allo studio", controlli replay); board e pannello entrambi visibili senza scrollbar verticale.
+Nel dettaglio variante (`/variants/:id`), i due pulsanti sotto la scacchiera ("Motore" e "Gioca contro il computer") spingono il layout oltre l'altezza visibile e attivano la scrollbar verticale.
 
-No comments were present, so the issue body is the only specification source.
+Comportamento attuale: scrollbar verticale per i pulsanti sotto la board.
 
-## Requirements
+Comportamento atteso: i due pulsanti nel pannello laterale destro (con "Modifica variante", "Torna allo studio", controlli replay); board e pannello entrambi visibili senza scrollbar verticale.
 
-- Address the problem described by the issue: Nel dettaglio variante (`/variants/:id`), i due pulsanti sotto la scacchiera ("Motore" e "Gioca contro il computer") spingono il layout oltre l'altezza visibile e attivano la scrollbar verticale.
-- Implement the expected behavior: i due pulsanti nel pannello laterale destro (con "Modifica variante", "Torna allo studio", controlli replay); board e pannello entrambi visibili senza scrollbar verticale.
-- Verify the reproduction scenario: aprire un `/variants/:id` su 1920×1080 con finestra massimizzata.
-- Consider the issue notes: coordinare con ISSUE-010 (stessa pagina) e col pattern 2-col di ISSUE-001.
+Non risultano commenti, quindi il corpo della issue e' l'unica fonte di specifica.
 
-## Acceptance Criteria
+## Requisiti
 
-- The expected behavior is observable: i due pulsanti nel pannello laterale destro (con "Modifica variante", "Torna allo studio", controlli replay); board e pannello entrambi visibili senza scrollbar verticale.
-- The current undesired behavior no longer occurs: scrollbar verticale per i pulsanti sotto la board.
-- The reproduction steps pass without exposing the issue: aprire un `/variants/:id` su 1920×1080 con finestra massimizzata.
+- Risolvere il problema descritto dalla issue: Nel dettaglio variante (`/variants/:id`), i due pulsanti sotto la scacchiera ("Motore" e "Gioca contro il computer") spingono il layout oltre l'altezza visibile e attivano la scrollbar verticale.
+- Implementare il comportamento atteso: i due pulsanti nel pannello laterale destro (con "Modifica variante", "Torna allo studio", controlli replay); board e pannello entrambi visibili senza scrollbar verticale.
+- Verificare lo scenario di riproduzione: aprire un `/variants/:id` su 1920×1080 con finestra massimizzata.
+- Considerare le note della issue: coordinare con ISSUE-010 (stessa pagina) e col pattern 2-col di ISSUE-001.
 
-## Discussion Notes
+## Criteri di accettazione
 
-- No comments.
+- Il comportamento atteso e' osservabile: i due pulsanti nel pannello laterale destro (con "Modifica variante", "Torna allo studio", controlli replay); board e pannello entrambi visibili senza scrollbar verticale.
+- Il comportamento indesiderato attuale non si verifica piu': scrollbar verticale per i pulsanti sotto la board.
+- I passi di riproduzione non mostrano piu' il problema: aprire un `/variants/:id` su 1920×1080 con finestra massimizzata.
 
-## Open Questions
+## Note dalla discussione
 
-- Clarify how far to follow related-work notes: coordinare con ISSUE-010 (stessa pagina) e col pattern 2-col di ISSUE-001.
+- Nessun commento.
 
-## Source Body
+## Domande aperte
+
+- Chiarire quanto seguire le note di lavoro collegato: coordinare con ISSUE-010 (stessa pagina) e col pattern 2-col di ISSUE-001.
+
+## Corpo originale
 
 **Backlog:** ISSUE-002 · **Area:** frontend · **Severità:** media
 
