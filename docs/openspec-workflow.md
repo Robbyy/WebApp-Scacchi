@@ -7,9 +7,9 @@ OpenSpec non sostituisce il backlog: il backlog resta il punto di raccolta e
 prioritizzazione delle idee. OpenSpec entra quando una segnalazione va trasformata in una
 change implementabile, con proposta, decisioni, specifiche e task.
 
-Gli esempi concreti di questa guida usano `issue-016-phase-domain-model` solo perché è la
-prima change OpenSpec aperta nel progetto. Lo stesso flusso vale per qualsiasi altra issue
-o evolutiva che decideremo di gestire con OpenSpec.
+Gli esempi concreti di questa guida usano `issue-016-phase-domain-model` come caso pratico
+di riferimento. Lo stesso flusso vale per qualsiasi altra issue o evolutiva che decideremo
+di gestire con OpenSpec.
 
 ## Cos'è OpenSpec
 
@@ -65,17 +65,75 @@ Non usarlo, di norma, per:
 - modifiche dirette piccole e a basso rischio;
 - aggiornamenti puramente documentali senza impatto funzionale.
 
-## Esempio pratico corrente
+## Inizializzare OpenSpec su un nuovo progetto
 
-OpenSpec è già inizializzato nel progetto.
+Questi passaggi servono solo quando il repository non contiene ancora una cartella
+`openspec/`.
 
-L'esempio pratico usato in questa guida è la change aperta per `ISSUE-016`:
+Installare OpenSpec globalmente:
+
+```cmd
+npm install -g @fission-ai/openspec@latest
+```
+
+Entrare nella cartella del progetto:
+
+```cmd
+cd <percorso-progetto>
+```
+
+Inizializzare OpenSpec:
+
+```cmd
+openspec init
+```
+
+Esempio con il percorso di questo repository:
+
+```cmd
+cd "C:\Sviluppo\Workspace - Intellij\WebApp Scacchi"
+openspec init
+```
+
+Verificare che l'inizializzazione sia sana:
+
+```cmd
+openspec doctor
+```
+
+Controllare il contesto risolto da OpenSpec:
+
+```cmd
+openspec context
+```
+
+Risultato atteso:
+
+- cartella `openspec/` presente nel repository;
+- configurazione OpenSpec leggibile;
+- `openspec doctor` senza errori bloccanti;
+- possibilità di creare change con `openspec new change "<change-id>"`.
+
+Nota: se un repository contiene già `openspec/`, non rilanciare `openspec init` alla cieca. Prima
+controllare `openspec doctor`, `openspec context` e lo stato Git.
+
+## Esempio pratico di riferimento
+
+Per rendere i comandi concreti, questa guida usa come esempio la change:
 
 ```cmd
 issue-016-phase-domain-model
 ```
 
-Questa change serve a decidere il modello di dominio per le fasi del gioco:
+In un'altra attività, sostituire questo identificativo con quello della change da gestire,
+per esempio:
+
+```cmd
+issue-017-settings-hub
+```
+
+Nel nostro esempio, `issue-016-phase-domain-model` serve a decidere il modello di dominio
+per le fasi del gioco:
 
 - Aperture;
 - Mediogioco;
@@ -120,7 +178,7 @@ Comando generico:
 openspec new change "<change-id>"
 ```
 
-Comando per l'esempio corrente:
+Esempio:
 
 ```cmd
 openspec new change "issue-016-phase-domain-model"
@@ -139,13 +197,13 @@ Comando generico:
 openspec status --change "<change-id>"
 ```
 
-Comando per l'esempio corrente:
+Esempio:
 
 ```cmd
 openspec status --change "issue-016-phase-domain-model"
 ```
 
-Output già osservato:
+Output atteso, se la change è stata appena creata e non contiene ancora artefatti:
 
 ```text
 Change: issue-016-phase-domain-model
@@ -175,7 +233,7 @@ Versione JSON, utile se vogliamo copiarla o farla leggere a Codex:
 openspec instructions <artifact> --change "<change-id>" --json
 ```
 
-Comando per la proposal dell'esempio corrente:
+Esempio per la proposal:
 
 ```cmd
 openspec instructions proposal --change "issue-016-phase-domain-model" --json
@@ -208,7 +266,7 @@ File atteso:
 openspec/changes/<change-id>/proposal.md
 ```
 
-File per l'esempio corrente:
+File dell'esempio:
 
 ```text
 openspec/changes/issue-016-phase-domain-model/proposal.md
@@ -225,7 +283,7 @@ openspec instructions design --change "<change-id>" --json
 openspec instructions specs --change "<change-id>" --json
 ```
 
-Comandi per l'esempio corrente:
+Esempio:
 
 ```cmd
 openspec instructions design --change "issue-016-phase-domain-model" --json
@@ -253,7 +311,7 @@ Comando generico:
 openspec instructions tasks --change "<change-id>" --json
 ```
 
-Comando per l'esempio corrente:
+Esempio:
 
 ```cmd
 openspec instructions tasks --change "issue-016-phase-domain-model" --json
@@ -280,7 +338,7 @@ Comando generico per una change:
 openspec validate "<change-id>" --type change
 ```
 
-Comando per l'esempio corrente:
+Esempio:
 
 ```cmd
 openspec validate "issue-016-phase-domain-model" --type change
@@ -292,7 +350,7 @@ Validazione più severa:
 openspec validate "<change-id>" --type change --strict
 ```
 
-Per l'esempio corrente:
+Esempio con validazione strict:
 
 ```cmd
 openspec validate "issue-016-phase-domain-model" --type change --strict
@@ -314,7 +372,7 @@ Comando generico:
 openspec show "<item-name>"
 ```
 
-Comando per l'esempio corrente:
+Esempio:
 
 ```cmd
 openspec show "issue-016-phase-domain-model"
@@ -361,7 +419,7 @@ Comando generico:
 openspec archive "<change-id>"
 ```
 
-Comando per l'esempio corrente, quando sarà completo:
+Esempio, quando la change sarà completa:
 
 ```cmd
 openspec archive "issue-016-phase-domain-model"
@@ -390,7 +448,7 @@ Contesto risolto da OpenSpec:
 openspec context
 ```
 
-Template disponibili per lo schema corrente:
+Template disponibili per lo schema configurato nel repository:
 
 ```cmd
 openspec templates
@@ -402,7 +460,7 @@ Schema disponibili:
 openspec schemas
 ```
 
-## Regola pratica per questo progetto
+## Regola pratica
 
 Per ogni nuova change OpenSpec:
 
