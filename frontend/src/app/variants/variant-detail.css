@@ -28,11 +28,19 @@
   flex: 0 0 auto;
 }
 
+/* Controlli motore nel pannello laterale (ISSUE-002): non più sotto la board,
+   per evitare che la colonna board superi l'altezza utile del viewport. */
+.engine-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .engine-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .engine-toggle {
