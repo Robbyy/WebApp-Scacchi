@@ -68,6 +68,17 @@ describe('PlayVsComputer', () => {
     expect(cmp.orientation()).toBe('black');
   });
 
+  it('renders title and controls inside the side panel (two-column layout)', () => {
+    // Regressione ISSUE-001: nessun testo sopra la board, tutto nel pannello destro.
+    const { fixture } = setup(baseEngine());
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.play > .play-head')).toBeNull();
+    expect(el.querySelector('.play-side .play-title')?.textContent).toContain(
+      'Gioca contro il computer',
+    );
+    expect(el.querySelector('.play-side .play-btn')).not.toBeNull();
+  });
+
   it('ignores user moves when it is not the user turn', () => {
     let called = false;
     const engine: Partial<StockfishService> = {

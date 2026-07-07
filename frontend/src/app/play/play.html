@@ -1,18 +1,7 @@
 <section class="play">
-  <header class="play-head">
-    <p class="play-kicker">Stockfish</p>
-    <h2 class="play-title">Gioca contro il computer</h2>
-  </header>
-
   @if (status() === 'invalid') {
     <p class="play-error">Posizione non valida. <a routerLink="/">Torna agli studi</a></p>
   } @else {
-    @if (engineUnavailable()) {
-      <p class="play-warn">
-        Motore non disponibile in questo ambiente: il computer non potrà rispondere.
-      </p>
-    }
-
     <div class="play-grid">
       <app-chessboard
         [position]="fen()"
@@ -23,6 +12,17 @@
       />
 
       <aside class="play-side">
+        <header class="play-head">
+          <p class="play-kicker">Stockfish</p>
+          <h2 class="play-title">Gioca contro il computer</h2>
+        </header>
+
+        @if (engineUnavailable()) {
+          <p class="play-warn">
+            Motore non disponibile in questo ambiente: il computer non potrà rispondere.
+          </p>
+        }
+
         <div class="play-status" [class.play-status--over]="status() === 'over'">
           @switch (status()) {
             @case ('your-turn') { Tocca a te. }

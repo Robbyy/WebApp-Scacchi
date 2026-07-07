@@ -1,11 +1,7 @@
 .play {
-  max-width: 900px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
-}
-
-.play-head {
-  margin-bottom: 1.25rem;
 }
 
 .play-kicker {
@@ -18,7 +14,7 @@
 
 .play-title {
   margin: 0.2rem 0 0;
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   color: var(--text-main);
 }
 
@@ -27,7 +23,7 @@
 }
 
 .play-warn {
-  margin: 0 0 1rem;
+  margin: 0;
   padding: 0.6rem 0.8rem;
   border-radius: 0.55rem;
   background: oklch(0.95 0.05 75);
@@ -35,22 +31,24 @@
   font-size: 0.9rem;
 }
 
+/* Layout a due colonne come nel dettaglio variante (ISSUE-001): board a
+   dimensione intrinseca a sinistra, pannello a larghezza definita a destra. */
 .play-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.5rem;
+  gap: 2rem;
+  justify-content: center;
   align-items: flex-start;
 }
 
+/* Non dimensionare l'host: la board interna si dimensiona da sola con
+   min(90vw, 720px) e un cap sull'host la farebbe solo traboccare. */
 app-chessboard {
   flex: 0 0 auto;
-  display: block;
-  width: min(100%, 480px);
 }
 
 .play-side {
-  flex: 1;
-  min-width: 220px;
+  width: min(100%, 380px);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
