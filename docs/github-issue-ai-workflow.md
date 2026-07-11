@@ -604,6 +604,50 @@ L'orchestratore puo' ripetere il ciclo finche' c'e' progresso verificabile. Deve
 quando lo stesso blocco persiste, quando le correzioni si contraddicono o quando emerge una
 decisione funzionale non delegabile.
 
+#### Circuit Breaker
+
+Il ciclo e' sempre finito. L'implementazione iniziale non conta come correzione; conta ogni
+nuovo giro completato dopo una review `CHANGES_REQUESTED` e arrivato a una nuova review.
+
+| Profilo | Correzioni massime |
+|---------|--------------------|
+| Fast | 2 |
+| Deep | 3 |
+
+Una promozione da fast a deep puo' avvenire una sola volta e non azzera il contatore. Il
+limite complessivo diventa quello deep, includendo le correzioni gia' eseguite.
+
+Promuovere immediatamente al deep path quando un finding dimostra che rischio, causa o
+scope erano stati sottostimati. Non usare la promozione soltanto per ottenere altri cicli.
+
+Interrompere prima del limite quando:
+
+- lo stesso finding bloccante compare in due review consecutive senza nuova evidenza;
+- lo stesso test continua a fallire nello stesso modo dopo due correzioni;
+- una correzione reintroduce un problema appena risolto;
+- il diff cresce senza avvicinarsi ai criteri di accettazione;
+- numero o severita' dei finding bloccanti non diminuiscono;
+- le correzioni richiedono decisioni di prodotto incompatibili non risolvibili dalle fonti.
+
+Per progresso verificabile si intende almeno uno di questi risultati:
+
+- finding bloccanti eliminati o ridotti di severita';
+- test prima falliti ora superati;
+- criteri di accettazione prima non dimostrati ora supportati da evidenze;
+- piano corretto sulla base di una nuova evidenza della codebase.
+
+Modificare file, aumentare il diff o riscrivere il report non costituisce da solo progresso.
+
+Quando il circuit breaker scatta:
+
+1. interrompere le invocazioni automatiche;
+2. lasciare issue, push e chiusura invariati;
+3. aggiornare implementation report e review con tentativi ed evidenze;
+4. dichiarare il workflow bloccato e indicare la decisione o condizione necessaria.
+
+I retry tecnici causati da timeout o errori di invocazione seguono il budget separato del
+watchdog e non contano come correzioni se non producono un nuovo diff revisionabile.
+
 ### 11. Gate Di Pubblicazione
 
 Prima del commit devono essere vere tutte le condizioni seguenti:
@@ -931,6 +975,8 @@ artefatti, non nella procedura generale.
 - Attendere un processo non osservabile fino al timeout massimo senza watchdog di inattivita'.
 - Rilanciare lo stesso comando dopo un timeout senza controllare processi, diff e artefatti.
 - Riversare l'intero stream del modello nel contesto invece di sintetizzare gli eventi.
+- Azzerare il contatore delle correzioni promuovendo artificiosamente il profilo.
+- Considerare qualunque modifica al codice come progresso del ciclo correttivo.
 - Usare il report dell'implementatore come unica prova dei test.
 - Affidare review e correzione alla stessa invocazione senza un nuovo controllo.
 - Concedere accesso globale al filesystem per evitare richieste di permesso.
@@ -972,15 +1018,11 @@ fast/deep    OpenSpec
  verifica orchestratore
           |
           v
-       review
-       /    \
-changes     approved
-requested      |
-   |           v
-   +----> implementazione
-               |
-               v
-       commit -> push -> commento -> close
+       review --[approved]--> commit -> push -> commento -> close
+          |
+          +--[changes requested, entro budget]--> implementazione -> verifica -> review
+          |
+          +--[circuit breaker]--> bloccato
 ```
 
 Il risultato atteso e' un flusso nel quale il committente assegna una issue e riceve il
