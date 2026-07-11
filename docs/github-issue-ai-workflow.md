@@ -10,10 +10,17 @@ Il documento ha due obiettivi:
 - rendere esplicite le best practice utili a progettare skill, agenti e harness sempre
   piu' autonomi.
 
-Il processo e' indipendente dal modello usato. In questo progetto l'orchestratore delega
-analisi e implementazione a Claude Code e, quando richiesta, la controanalisi a una seconda
-sessione Codex, applicando la politica di routing documentata piu' avanti e mantenendo il
-controllo di scope, permessi, verifiche e ciclo di vita della issue.
+Il profilo corrente usa una sessione fissa GPT-5.6 Luna con effort `xhigh` come controller
+del workflow. Luna non cambia modello o effort durante l'esecuzione della issue: governa lo
+stato, gli strumenti, i timeout e i gate procedurali. Le decisioni che richiedono giudizio
+tecnico sono delegate a sessioni esterne, applicando la politica di routing documentata piu'
+avanti.
+
+Analisi, controanalisi e implementazione mantengono i rispettivi modelli gia' definiti.
+Triage, confronto delle analisi, verifica semantica dell'implementazione e review vengono
+invece eseguiti da agenti Terra indipendenti. Questa separazione mantiene economica la
+sessione lunga di coordinamento e non chiede al modello che ha implementato il codice di
+approvare il proprio lavoro.
 
 ## Principi Del Workflow
 
@@ -57,10 +64,10 @@ Preferire un processo di specifica, come OpenSpec, quando la issue richiede prim
 In questo repository il processo alternativo e' documentato in
 [`openspec-workflow.md`](openspec-workflow.md).
 
-Il routing verso OpenSpec e' un'operazione autonoma dell'orchestratore. Non richiede una
-conferma preventiva quando i criteri di questa guida sono soddisfatti. La issue GitHub resta
-la fonte del lavoro e viene chiusa soltanto dopo il completamento del percorso OpenSpec e
-dei normali gate di verifica e pubblicazione.
+Il routing verso OpenSpec e' deciso autonomamente dallo specialista di triage. Non richiede
+una conferma preventiva quando i criteri di questa guida sono soddisfatti. La issue GitHub
+resta la fonte del lavoro e viene chiusa soltanto dopo il completamento del percorso OpenSpec
+e dei normali gate di verifica e pubblicazione.
 
 La presenza di una modifica al database non impone da sola OpenSpec. Una migration piccola
 e chiaramente richiesta da una issue puo' essere gestita con questo workflow; una nuova
@@ -73,18 +80,43 @@ Il workflow distingue i ruoli anche quando sono eseguiti dalla stessa infrastrut
 | Ruolo | Responsabilita' |
 |------|------------------|
 | Committente | Seleziona la issue e definisce i confini generali di autonomia. |
-| Orchestratore | Governa lo stato del lavoro, concede i permessi, valida gli output, esegue verifiche e decide i passaggi di fase. |
+| Controller del workflow | Mantiene lo stato, applica regole e timeout, avvia gli agenti, esegue controlli deterministici e governa Git/GitHub. |
+| Specialista di triage | Classifica il rischio e sceglie fast path, deep path, OpenSpec o blocco motivato. |
 | Analista | Legge task e codebase, raccoglie evidenze e produce il piano tecnico. |
 | Controanalista | Esamina in modo indipendente task, codice e analisi primaria per cercare errori, assunzioni fragili e alternative. |
+| Gate dell'analisi | Confronta gli artifact di analisi e determina se il piano e' pronto, va corretto, richiede OpenSpec o e' bloccato. |
 | Implementatore | Applica il piano, testa la modifica e documenta eventuali deviazioni. |
+| Verificatore | Controlla in modo indipendente che il diff, le evidenze e le verifiche dimostrino i criteri di accettazione. |
 | Revisore | Valuta il diff e le evidenze in modo indipendente dall'implementatore. |
 
 Nel profilo corrente:
 
-- Codex opera come orchestratore e revisore finale;
-- Claude Code opera come analista e implementatore con modelli distinti;
+- GPT-5.6 Luna `xhigh` opera come controller fisso della sessione principale;
+- GPT-5.6 Terra opera, in sessioni esterne distinte, come specialista di triage, gate
+  dell'analisi, verificatore e revisore;
+- Claude Code opera come analista e implementatore con i modelli gia' definiti;
 - quando richiesta, una seconda sessione Codex con GPT-5.6 Sol opera come controanalista;
 - gli artefatti Markdown costituiscono il contratto di passaggio tra i ruoli.
+
+Terra e' preferito a Sonnet 5 per i nuovi gate decisionali. Sonnet resta dedicato
+all'implementazione: una review affidata a una famiglia diversa e a una sessione separata
+riduce la correlazione con le scelte dell'implementatore. Terra copre i giudizi circoscritti
+con un costo inferiore a Sol; Sol resta riservato alla controanalisi gia' prevista per i
+casi che la richiedono.
+
+### Confini Del Controller Luna
+
+Luna puo' eseguire autonomamente decisioni meccaniche e controllabili: verificare
+precondizioni e schemi degli artifact, applicare la policy di permesso, eseguire comandi di
+test autorizzati, controllare diff e stato Git, avviare o arrestare processi verificati,
+contare retry e applicare transizioni gia' definite.
+
+Luna non decide da sola il routing del lavoro, la validita' tecnica di un piano, la
+risoluzione di divergenze tra analisti, il superamento semantico dell'implementazione o
+l'esito della review. Per tali punti avvia l'agente esterno previsto, controlla che il suo
+output rispetti il contratto e applica il risultato secondo le regole di questa guida. Se
+l'output e' assente, malformato o inconcludente, il controller non lo sostituisce con una
+propria interpretazione: esegue il retry consentito oppure blocca il workflow.
 
 Separare i ruoli riduce il rischio che l'implementatore confermi automaticamente le proprie
 ipotesi. La separazione e' utile anche se i ruoli usano lo stesso modello: invocazioni
@@ -126,7 +158,7 @@ Accessi esterni normalmente ammessi:
 
 ## Contratto Di Autonomia
 
-Quando il committente assegna una issue, l'orchestratore puo' eseguire senza conferme
+Quando il committente assegna una issue, il controller puo' eseguire senza conferme
 intermedie tutte le operazioni ordinarie necessarie al workflow.
 
 Operazioni autonome:
@@ -146,7 +178,7 @@ Operazioni autonome:
 - creare commit non distruttivi e pusharli sul branch previsto dal repository;
 - commentare e chiudere la issue dopo il superamento dei gate finali.
 
-Richieste di permesso provenienti da un agente delegato vengono decise dall'orchestratore.
+Richieste di permesso provenienti da un agente delegato vengono decise dal controller.
 Sono approvabili quando l'azione:
 
 - e' necessaria alla fase in corso;
@@ -156,7 +188,7 @@ Sono approvabili quando l'azione:
 - non altera dati persistenti locali;
 - non modifica stato esterno oltre a quanto previsto dal workflow.
 
-L'orchestratore deve fermarsi e chiedere una decisione quando e' indispensabile:
+Il controller deve fermarsi e chiedere una decisione quando e' indispensabile:
 
 - scegliere tra comportamenti funzionali incompatibili non risolti dalla issue;
 - eseguire un'operazione distruttiva o difficilmente reversibile;
@@ -216,9 +248,12 @@ Naming:
 ```text
 github-OWNER-REPO-NUMBER.source.json
 github-OWNER-REPO-NUMBER.task.md
+github-OWNER-REPO-NUMBER.triage.md
 github-OWNER-REPO-NUMBER.analysis.md
 github-OWNER-REPO-NUMBER.counter-analysis.md
+github-OWNER-REPO-NUMBER.analysis-gate.md
 github-OWNER-REPO-NUMBER.implementation.md
+github-OWNER-REPO-NUMBER.verification.md
 github-OWNER-REPO-NUMBER.review.md
 github-OWNER-REPO-NUMBER.dry-run.md
 ```
@@ -227,9 +262,12 @@ Regole di versionamento:
 
 - `.source.json`: resta locale e ignorato da Git;
 - `.task.md`: committato;
+- `.triage.md`: committato;
 - `.analysis.md`: committato;
 - `.counter-analysis.md`: committato quando prodotto;
+- `.analysis-gate.md`: committato;
 - `.implementation.md`: committato;
+- `.verification.md`: committato;
 - `.review.md`: committato.
 - `.dry-run.md`: prodotto solo durante una dry run o quando serve documentare il processo,
   non nelle esecuzioni ordinarie.
@@ -241,9 +279,9 @@ con decisioni del workflow.
 Stati logici consigliati:
 
 ```text
-Direct:  ACQUIRED -> ANALYZED -> [CHALLENGED] -> CONSOLIDATED -> IMPLEMENTED
-                  -> VERIFIED -> REVIEWED -> PUBLISHED -> CLOSED
-OpenSpec: ACQUIRED -> SPECIFYING -> SPEC_VALIDATED -> IMPLEMENTED
+Direct:  ACQUIRED -> TRIAGED -> ANALYZED -> [CHALLENGED] -> ANALYSIS_GATED
+                  -> IMPLEMENTED -> VERIFIED -> REVIEWED -> PUBLISHED -> CLOSED
+OpenSpec: ACQUIRED -> TRIAGED -> SPECIFYING -> SPEC_VALIDATED -> IMPLEMENTED
                   -> VERIFIED -> REVIEWED -> PUBLISHED -> CLOSED
 ```
 
@@ -261,9 +299,12 @@ codice e documenti precedenti. Per il fast path usare come budget indicativo:
 | Artefatto | Budget indicativo |
 |-----------|-------------------|
 | Task | 100 righe |
+| Triage | 60 righe |
 | Analisi | 120 righe |
 | Controanalisi, quando necessaria | 100 righe |
+| Gate dell'analisi | 80 righe |
 | Report implementazione | 80 righe |
+| Verifica semantica | 80 righe |
 | Review | 80 righe |
 
 Il budget e' un guardrail, non un criterio di accettazione. Puo' essere superato quando la
@@ -272,8 +313,10 @@ lunghezza resta proporzionata ai rischi: non esiste un obbligo di produrre docum
 
 ## Profili Di Esecuzione
 
-Il triage assegna un profilo prima di invocare modelli costosi. Il profilo puo' essere
-alzato durante il lavoro, ma non abbassato per ignorare un rischio gia' emerso.
+Uno specialista Terra assegna il profilo prima di invocare modelli costosi. Il controller
+Luna applica la decisione e registra l'output in `.triage.md`. Il profilo puo' essere alzato
+durante il lavoro soltanto da un gate esterno o da un segnale deterministico di sicurezza,
+ma non abbassato per ignorare un rischio gia' emerso.
 
 ### Fast Path
 
@@ -314,7 +357,7 @@ a OpenSpec invece di usare il deep path come sostituto della specifica.
 
 ### OpenSpec Path
 
-L'orchestratore seleziona autonomamente OpenSpec quando la issue richiede di costruire una
+Lo specialista di triage seleziona OpenSpec quando la issue richiede di costruire una
 specifica prima del codice, per esempio:
 
 - nuovo concetto di dominio o relazione tra entita';
@@ -340,8 +383,8 @@ Quando selezionato:
 8. tornare ai gate GitHub per commit, push, commento e chiusura della issue.
 
 Il percorso resta autonomo finche' issue, commenti, codebase e ricerca permettono di
-risolvere le decisioni. L'orchestratore chiede input soltanto quando esistono comportamenti
-di prodotto incompatibili e nessuna fonte autorizzata consente di scegliere.
+risolvere le decisioni. Il controller chiede input soltanto quando lo specialista identifica
+comportamenti di prodotto incompatibili e nessuna fonte autorizzata consente di scegliere.
 
 ## Procedura End-To-End
 
@@ -356,7 +399,7 @@ Prima di acquisire la issue:
 5. verificare gli strumenti necessari alla build e ai test;
 6. controllare che il database persistente non entri nell'ambiente di verifica.
 
-Un working tree non pulito non blocca automaticamente il lavoro. L'orchestratore deve
+Un working tree non pulito non blocca automaticamente il lavoro. Il controller deve
 pero' sapere quali modifiche erano gia' presenti, evitare di sovrascriverle e costruire il
 commit con una selezione esplicita dei file.
 
@@ -388,12 +431,24 @@ discussione o un'ipotesi.
 
 ### 3. Triage E Ricerca
 
-Prima dell'analisi tecnica, classificare il lavoro:
+Prima dell'analisi tecnica, il controller avvia una sessione Terra di triage in sola lettura.
+Riceve task consolidato, commenti, profilo operativo e repository locale. Scrive solo:
+
+```text
+<task-base-name>.triage.md
+```
+
+Il triage deve classificare il lavoro:
 
 - bug, manutenzione o evolutiva;
 - frontend, backend, dati, infrastruttura o combinazione;
 - rischio e ampiezza stimati;
 - routing al fast path, al deep path oppure all'OpenSpec path.
+
+L'output deve inoltre indicare evidenze, controlli obbligatori, agenti da invocare e uno dei
+seguenti esiti: `FAST`, `DEEP`, `OPENSPEC` o `BLOCKED`. Il controller accetta solo un output
+completo e coerente con le regole di routing; non sostituisce un triage incompleto con una
+propria valutazione tecnica.
 
 Le ricerche devono rispondere a domande concrete emerse dalla issue o dalla codebase.
 Preferire fonti primarie e documentazione ufficiale. Le conclusioni che influenzano
@@ -432,7 +487,7 @@ L'analisi deve contenere:
 - rischi, dipendenze e fuori scope;
 - domande aperte residue.
 
-L'analista non deve modificare il codice. L'orchestratore verifica che il working tree non
+L'analista non deve modificare il codice. Il controller verifica che il working tree non
 contenga modifiche inattese prodotte durante questa fase.
 
 Nel fast path l'analisi deve restare concentrata sulla causa, sul diff probabile e sulle
@@ -472,9 +527,9 @@ La controanalisi deve cercare in modo mirato:
 
 Il controanalista non modifica codice, test o analisi primaria. La separazione degli output
 preserva la provenienza delle osservazioni e impedisce che il dissenso venga cancellato
-prima della valutazione dell'orchestratore.
+prima della valutazione del gate dell'analisi.
 
-L'orchestratore attende la conclusione della sessione, verifica che sia stato creato solo
+Il controller attende la conclusione della sessione, verifica che sia stato creato solo
 l'artefatto previsto e considera fallita la fase se la controanalisi non contiene evidenze
 verificabili.
 
@@ -483,12 +538,19 @@ Non deve riscrivere l'intera analisi primaria quando la maggior parte e' conferm
 
 ### 6. Sintesi Critica E Gate Dell'Analisi
 
-L'orchestratore confronta task, analisi primaria, eventuale controanalisi e codice. Non
-sceglie il risultato per maggioranza e non assume che il modello piu' potente abbia
-automaticamente ragione. Ogni divergenza materiale viene risolta attraverso evidenze,
-test, documentazione o ricerca pertinente.
+Il controller avvia una sessione Terra separata come gate dell'analisi. Riceve task,
+triage, analisi primaria, eventuale controanalisi e repository in sola lettura. Non modifica
+gli artifact precedenti e scrive soltanto:
 
-Prima di implementare verifica che:
+```text
+<task-base-name>.analysis-gate.md
+```
+
+Il gate non sceglie il risultato per maggioranza e non assume che il modello piu' potente
+abbia automaticamente ragione. Ogni divergenza materiale viene risolta attraverso
+evidenze, test, documentazione o ricerca pertinente.
+
+Prima di dichiarare il piano pronto verifica che:
 
 - le affermazioni principali siano confermate dal codice;
 - gli eventuali finding validi della controanalisi siano stati recepiti;
@@ -500,27 +562,27 @@ Prima di implementare verifica che:
 - le domande tecniche risolvibili siano state chiuse;
 - le vere decisioni di prodotto siano state identificate.
 
-L'orchestratore aggiorna `.analysis.md` con il piano consolidato e le decisioni finali,
-senza cancellare `.counter-analysis.md` quando esiste. L'implementatore riceve il task e
-l'analisi consolidata, non deve ricostruire la discussione tra i due analisti.
+L'output del gate deve essere uno fra `READY`, `REWORK_ANALYSIS`, `ROUTE_OPENSPEC` e
+`BLOCKED`, con finding accettati o scartati, piano consolidato, test richiesti e motivazioni
+verificabili. L'implementatore riceve task, analisi primaria, eventuale controanalisi e gate
+dell'analisi; non deve ricostruire la discussione tra gli analisti.
 
-Se la sintesi cambia in modo sostanziale causa, architettura o piano, l'orchestratore
-esegue o rilancia la controanalisi sul documento aggiornato. Per correzioni puntuali gia'
-supportate da evidenze non e' necessario aggiungere un ciclo puramente formale.
-
-Se l'analisi resta incompleta, viene corretta o rilanciata. Se richiede una decisione
-funzionale indispensabile, il workflow si ferma senza iniziare modifiche speculative.
+Con `REWORK_ANALYSIS`, il controller rilancia soltanto la fase necessaria entro i limiti del
+workflow. Con `ROUTE_OPENSPEC` segue il percorso OpenSpec. Con `BLOCKED` non inizia
+modifiche speculative.
 
 ### 7. Implementazione
 
 Invocare l'implementatore usando `task-implementation`, in una nuova invocazione che usa
-task e analisi come contratto. Nel fast path usare Sonnet 5 senza Ultracode. Nel deep path
-Ultracode e' ammesso quando la decomposizione multi-agente porta un vantaggio concreto.
+task, analisi e gate dell'analisi come contratto. Nel fast path usare Sonnet 5 senza
+Ultracode. Nel deep path Ultracode e' ammesso quando la decomposizione multi-agente porta un
+vantaggio concreto.
 
 Input:
 
 - task;
-- analisi validata;
+- analisi primaria e gate dell'analisi;
+- eventuale controanalisi;
 - repository;
 - eventuale review precedente durante un ciclo correttivo.
 
@@ -543,8 +605,8 @@ eseguiti, verifiche non eseguite, deviazioni e rischi residui.
 
 ### 8. Verifica Indipendente
 
-L'orchestratore non assume che i test dichiarati nel report siano stati eseguiti
-correttamente. Controlla direttamente:
+Il controller non assume che i test dichiarati nel report siano stati eseguiti
+correttamente. Esegue direttamente i controlli meccanici:
 
 1. `git status --short` e diff completo;
 2. file estranei o generati accidentalmente;
@@ -553,6 +615,23 @@ correttamente. Controlla direttamente:
 5. comportamento manuale o browser per UI e interazioni;
 6. compatibilita' con i criteri di accettazione;
 7. stato del database persistente.
+
+Con diff e risultati disponibili, il controller avvia una sessione Terra di verifica
+semantica in sola lettura. Riceve task, triage, gate dell'analisi, report di implementazione,
+diff e risultati dei controlli. Scrive soltanto:
+
+```text
+<task-base-name>.verification.md
+```
+
+Il verificatore stabilisce se criteri di accettazione, copertura delle prove e limiti
+dichiarati sono coerenti con il codice effettivo. Restituisce `PASSED`, `FAILED` o `BLOCKED`.
+`FAILED` riporta all'implementazione; `BLOCKED` sospende il workflow. Luna non trasforma un
+esito negativo o inconcludente in un passaggio positivo.
+
+Con `FAILED`, l'implementatore riceve anche `.verification.md`, corregge soltanto i finding
+pertinenti e il controller riesegue controlli meccanici, verifica semantica e review. Un
+esito `PASSED` e' necessario ma non sostituisce la review indipendente.
 
 Le verifiche vanno scelte in base al rischio, non per abitudine. Una modifica condivisa tra
 piu' moduli richiede una rete piu' ampia di una correzione locale.
@@ -564,7 +643,8 @@ avanti e, quando previsto dal progetto, rollback o compatibilita' con dati esist
 
 ### 9. Review
 
-Usare `task-implementation-review` su una sorgente esplicita:
+Il controller invoca un revisore Terra separato con `task-implementation-review`, su una
+sorgente esplicita:
 
 - `working tree`, prima del commit;
 - `commit <hash>`, dopo un commit locale;
@@ -584,8 +664,8 @@ dati e test mancanti. Esiti:
 - `APPROVED_WITH_NOTES`: pronto, con note non bloccanti;
 - `CHANGES_REQUESTED`: correzioni necessarie.
 
-Il revisore deve basarsi sul diff e sul codice, non solo su task, analisi e report. Gli
-artefatti spiegano l'intento; il codice determina il comportamento reale.
+Il revisore deve basarsi sul diff e sul codice, non solo su task, analisi, report e
+verifica. Gli artefatti spiegano l'intento; il codice determina il comportamento reale.
 
 ### 10. Ciclo Correttivo
 
@@ -600,14 +680,16 @@ Con `CHANGES_REQUESTED`:
 Se un finding rivela che la causa o il requisito erano stati compresi male, tornare anche
 all'analisi. Non forzare una correzione locale quando e' il piano a essere sbagliato.
 
-L'orchestratore puo' ripetere il ciclo finche' c'e' progresso verificabile. Deve fermarsi
+Il controller puo' ripetere il ciclo finche' c'e' progresso verificabile. Deve fermarsi
 quando lo stesso blocco persiste, quando le correzioni si contraddicono o quando emerge una
 decisione funzionale non delegabile.
 
 #### Circuit Breaker
 
 Il ciclo e' sempre finito. L'implementazione iniziale non conta come correzione; conta ogni
-nuovo giro completato dopo una review `CHANGES_REQUESTED` e arrivato a una nuova review.
+nuovo giro completato dopo una verifica `FAILED` o una review `CHANGES_REQUESTED` e arrivato
+a una nuova verifica o review. Una verifica negativa non crea quindi un percorso alternativo
+privo di limite.
 
 | Profilo | Correzioni massime |
 |---------|--------------------|
@@ -642,7 +724,7 @@ Quando il circuit breaker scatta:
 
 1. interrompere le invocazioni automatiche;
 2. lasciare issue, push e chiusura invariati;
-3. aggiornare implementation report e review con tentativi ed evidenze;
+3. aggiornare implementation report, verifica e review con tentativi ed evidenze;
 4. dichiarare il workflow bloccato e indicare la decisione o condizione necessaria.
 
 I retry tecnici causati da timeout o errori di invocazione seguono il budget separato del
@@ -654,6 +736,7 @@ Prima del commit devono essere vere tutte le condizioni seguenti:
 
 - criteri di accettazione soddisfatti;
 - test obbligatori superati;
+- verifica semantica `PASSED`;
 - review `APPROVED` o `APPROVED_WITH_NOTES`;
 - note residue esplicitamente non bloccanti;
 - diff limitato allo scope;
@@ -678,9 +761,12 @@ Il commit include normalmente:
 
 - codice e test della correzione;
 - `.task.md`;
+- `.triage.md`;
 - `.analysis.md`;
 - `.counter-analysis.md`, quando prodotta;
+- `.analysis-gate.md`;
 - `.implementation.md`;
+- `.verification.md`;
 - `.review.md`.
 
 Il report `.dry-run.md` viene incluso soltanto nelle simulazioni che lo prevedono.
@@ -753,24 +839,33 @@ Il profilo corrente usa il seguente routing:
 
 | Fase | Profilo | Periodo | Modello | Effort / modalita' |
 |------|---------|---------|---------|--------------------|
+| Controller | Tutti | Sempre | GPT-5.6 Luna | XHigh, fisso per l'intera sessione |
+| Triage | Tutti | Sempre | GPT-5.6 Terra | High |
 | Analisi | Fast | Fino al 12 luglio 2026 incluso | Fable | High |
 | Analisi | Deep | Fino al 12 luglio 2026 incluso | Fable | Massimo |
 | Analisi | Fast | Dal 13 luglio 2026 | Opus 4.8 | High |
 | Analisi | Deep | Dal 13 luglio 2026 | Opus 4.8 | Massimo |
 | Controanalisi | Fast, solo su trigger | Sempre | GPT-5.6 Sol | High |
 | Controanalisi | Deep | Sempre | GPT-5.6 Sol | Ultra |
+| Gate dell'analisi | Fast | Sempre | GPT-5.6 Terra | High |
+| Gate dell'analisi | Deep e OpenSpec | Sempre | GPT-5.6 Terra | XHigh |
 | Implementazione | Fast | Sempre | Sonnet 5 | High, senza Ultracode |
 | Implementazione | Deep | Sempre | Sonnet 5 | Massimo, Ultracode quando utile |
+| Verifica semantica | Fast | Sempre | GPT-5.6 Terra | High |
+| Verifica semantica | Deep e OpenSpec | Sempre | GPT-5.6 Terra | XHigh |
+| Review | Fast | Sempre | GPT-5.6 Terra | High |
+| Review | Deep e OpenSpec | Sempre | GPT-5.6 Terra | XHigh |
 
 La data va valutata all'inizio della fase di analisi, usando la data locale dell'ambiente
 di orchestrazione. Un'analisi gia' iniziata non cambia modello a meta' esecuzione se supera
 la mezzanotte; un nuovo tentativo avviato il giorno successivo applica invece la politica
-valida in quel momento.
+valida in quel momento. Luna resta sempre Luna `xhigh`: una delega a Terra o Sol apre una
+nuova sessione esterna e non modifica il modello della sessione orchestratrice.
 
-Prima di ogni invocazione l'orchestratore verifica che modello ed effort siano disponibili
-nell'ambiente che deve eseguirli: Claude Code per analisi e implementazione, Codex per la
-controanalisi. Se non lo sono, non sceglie automaticamente un modello diverso: sospende la
-fase e segnala l'incompatibilita'.
+Prima di ogni invocazione il controller verifica che modello ed effort siano disponibili
+nell'ambiente che deve eseguirli: Claude Code per analisi e implementazione, Codex per
+controanalisi e gate Terra. Se non lo sono, non sceglie automaticamente un modello diverso:
+sospende la fase e segnala l'incompatibilita'.
 
 In Claude Code, `ultracode` non e' un valore dell'opzione `--effort`. Quando il deep path lo
 richiede, usare il modello Sonnet 5 con effort massimo e attivare la modalita' Ultracode nel
@@ -779,7 +874,7 @@ passando `--effort ultracode`.
 
 ## Gestione Sicura Di Claude Code
 
-L'orchestratore avvia Claude Code dalla root del repository interessato e specifica il
+Il controller avvia Claude Code dalla root del repository interessato e specifica il
 modello in modo esplicito.
 
 Forma generale dell'invocazione:
@@ -801,7 +896,7 @@ Quando la skill vive fuori dal repository target, concedere con `--add-dir` solt
 directory della skill richiesta. Non autorizzare l'intero laboratorio AI per comodita'.
 
 Usare `stream-json` per osservare avanzamento, tool call, errori e richieste di permesso.
-L'orchestratore deve sintetizzare gli eventi di stato e non riversare l'intero stream nel
+Il controller deve sintetizzare gli eventi di stato e non riversare l'intero stream nel
 contesto o negli artefatti: l'osservabilita' serve a governare il processo, non a duplicarne
 ogni token.
 
@@ -813,16 +908,16 @@ Le opzioni effettive dipendono dalla fase:
 - la persistenza della sessione e gli strumenti abilitati vanno ridotti al minimo utile.
 
 Per i comandi shell preferire allowlist mirate, per esempio stato Git e test pertinenti.
-L'orchestratore ripete comunque le verifiche che costituiscono gate di pubblicazione.
+Il controller ripete comunque le verifiche che costituiscono gate di pubblicazione.
 
 Non usare un'opzione di bypass generale dei permessi come scorciatoia. Le richieste vengono
-gestite dall'orchestratore in base al contratto di autonomia. Un comando legittimo per la
+gestite dal controller in base al contratto di autonomia. Un comando legittimo per la
 build puo' essere approvato; una scrittura fuori repository o una modifica globale viene
 rifiutata.
 
 L'invocazione non interattiva deve produrre un output osservabile e un codice di uscita. Se
 il processo termina senza l'artefatto previsto, dichiara test non eseguiti come eseguiti o
-modifica file fuori fase, l'orchestratore considera la fase fallita anche se il messaggio
+modifica file fuori fase, il controller considera la fase fallita anche se il messaggio
 finale afferma il contrario.
 
 ### Timeout E Watchdog
@@ -858,8 +953,8 @@ scritto un output valido, oppure terminare correttamente lasciando un artefatto 
 
 ## Gestione Della Controanalisi Codex
 
-La controanalisi viene eseguita in una nuova sessione Codex, distinta dalla sessione
-dell'orchestratore. Il modello e' `gpt-5.6-sol`; se l'ambiente non lo rende disponibile,
+La controanalisi viene eseguita in una nuova sessione Codex, distinta dalla sessione del
+controller. Il modello e' `gpt-5.6-sol`; se l'ambiente non lo rende disponibile,
 non viene sostituito automaticamente.
 
 La nuova sessione deve lavorare sullo stesso checkout o su uno stato che includa gli
@@ -874,13 +969,36 @@ Permessi della sessione:
 - non modificare codice, test, configurazioni o analisi primaria;
 - non eseguire commit, push o azioni sulla issue GitHub.
 
-L'orchestratore invia un prompt breve che identifica gli input e l'output, poi monitora la
+Il controller invia un prompt breve che identifica gli input e l'output, poi monitora la
 sessione fino al completamento. Al termine controlla stato Git, file creati e contenuto
 della controanalisi prima di iniziare la sintesi critica.
 
-L'indipendenza richiede che la nuova sessione non riceva le conclusioni private
-dell'orchestratore ne' istruzioni per confermare l'analisi primaria. Deve poter dissentire,
+L'indipendenza richiede che la nuova sessione non riceva le conclusioni private del
+controller ne' istruzioni per confermare l'analisi primaria. Deve poter dissentire,
 ma ogni finding deve essere collegato a evidenze controllabili.
+
+## Gestione Dei Gate Terra
+
+Triage, gate dell'analisi, verifica semantica e review sono quattro invocazioni Terra
+separate. Non riutilizzare una loro sessione per un altro ruolo: l'indipendenza deriva anche
+dal non trasportare conclusioni implicite fra gate diversi.
+
+| Gate | Scrittura consentita | Esiti ammessi |
+|------|----------------------|---------------|
+| Triage | `<task-base-name>.triage.md` | `FAST`, `DEEP`, `OPENSPEC`, `BLOCKED` |
+| Gate dell'analisi | `<task-base-name>.analysis-gate.md` | `READY`, `REWORK_ANALYSIS`, `ROUTE_OPENSPEC`, `BLOCKED` |
+| Verifica semantica | `<task-base-name>.verification.md` | `PASSED`, `FAILED`, `BLOCKED` |
+| Review | `<task-base-name>.review.md` | `APPROVED`, `APPROVED_WITH_NOTES`, `CHANGES_REQUESTED` |
+
+Ogni invocazione ha accesso in lettura al checkout e solo in scrittura al proprio artifact.
+Non puo' modificare codice, test, configurazione, altri artifact, Git o GitHub. Il
+controller passa input espliciti, controlla codice di uscita, file creati, formato e stato
+Git prima di accettare l'esito.
+
+Per efficienza i gate fast usano Terra `high`. I gate deep e OpenSpec usano Terra `xhigh`.
+Non usare Sonnet 5 per questi gate: resta l'implementatore e non deve diventare il controllore
+semantico del proprio diff. Non usare Sol come sostituto generalizzato di Terra: il suo costo
+e' giustificato solo dalla controanalisi indipendente gia' richiesta dal profilo.
 
 ## Sicurezza Del Database
 
@@ -906,6 +1024,7 @@ Un workflow autonomo deve fallire in modo leggibile.
 | Evento | Azione |
 |--------|--------|
 | Download issue fallito | Conservare gli output validi, diagnosticare autenticazione o rete, non inventare il task. |
+| Triage o gate decisionale senza evidenze | Rilanciare una sola volta; poi bloccare senza sostituirlo con il giudizio di Luna. |
 | Analisi senza evidenze | Correggere o rilanciare l'analisi. |
 | Modifica inattesa durante analisi | Fermare la fase e ispezionare il diff. |
 | Skill esterna non leggibile | Rilanciare con `--add-dir` limitato alla directory della skill. |
@@ -927,11 +1046,13 @@ commentare o chiudere, verificare lo stato gia' raggiunto.
 Il lavoro e' completato soltanto quando:
 
 - il task rappresenta correttamente issue e commenti;
-- l'analisi e' stata validata;
+- il triage esterno ha assegnato un percorso valido;
+- il gate dell'analisi ha dichiarato il piano `READY`;
 - la controanalisi indipendente e' stata completata quando richiesta dal profilo;
-- le eventuali divergenze materiali sono state risolte nell'analisi consolidata;
+- le eventuali divergenze materiali sono state risolte dal gate dell'analisi;
 - l'implementazione soddisfa i criteri di accettazione;
 - test e verifiche sono stati eseguiti o le limitazioni sono state rese esplicite;
+- la verifica semantica e' positiva;
 - la review finale e' positiva;
 - il diff non contiene modifiche estranee;
 - commit e push sono riusciti;
@@ -969,6 +1090,8 @@ artefatti, non nella procedura generale.
 - Implementare direttamente dal testo della issue senza consolidare i commenti.
 - Chiedere al controanalista di confermare l'analisi invece di metterla alla prova.
 - Lasciare che il controanalista riscriva l'analisi primaria cancellando il dissenso.
+- Lasciare che Luna sostituisca con una propria decisione un triage o un gate esterno
+  inconcludente.
 - Eseguire sempre controanalisi `ultra` indipendentemente dal rischio.
 - Usare Ultracode per una modifica locale che non beneficia di decomposizione multi-agente.
 - Trattare `ultracode` come valore di `--effort` senza verificare il client installato.
@@ -996,7 +1119,7 @@ GitHub issue + commenti
    task consolidato
           |
           v
-        triage
+ triage Terra esterno
        /      \
 fast/deep    OpenSpec
     |           |
@@ -1007,7 +1130,7 @@ fast/deep    OpenSpec
 [controanalisi] validazione specifica
     |           |
     v           |
- sintesi        |
+ gate analisi Terra
     |           |
     +-----+-----+
           |
@@ -1015,10 +1138,10 @@ fast/deep    OpenSpec
  implementazione --[decisione necessaria]--> sospensione motivata
           |
           v
- verifica orchestratore
+ verifica Terra + controlli Luna
           |
           v
-       review --[approved]--> commit -> push -> commento -> close
+ review Terra --[approved]--> commit -> push -> commento -> close
           |
           +--[changes requested, entro budget]--> implementazione -> verifica -> review
           |
@@ -1026,5 +1149,5 @@ fast/deep    OpenSpec
 ```
 
 Il risultato atteso e' un flusso nel quale il committente assegna una issue e riceve il
-resoconto finale, mentre l'orchestratore gestisce autonomamente strumenti, permessi, agenti,
+resoconto finale, mentre il controller gestisce autonomamente strumenti, permessi, agenti,
 verifiche e cicli correttivi entro confini dichiarati e controllabili.

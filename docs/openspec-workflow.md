@@ -35,6 +35,51 @@ Nel nostro progetto OpenSpec va usato come guida e memoria decisionale, non come
 serve quando aiuta a chiarire scope, requisiti, dati/API, UI e rischi prima di modificare
 il codice.
 
+## Orchestrazione Autonoma
+
+Quando una change OpenSpec e' gestita dall'harness, GPT-5.6 Luna con effort `xhigh` resta
+il controller fisso dell'intera esecuzione. Luna coordina lo stato della change, invoca gli
+agenti, esegue comandi OpenSpec e controlli deterministici, applica timeout e circuit
+breaker, gestisce Git e conserva le evidenze. Non decide da sola alternative di dominio,
+API, persistenza o architettura.
+
+Le decisioni tecniche sostanziali sono delegate a GPT-5.6 Terra in sessioni esterne:
+
+- il triage Terra `high` decide se una richiesta deve entrare in OpenSpec e ne indica scope,
+  rischio e artifact necessari;
+- il gate di specifica Terra `xhigh` valuta proposal, design, specs e tasks dopo ogni
+  artefatto, con esito `READY`, `REWORK`, `BLOCKED` o `SPLIT_CHANGE`;
+- la verifica semantica e la review Terra `xhigh` valutano l'implementazione finale;
+- analisi, controanalisi e implementazione mantengono le regole e i modelli definiti nel
+  [workflow GitHub](github-issue-ai-workflow.md).
+
+Terra e' scelto per questi gate invece di Sonnet 5 per mantenere indipendente la verifica
+dall'implementatore. Sonnet 5 resta il modello di implementazione; Sol resta disponibile
+solo nelle attivita' esterne gia' previste dal workflow GitHub.
+
+Ogni agente decisionale scrive un artifact esplicito e non modifica codice o artifact di
+altri ruoli. Luna controlla la struttura dell'output e applica il suo esito; se l'output e'
+incompleto o contraddittorio, esegue il retry consentito o blocca la change, senza sostituire
+il gate con una propria valutazione.
+
+Per una change `<change-id>`, i report dei gate vivono in una directory non interpretata da
+OpenSpec, ma versionata insieme alla change:
+
+```text
+openspec/changes/<change-id>/governance/
+  triage.md
+  proposal-gate.md
+  design-specs-gate.md
+  tasks-gate.md
+  verification.md
+  review.md
+```
+
+Questi report non sostituiscono `proposal`, `design`, `specs` o `tasks`: registrano il
+perche' un artifact e' stato accettato, rimandato o bloccato. L'agente di ogni gate scrive
+solo il proprio report; Luna controlla struttura, stato Git e coerenza con le transizioni
+ammesse.
+
 ## Riferimenti ufficiali
 
 - [Sito ufficiale OpenSpec](https://openspec.dev/) — panoramica del prodotto, principi e
@@ -148,16 +193,17 @@ per le fasi del gioco:
 Flusso consigliato:
 
 1. Identificare nel backlog lo slice da lavorare.
-2. Creare una change OpenSpec.
-3. Controllare lo stato della change.
-4. Generare/leggere le istruzioni per il prossimo artefatto.
-5. Scrivere `proposal`.
-6. Scrivere `design` e `specs`.
-7. Scrivere `tasks`.
-8. Validare la change.
-9. Implementare i task.
-10. Validare di nuovo.
-11. Archiviare la change quando completata.
+2. Far classificare a Terra il routing e lo scope della change.
+3. Creare una change OpenSpec.
+4. Controllare lo stato della change.
+5. Generare/leggere le istruzioni per il prossimo artefatto.
+6. Scrivere `proposal`, poi farla valutare dal gate di specifica Terra.
+7. Scrivere `design` e `specs`, poi farli valutare dal gate di specifica Terra.
+8. Scrivere `tasks`, poi farli valutare dal gate di specifica Terra.
+9. Validare la change con OpenSpec.
+10. Implementare i task secondo il workflow GitHub.
+11. Eseguire verifica semantica e review Terra, oltre alle verifiche OpenSpec.
+12. Archiviare la change quando completata.
 
 Con lo schema attuale `spec-driven`, l'ordine degli artefatti è:
 
@@ -171,6 +217,10 @@ bloccato finché non esistono `design` e `specs`.
 ## 1. Creare una change
 
 Serve ad aprire una cartella sotto `openspec/changes/<change-id>/`.
+
+Nel workflow autonomo questo passo avviene solo dopo il triage Terra. Il triage deve avere
+confermato `OPENSPEC`, delimitato lo scope e indicato se la change va spezzata prima di
+creare file o task.
 
 Comando generico:
 
@@ -332,6 +382,10 @@ Esempi di task possibili:
 
 Serve a controllare che una change o tutto il repository OpenSpec siano coerenti.
 
+La validazione CLI controlla la struttura OpenSpec; non decide se una scelta di dominio o un
+piano tecnico siano validi. Il gate Terra corrispondente deve aver approvato gli artifact
+prima di considerare la change pronta per l'implementazione.
+
 Comando generico per una change:
 
 ```cmd
@@ -398,7 +452,10 @@ openspec list --specs
 
 ## 9. Implementare
 
-L'implementazione deve partire solo dopo proposal/design/specs/tasks validati.
+L'implementazione deve partire solo dopo proposal/design/specs/tasks validati da OpenSpec e
+approvati dai rispettivi gate Terra. Si applicano quindi le fasi di implementazione, verifica
+semantica, review, circuit breaker e Git del [workflow GitHub](github-issue-ai-workflow.md),
+anche quando la change e' nata direttamente dal backlog.
 
 Per `ISSUE-016`, la change `issue-016-phase-domain-model` non dovrebbe implementare tutto
 Mediogioco/Finale. Deve invece fissare il modello che abilita le change successive:
@@ -411,7 +468,9 @@ Mediogioco/Finale. Deve invece fissare il modello che abilita le change successi
 
 ## 10. Archiviare una change completata
 
-Quando una change è implementata, validata e accettata, si archivia.
+Quando una change è implementata, validata, verificata e accettata, si archivia. Prima
+dell'archivio devono essere positivi sia la verifica semantica sia la review Terra; non basta
+che OpenSpec accetti la struttura degli artifact.
 
 Comando generico:
 
