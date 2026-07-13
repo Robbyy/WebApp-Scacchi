@@ -194,6 +194,7 @@ Directory: `directory_artefatti` del profilo. Prefisso comune `<base>`.
 | `<base>.implementation.md` | implementatore | committato | §17.8 |
 | `<base>.review.md` | quality reviewer | committato | §17.9 |
 | `<base>.dry-run.md` | orchestratore | solo nelle simulazioni | §17.10 |
+| `<base>.metrics.source.json` | orchestratore | locale, mai committato | §17.11 |
 
 I file locali usano il suffisso `.source.json` per rientrare nella regola di esclusione Git
 già prevista dal repository per i dati locali di run.
@@ -212,6 +213,11 @@ Iterazioni: quando una fase viene rieseguita, l'artefatto viene sovrascritto e d
 riportare `iterazione: n` nel blocco esito e una sezione `Storico` con una riga per ogni
 iterazione precedente (`iterazione | data | esito | trigger`). Gli artefatti contengono
 decisioni ed evidenze; non ricopiano task, codice o documenti già disponibili.
+
+Telemetria: l'orchestratore inizializza `<base>.metrics.source.json` al preflight e lo
+aggiorna dopo ogni fase o invocazione delegata terminata, anche se fallita o bloccata. Il file
+serve a valutare routing, costo e qualità delle run; non è un artefatto di decisione e non
+viene passato agli agenti come contesto di lavoro.
 
 ## 7. Stati, Transizioni E Ripresa
 
@@ -819,6 +825,8 @@ chiudere, verificare lo stato già raggiunto.
   commento e chiusura non siano avvenuti. Il commit può restare locale su un branch
   isolato.
 - Output aggiuntivo: `<base>.dry-run.md` (§17.10).
+- Il report dry-run riporta anche il riepilogo di `<base>.metrics.source.json` (§17.11),
+  dichiarando separatamente i dati di uso non disponibili.
 - Stato terminale: `DRY_RUN_COMPLETED`.
 - Le carenze che riguardano solo la pubblicazione (canale GitHub scrivente, browser per
   evidenze non richieste dai criteri) vengono dichiarate come limitazioni, non simulate
@@ -968,7 +976,68 @@ JSON scritto dall'orchestratore. Locale, mai committato. Chiavi obbligatorie:
 
 - Blocco esito: `fase: dry-run`, `esito: DRY_RUN_COMPLETED`, `data`.
 - Sezioni obbligatorie: Esito per fase; Verifica dell'assenza di effetti remoti (push,
-  commento, chiusura); Limitazioni dichiarate.
+  commento, chiusura); Riepilogo telemetria (route, durata totale, invocazioni per ruolo,
+  token e costo disponibili/non disponibili); Limitazioni dichiarate.
+
+### 17.11 `<base>.metrics.source.json`
+
+JSON locale, mai committato, scritto e aggiornato solo dall'orchestratore. Viene creato in F0
+con `route: NOT_SELECTED`, aggiornato dal triage e completato allo stato terminale. Non
+contiene prompt, risposte, stream grezzi, contenuto di file, variabili d'ambiente, credenziali
+o altri segreti.
+
+Schema minimo:
+
+```json
+{
+  "run_id": "<uuid o identificatore stabile>",
+  "mode": "live | dry-run",
+  "route": "NOT_SELECTED | FAST | DEEP | OPENSPEC | BLOCKED",
+  "started_at": "<ISO-8601>",
+  "ended_at": "<ISO-8601 | null>",
+  "terminal_state": "<stato V2 | null>",
+  "phases": [
+    {
+      "phase": "F2",
+      "role": "triage",
+      "attempt": 1,
+      "outcome": "FAST",
+      "model": "GPT-5.6 Terra",
+      "effort": "high",
+      "ultracode": "not_applicable | si | no",
+      "started_at": "<ISO-8601>",
+      "ended_at": "<ISO-8601>",
+      "duration_seconds": 0,
+      "tokens": {
+        "input": "<numero | not_available>",
+        "output": "<numero | not_available>",
+        "reasoning": "<numero | not_available>",
+        "cached": "<numero | not_available>"
+      },
+      "cost": {
+        "amount": "<numero | not_available>",
+        "currency": "<codice ISO | not_available>",
+        "source": "client | billing | rate_card | not_available"
+      },
+      "tool_calls": 0,
+      "retry": false,
+      "rework": false,
+      "correction": false
+    }
+  ]
+}
+```
+
+`tokens` e `cost` possono contenere numeri solo quando il client o il canale di billing li
+espone in modo attendibile. L'orchestratore non stima token dal testo e non calcola costi da
+prezzi ricordati: in assenza di fonte usa `not_available`. Una stima basata su un rate card
+versionato è consentita solo con `source: rate_card` e con riferimento alla versione usata.
+
+La telemetria minima sempre disponibile è: route, fase, ruolo, modello configurato, effort,
+Ultracode, tentativo, esito, timestamp, durata, retry, rework, correzione e stato terminale.
+I confronti di efficienza raggruppano run dello stesso tipo e usano anche qualità finale,
+finding della review, promozioni e interventi umani: durata o token da soli non definiscono
+un routing corretto.
 
 ## 18. Invarianti
 
@@ -1006,6 +1075,8 @@ Run live completata solo quando tutte:
 - [ ] commento conclusivo presente su GitHub;
 - [ ] issue chiusa come completata;
 - [ ] modifiche preesistenti e risorse protette rimaste conformi (§14).
+- [ ] `<base>.metrics.source.json` completato fino allo stato terminale, con ogni dato non
+      disponibile dichiarato come tale.
 
 In una dry-run, le ultime quattro voci sono sostituite dalla verifica esplicita che push,
 commento e chiusura non siano avvenuti (`DRY_RUN_COMPLETED`).
