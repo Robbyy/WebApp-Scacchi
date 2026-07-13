@@ -1,5 +1,10 @@
 # OpenSpec Workflow
 
+> Stato: guida narrativa e didattica. Per avviare o riprendere una change OpenSpec usare la
+> specifica operativa [`openspec-workflow-v2.md`](openspec-workflow-v2.md) e il
+> [`profilo di progetto`](ai-workflow-project-profile.md). In caso di conflitto operativo
+> prevale la V2; questa guida conserva concetti, comandi e contesto storico.
+
 Questa guida descrive il modo in cui usiamo OpenSpec in questo progetto per gestire
 attività evolutive che richiedono una specifica prima dell'implementazione.
 

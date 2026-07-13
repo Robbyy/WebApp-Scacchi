@@ -1,5 +1,10 @@
 # GitHub Issue AI Workflow
 
+> Stato: guida narrativa e didattica. Per avviare o riprendere una nuova run usare la
+> specifica operativa [`github-issue-ai-workflow-v2.md`](github-issue-ai-workflow-v2.md) e il
+> [`profilo di progetto`](ai-workflow-project-profile.md). In caso di conflitto operativo
+> prevale la V2; questa guida conserva motivazioni, best practice e contesto storico.
+
 Questa guida descrive un processo generalizzato per affidare a un orchestratore AI la
 gestione completa di una GitHub issue: acquisizione, analisi, implementazione, verifica,
 review, pubblicazione e chiusura.
@@ -841,10 +846,10 @@ Il profilo corrente usa il seguente routing:
 |------|---------|---------|---------|--------------------|
 | Controller | Tutti | Sempre | GPT-5.6 Luna | XHigh, fisso per l'intera sessione |
 | Triage | Tutti | Sempre | GPT-5.6 Terra | High |
-| Analisi | Fast | Fino al 12 luglio 2026 incluso | Fable | High |
-| Analisi | Deep | Fino al 12 luglio 2026 incluso | Fable | Massimo |
-| Analisi | Fast | Dal 13 luglio 2026 | Opus 4.8 | High |
-| Analisi | Deep | Dal 13 luglio 2026 | Opus 4.8 | Massimo |
+| Analisi | Fast | Fino al 19 luglio 2026 incluso | Fable | High |
+| Analisi | Deep | Fino al 19 luglio 2026 incluso | Fable | Massimo |
+| Analisi | Fast | Dal 20 luglio 2026 | Opus 4.8 | High |
+| Analisi | Deep | Dal 20 luglio 2026 | Opus 4.8 | Massimo |
 | Controanalisi | Fast, solo su trigger | Sempre | GPT-5.6 Sol | High |
 | Controanalisi | Deep | Sempre | GPT-5.6 Sol | Ultra |
 | Gate dell'analisi | Fast | Sempre | GPT-5.6 Terra | High |
