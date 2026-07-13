@@ -62,9 +62,11 @@ L'orchestratore applica questa checklist a ogni output delegato:
 3. il blocco esito è presente con tutte le chiavi richieste dal contratto;
 4. `esito` appartiene all'enum della fase e rispetta le restrizioni di validità del percorso
    corrente (§9);
-5. le sezioni obbligatorie del contratto sono presenti e non vuote;
-6. `git status --short` non mostra modifiche fuori dai permessi della fase;
-7. il budget righe (§6) è rispettato — soft: il superamento produce un warning registrato,
+5. per l'implementazione, `modello`, `effort` e `ultracode` coincidono con i metadati
+   dell'invocazione registrati dall'orchestratore prima dell'avvio;
+6. le sezioni obbligatorie del contratto sono presenti e non vuote;
+7. `git status --short` non mostra modifiche fuori dai permessi della fase;
+8. il budget righe (§6) è rispettato — soft: il superamento produce un warning registrato,
    non un blocco.
 
 Se V-OUT fallisce: 1 retry tecnico con istruzioni ristrette; al secondo fallimento si
@@ -523,14 +525,15 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
   effort massimo con Ultracode quando utile (deep); scrittura nello scope del contratto e
   comandi di test autorizzati.
 - Input: task, analisi, gate dell'analisi (contratto vincolante), eventuale controanalisi;
-  nei cicli correttivi anche `.review.md` e/o gli esiti dei test falliti.
+  nei cicli correttivi anche `.review.md` e/o gli esiti dei test falliti. L'orchestratore
+  passa inoltre i metadati configurati dell'invocazione: `modello`, `effort`, `ultracode`.
 - Obblighi: seguire i pattern esistenti; modificare solo i file necessari; test
   proporzionati al rischio; motivare ogni deviazione materiale dal piano; correggere solo i
   finding pertinenti nei cicli correttivi; nessun commit, push o azione GitHub; non
   incorporare modifiche preesistenti; non toccare risorse protette.
 - Output: diff sul working tree + `<base>.implementation.md` (§17.8).
 - Validazione: V-OUT; diff presente e nel perimetro del contratto; hash delle risorse
-  protette invariati.
+  protette invariati; metadati nel report identici a quelli configurati dall'orchestratore.
 - Esiti: `DONE` → `IMPLEMENTED`; `NEEDS_DECISION` → `WAITING_DECISION` (§10); `FAILED` o
   non conforme → 1 retry tecnico → `BLOCKED`.
 - Contatori: la prima implementazione non consuma correzioni; ogni rientro successivo ne
@@ -928,13 +931,15 @@ JSON scritto dall'orchestratore. Locale, mai committato. Chiavi obbligatorie:
 ### 17.8 `<base>.implementation.md`
 
 - Blocco esito: `fase: implementation`, `esito: DONE|FAILED|NEEDS_DECISION`,
+  `modello: Sonnet 5`, `effort: high|massimo`, `ultracode: si|no`,
   `correzione: <n>` (0 = prima implementazione), `test_eseguiti: si|parziale|no`,
   `iterazione`, `data`.
 - Sezioni obbligatorie: File modificati; Comportamento ottenuto per ogni `AC-n`; Test
   eseguiti e risultati; Verifiche non eseguite e motivo; Deviazioni dal piano; Rischi
   residui; Decisione richiesta (solo `NEEDS_DECISION`).
-- Regole: non dichiarare eseguiti test non eseguiti (F7 li ripete comunque); non
-  incorporare modifiche preesistenti nel resoconto.
+- Regole: `modello`, `effort` e `ultracode` sono metadati forniti dall'orchestratore, non
+  una dichiarazione scelta dall'implementatore; non dichiarare eseguiti test non eseguiti
+  (F7 li ripete comunque); non incorporare modifiche preesistenti nel resoconto.
 
 ### 17.9 `<base>.review.md`
 
