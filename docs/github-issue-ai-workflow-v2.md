@@ -124,19 +124,29 @@ analisi approfondita o authoring. Un'invocazione già iniziata non cambia modell
 esecuzione. L'analisi compatta dei percorsi `MICRO_DIRECT` e `FAST` è parte di F2 e usa
 sempre Sonnet 5 secondo §3.3.
 
-### 3.5 Disponibilità Di Modelli Ed Effort
+### 3.5 Adapter Di Delega, Modelli Ed Effort
 
-Prima di ogni invocazione l'orchestratore verifica che modello ed effort previsti siano
-accettati dal client di destinazione. Se non lo sono: nessuna sostituzione automatica; la
-run passa a `BLOCKED_ENVIRONMENT` con l'indicazione dell'incompatibilità. Ultracode si
-attiva nel prompt secondo la sintassi supportata dal client installato; `ultracode` non è
-un valore di `--effort`.
+Un adapter di delega è la configurazione di progetto che collega un ruolo a un client
+eseguibile o a una sessione esterna: identifica client, verifica tecnica, mappa modelli ed
+effort, imposta working directory e permessi della fase, raccoglie l'output e restituisce i
+metadati di invocazione. Il profilo (§5) deve dichiarare ogni adapter usato dalla run; il
+workflow non presume che un modello visibile in un'interfaccia sia invocabile
+dall'orchestratore.
+
+F0 verifica soltanto che gli adapter registrati siano raggiungibili e autenticati quando
+necessario, senza richiedere tutti i modelli dei percorsi non ancora scelti. Immediatamente
+prima di ogni invocazione delegata l'orchestratore risolve l'adapter della fase e verifica
+modello ed effort effettivamente richiesti. Adapter, modello o effort non disponibili →
+`BLOCKED_ENVIRONMENT` nella fase interessata, senza sostituzioni automatiche. Ultracode si
+attiva solo con il meccanismo concreto esposto dal client; `ultracode` non è un valore di
+`--effort`.
 
 ## 4. Confini Dell'Orchestratore
 
 Esegue direttamente (azioni deterministiche):
 
 - risoluzione del profilo di progetto e preflight;
+- risoluzione e verifica degli adapter di delega;
 - acquisizione della issue con la skill di intake;
 - validazione V-OUT e controllo delle restrizioni di validità degli esiti;
 - avvio, monitoraggio, timeout e terminazione verificata degli agenti;
@@ -181,6 +191,7 @@ vigente è [`ai-workflow-project-profile.md`](ai-workflow-project-profile.md). C
 | `comandi_verifica` | build, test, lint, type-check per area | F7 |
 | `comandi_ui` | procedura browser/preview per le evidenze UI | F7 |
 | `canale_github` | modalità autenticata di lettura e scrittura della issue | F0, F1, F11 |
+| `adapter_delega` | client, mapping modello/effort, verifica e vincoli di invocazione per ruolo | F0, fasi delegate |
 | `timeout_override` | eventuali valori per ruolo/effort | §12 |
 | `budget_override` | eventuali budget artefatti | §6 |
 
@@ -454,7 +465,9 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
   8. verificare la configurazione del database temporaneo per i test: le risorse protette
      non devono entrare nell'ambiente di verifica;
   9. verificare la disponibilità del browser se prevedibilmente necessaria;
-  10. verificare che modelli ed effort di §3.3 siano accettati dai client.
+   10. verificare gli adapter di delega registrati nel profilo: eseguibile o canale sessione
+       raggiungibile, autenticazione quando richiesta, nessun segreto stampato. Non
+       verificare qui modelli o effort dei percorsi non ancora scelti (§3.5).
 - Output: `<base>.preflight.source.json` (§17.2).
 - Esiti: tutto verificato → `PREFLIGHTED`; carenza tecnica → `BLOCKED_ENVIRONMENT`. Una
   carenza che riguarda solo la pubblicazione blocca comunque una run live prima
@@ -482,6 +495,9 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
   | `SPECIFYING` | `BLOCKED`/`WAITING_DECISION`.
 - Esecutore: agente Sonnet 5 `high`, read-only sul checkout.
 - Input: `<base>.task.md`, profilo di progetto, checkout.
+- Precondizione tecnica: prima dell'invocazione risolvere l'adapter Sonnet 5 `high` del
+  profilo e verificare che il client lo accetti; indisponibilità → `BLOCKED_ENVIRONMENT`,
+  senza routing sostitutivo.
 - Azioni dell'agente: classificare il lavoro (tipo, aree, rischio), applicare i criteri di
   routing §8.1, dichiarare le verifiche obbligatorie e i flag `ui_evidence_required` e
   `shared_persistent_data_update`. Per `MICRO_DIRECT` e `FAST` verifica la causa sul codice
@@ -875,7 +891,7 @@ credenziali e dati sensibili; file locali di run mai committati; output temporan
 | Push fallito | `PUBLISH_FAILED`, recovery idempotente |
 | Commento o chiusura falliti | 1 retry idempotente → `PUBLISH_FAILED` |
 | Stato non derivabile o artefatti incoerenti | `BLOCKED`, nessuna ricostruzione inventata |
-| Modello o effort non disponibile | `BLOCKED_ENVIRONMENT`, nessun fallback silenzioso |
+| Adapter, modello o effort non disponibile | `BLOCKED_ENVIRONMENT`, nessun fallback silenzioso |
 
 Ogni retry è idempotente quando possibile: prima di riscaricare, ricreare, commentare o
 chiudere, verificare lo stato già raggiunto.
@@ -885,6 +901,9 @@ chiudere, verificare lo stato già raggiunto.
 - Percorso identico fino a F9 compreso: la run raggiunge `COMMIT_READY`. F10–F11 non sono
   eseguite e sono sostituite da una verifica esplicita che push, commento e chiusura non siano
   avvenuti. Un eventuale commit creato manualmente resta solo locale su `branch_run` isolato.
+- Se la dry-run termina `BLOCKED_ENVIRONMENT` o `BLOCKED` prima di F9, non produce
+  `<base>.dry-run.md`: preflight, artefatto della fase bloccata e telemetria descrivono
+  l'arresto. Il report dry-run è riservato allo stato `DRY_RUN_COMPLETED`.
 - Output aggiuntivo: `<base>.dry-run.md` (§17.10).
 - Il report dry-run riporta anche il riepilogo di `<base>.metrics.source.json` (§17.11),
   dichiarando separatamente i dati di uso non disponibili.
@@ -923,6 +942,7 @@ JSON scritto dall'orchestratore. Locale, mai committato. Chiavi obbligatorie:
   "modifiche_preesistenti": ["<path>"],
   "hash_risorse_protette": {"<path>": "<hash>"},
   "strumenti_verificati": ["..."],
+  "adapter_verificati": {"<id>": {"raggiungibile": true, "autenticazione": "ok | non_richiesta | non_verificata"}},
   "canale_github": {"lettura": true, "scrittura": true},
   "carenze": ["..."]
 }
@@ -1090,6 +1110,7 @@ Schema minimo:
       "role": "triage",
       "attempt": 1,
       "outcome": "FAST",
+      "adapter": "<id adapter di delega>",
       "model": "Sonnet 5",
       "effort": "high",
       "ultracode": "not_applicable | si | no",
@@ -1130,7 +1151,7 @@ espone in modo attendibile. L'orchestratore non stima token dal testo e non calc
 prezzi ricordati: in assenza di fonte usa `not_available`. Una stima basata su un rate card
 versionato è consentita solo con `source: rate_card` e con riferimento alla versione usata.
 
-La telemetria minima sempre disponibile è: route, promozioni, fase, ruolo, modello
+La telemetria minima sempre disponibile è: route, promozioni, fase, ruolo, adapter, modello
 configurato, effort, Ultracode, tentativo, esito, timestamp, durata, retry, rework,
 correzione e stato terminale.
 I confronti di efficienza raggruppano run dello stesso tipo e usano anche qualità finale,

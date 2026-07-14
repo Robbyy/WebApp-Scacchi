@@ -27,11 +27,30 @@ branch remoti; staging e commit usano sempre una allowlist esplicita.
 |------|-------------------|
 | Root del repository prodotto | lettura e scrittura limitata allo scope approvato della run |
 | Harness attivo | lettura di skill, cataloghi e prompt; scrittura solo per issue che riguardano esplicitamente harness o workflow |
+| Adapter di delega dichiarati | esecuzione dei soli client elencati nel profilo; configurazioni e credenziali del client non vengono modificate |
 | Altre directory o sistema operativo | vietati salvo decisione esplicita del committente |
 
 L'harness attivo viene risolto dal catalogo di skill disponibile nella sessione. Nel workspace
 attuale corrisponde a `C:\Sviluppo\Workspace - AI\AI Stuff`; il percorso non va assunto in
 un ambiente copiato o diverso.
+
+## Adapter Di Delega
+
+Il workflow distingue la policy del modello dal client che lo invoca. F0 verifica che ogni
+adapter registrato sia raggiungibile e autenticato quando necessario; modello ed effort sono
+verificati dall'adapter solo subito prima della fase delegata. Un adapter assente o non
+utilizzabile blocca la fase interessata senza fallback automatico.
+
+| ID | Ruoli e mapping | Verifica F0 | Vincoli di invocazione |
+|----|-----------------|-------------|------------------------|
+| `claude-code-local` | Claude: `Sonnet 5` → `sonnet`; `Haiku 4.5` → `haiku`; `Fable` → `fable`; `Opus 4.8` → `opus` | `claude` raggiungibile e `claude auth status` autenticato | Eseguire dal checkout o worktree della run; comando base `claude -p --model <alias> --effort <livello> <prompt>`; applicare i permessi della fase; non usare `--dangerously-skip-permissions`. |
+| `codex-session` | GPT-5.6 Luna, Terra e Sol nelle rispettive sessioni esterne | Il runtime della sessione espone la delega al modello previsto | Usare la sessione esterna effimera prevista dalla V2, con permessi minimi della fase. |
+
+Per `claude-code-local`, alias ed effort sono verificati all'invocazione effettiva. Le fasi
+read-only configurano strumenti read-only; F6 riceve scrittura limitata al checkout della run
+e allo scope autorizzato. Ultracode non ha un flag CLI assunto dal profilo: quando è utile e
+il client lo espone concretamente, l'adapter lo abilita e registra `ultracode: si`; altrimenti
+usa l'effort previsto con `ultracode: no` se la fase lo consente.
 
 ## Risorse Protette E Dati
 
