@@ -17,8 +17,9 @@
 | File locali di run | `*.source.json`, ignorati da Git |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
-locale isolato e non produce push, commenti o chiusure. Il workflow non crea, riscrive o
-elimina branch remoti; staging e commit usano sempre una allowlist esplicita.
+locale isolato, registrato come `branch_run` nel preflight, e non esegue push, commenti o
+chiusure. `master` non è un vincolo per la dry-run. Il workflow non crea, riscrive o elimina
+branch remoti; staging e commit usano sempre una allowlist esplicita.
 
 ## Directory E Permessi
 

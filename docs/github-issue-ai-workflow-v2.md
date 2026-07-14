@@ -94,33 +94,35 @@ effort dell'orchestratore.
 | Ruolo | Esecutore | Fasi | Scrive |
 |-------|-----------|------|--------|
 | Orchestratore | GPT-5.6 Luna `xhigh`, sessione fissa | F0, F1, F7, F9, F10, F11, coordinamento | `.preflight.source.json`, `.verification.source.json`, `.dry-run.md` |
-| Triage | GPT-5.6 Terra | F2 | `.triage.md` |
-| Analista | Claude (§3.4) | F3 | `.analysis.md` |
+| Triage e analisi rapida | Sonnet 5 | F2 per `MICRO_DIRECT` e `FAST`; triage per `DEEP` | `.triage.md` |
+| Analista approfondito | Claude (§3.4) | F3 solo `DEEP` o dopo promozione | `.analysis.md` |
 | Controanalista | GPT-5.6 Sol | F5 | `.counter-analysis.md` |
-| Gate dell'analisi | GPT-5.6 Terra | F4 | `.analysis-gate.md` |
-| Implementatore | Sonnet 5 | F6 | codice, test, `.implementation.md` |
+| Gate dell'analisi approfondita | GPT-5.6 Terra | F4 solo `DEEP` | `.analysis-gate.md` |
+| Implementatore | Haiku 4.5 (`MICRO_DIRECT`), Sonnet 5 (`FAST`/`DEEP`) | F6 | codice, test, `.implementation.md` |
 | Quality reviewer | GPT-5.6 Terra | F8 | `.review.md` |
 
 ### 3.3 Routing Modelli Ed Effort
 
-| Fase | Fast | Deep |
-|------|------|------|
-| Triage (F2) | Terra `high` | Terra `high` |
-| Analisi (F3) | Claude §3.4, `high` | Claude §3.4, effort massimo |
-| Controanalisi (F5) | Sol `high` (solo su `CHALLENGE_REQUIRED`) | Sol `ultra` (obbligatoria) |
-| Gate dell'analisi (F4) | Terra `high` | Terra `xhigh` |
-| Implementazione (F6) | Sonnet 5 `high`, senza Ultracode | Sonnet 5 effort massimo, Ultracode quando la decomposizione porta vantaggio |
-| Quality review (F8) | Terra `high` | Terra `xhigh` |
+| Fase | Micro Direct | Fast | Deep |
+|------|--------------|------|------|
+| Triage / analisi rapida (F2) | Sonnet 5 `high` | Sonnet 5 `high` | Sonnet 5 `high` |
+| Analisi approfondita (F3) | — | — | Claude §3.4, effort massimo |
+| Controanalisi (F5) | — | — | Sol `ultra` (obbligatoria) |
+| Gate dell'analisi (F4) | — | — | Terra `xhigh` |
+| Implementazione (F6) | Haiku 4.5 `high`, senza Ultracode | Sonnet 5 `high`, senza Ultracode | Sonnet 5 effort massimo, Ultracode quando la decomposizione porta vantaggio |
+| Quality review (F8) | Terra `high` | Terra `high` | Terra `xhigh` |
 
 ### 3.4 Politica Temporale Dell'Analisi
 
-| Periodo | Modello per analisi e authoring OpenSpec |
+| Periodo | Modello per analisi `DEEP` e authoring OpenSpec |
 |---------|------------------------------------------|
 | Fino al 19 luglio 2026 incluso | Fable |
 | Dal 20 luglio 2026 | Opus 4.8 |
 
 La data si valuta con la data locale dell'ambiente all'avvio di ogni nuova invocazione di
-analisi o authoring. Un'invocazione già iniziata non cambia modello a metà esecuzione.
+analisi approfondita o authoring. Un'invocazione già iniziata non cambia modello a metà
+esecuzione. L'analisi compatta dei percorsi `MICRO_DIRECT` e `FAST` è parte di F2 e usa
+sempre Sonnet 5 secondo §3.3.
 
 ### 3.5 Disponibilità Di Modelli Ed Effort
 
@@ -146,8 +148,8 @@ Esegue direttamente (azioni deterministiche):
 
 Delega sempre (giudizi semantici):
 
-- routing del lavoro (F2);
-- validità tecnica del piano e risoluzione delle divergenze tra analisti (F4);
+- routing e contratto diretto nei percorsi `MICRO_DIRECT`/`FAST` (F2);
+- validità tecnica del piano e risoluzione delle divergenze tra analisti nel solo `DEEP` (F4);
 - messa alla prova indipendente dell'analisi (F5);
 - scrittura del codice (F6);
 - valutazione semantica dell'implementazione e review (F8).
@@ -173,7 +175,7 @@ vigente è [`ai-workflow-project-profile.md`](ai-workflow-project-profile.md). C
 | Chiave | Contenuto | Usata in |
 |--------|-----------|----------|
 | `directory_autorizzate` | radici entro cui leggere e scrivere | tutte |
-| `branch_atteso`, `remote_atteso` | politica Git del repository | F0, F9, F10 |
+| `branch_atteso`, `remote_atteso` | politica Git della run live | F0, F9, F10 |
 | `directory_artefatti` | posizione degli artefatti di issue (convenzione: `docs/work-items/github-issues/`) | tutte |
 | `risorse_protette` | file persistenti da non alterare (es. database locali con dati reali) | F0, F7, F9 |
 | `comandi_verifica` | build, test, lint, type-check per area | F7 |
@@ -216,12 +218,13 @@ accettazione):
 
 | Task | Triage | Analisi | Controanalisi | Gate analisi | Implementazione | Review |
 |------|--------|---------|---------------|--------------|-----------------|--------|
-| 100 | 60 | 120 | 100 | 80 | 80 | 120 |
+| 100 | 110 | 120 | 100 | 80 | 80 | 120 |
 
 Iterazioni: quando una fase viene rieseguita, l'artefatto viene sovrascritto e deve
 riportare `iterazione: n` nel blocco esito e una sezione `Storico` con una riga per ogni
 iterazione precedente (`iterazione | data | esito | trigger`). Gli artefatti contengono
-decisioni ed evidenze; non ricopiano task, codice o documenti già disponibili.
+decisioni ed evidenze; non ricopiano task, codice o documenti già disponibili. Il contratto
+della review (§17.9) aggiunge allo storico i campi necessari a ricostruire una promozione.
 
 Telemetria: l'orchestratore inizializza `<base>.metrics.source.json` al preflight e lo
 aggiorna dopo ogni fase o invocazione delegata terminata, anche se fallita o bloccata. Il file
@@ -235,7 +238,7 @@ viene passato agli agenti come contesto di lavoro.
 Avanzamento (ordine nominale):
 
 ```text
-CREATED -> PREFLIGHTED -> ACQUIRED -> TRIAGED -> ANALYZED -> [CHALLENGED]
+CREATED -> PREFLIGHTED -> ACQUIRED -> [TRIAGED -> ANALYZED -> CHALLENGED]
         -> ANALYSIS_GATED -> IMPLEMENTED -> MECHANICALLY_VERIFIED
         -> QUALITY_REVIEWED -> COMMIT_READY -> PUBLISHED -> CLOSED
 ```
@@ -259,15 +262,14 @@ Controllo:
 | `CREATED` | preflight superato (F0) | `PREFLIGHTED` |
 | qualunque | prerequisito tecnico mancante | `BLOCKED_ENVIRONMENT` |
 | `PREFLIGHTED` | intake completato (F1) | `ACQUIRED` |
-| `ACQUIRED` | triage `FAST` o `DEEP` (F2) | `TRIAGED` (route registrato) |
+| `ACQUIRED` | F2 `MICRO_DIRECT` o `FAST` con contratto diretto valido | `ANALYSIS_GATED` |
+| `ACQUIRED` | triage `DEEP` (F2) | `TRIAGED` (route registrato) |
 | `ACQUIRED` | triage `OPENSPEC` | `SPECIFYING` (run figlia OpenSpec V2) |
 | `ACQUIRED` | triage `BLOCKED` | `BLOCKED` o `WAITING_DECISION` per `tipo_blocco` (§10) |
 | `TRIAGED` | analisi prodotta (F3) | `ANALYZED` |
 | `ANALYZED` (deep, controanalisi mai eseguita nella run) | controanalisi iniziale obbligatoria prodotta (F5) | `CHALLENGED` |
-| `ANALYZED` (fast) | gate `CHALLENGE_REQUIRED` (F4, prima valutazione) | esegui F5 → `CHALLENGED` |
-| `ANALYZED` / `CHALLENGED` | gate `READY` (F4) | `ANALYSIS_GATED` |
+| `ANALYZED` / `CHALLENGED` | gate `READY` (F4, solo deep) | `ANALYSIS_GATED` |
 | `ANALYZED` / `CHALLENGED` | gate `REWORK_ANALYSIS`, rework disponibile | F3 → `ANALYZED`/`CHALLENGED` secondo F3, poi F4 senza nuova F5 |
-| `ANALYZED` / `CHALLENGED` | gate `PROMOTE_DEEP` (solo fast, 1 volta) | promozione §8.3 → `CHALLENGED` |
 | `ANALYZED` / `CHALLENGED` | gate `ROUTE_OPENSPEC` | `SPECIFYING` |
 | `ANALYZED` / `CHALLENGED` | gate `BLOCKED` | `BLOCKED` o `WAITING_DECISION` per `tipo_blocco` |
 | `ANALYSIS_GATED` | implementazione `DONE` (F6) | `IMPLEMENTED` |
@@ -275,8 +277,10 @@ Controllo:
 | `IMPLEMENTED` | controlli meccanici superati (F7) | `MECHANICALLY_VERIFIED` |
 | `IMPLEMENTED` | test fallito per codice, correzione disponibile (§13) | F6 → `IMPLEMENTED` |
 | `MECHANICALLY_VERIFIED` | review `APPROVED` / `APPROVED_WITH_NOTES` (F8) | `QUALITY_REVIEWED` |
-| `MECHANICALLY_VERIFIED` | review `CHANGES_REQUESTED`, correzione disponibile | F6 → `IMPLEMENTED` |
-| `MECHANICALLY_VERIFIED` | review `REANALYSIS_REQUIRED`, budget disponibili | F3 → `ANALYZED`/`CHALLENGED` secondo F3, poi F4 senza nuova F5 |
+| `MECHANICALLY_VERIFIED` (`MICRO_DIRECT`) | review `CHANGES_REQUESTED` con `promozione_percorso: micro_to_fast`, correzione disponibile | promuovi a `FAST` → F6 con Sonnet 5 → `IMPLEMENTED` |
+| `MECHANICALLY_VERIFIED` (`FAST`/`DEEP`) | review `CHANGES_REQUESTED`, correzione disponibile | F6 → `IMPLEMENTED` |
+| `MECHANICALLY_VERIFIED` (deep) | review `REANALYSIS_REQUIRED`, budget disponibili | F3 → `ANALYZED`/`CHALLENGED` secondo F3, poi F4 senza nuova F5 |
+| `MECHANICALLY_VERIFIED` (`MICRO_DIRECT`/`FAST`) | review `REANALYSIS_REQUIRED` con `promozione_percorso: direct_to_deep`, budget disponibili | promuovi a `DEEP` → F3 → F5 → F4 |
 | `MECHANICALLY_VERIFIED` | review `NO_PROGRESS` o circuit breaker (§11) | `BLOCKED` |
 | `QUALITY_REVIEWED` | gate di pubblicazione superato (F9) | `COMMIT_READY` |
 | `COMMIT_READY` | commit e push riusciti (F10) | `PUBLISHED` |
@@ -284,21 +288,18 @@ Controllo:
 | `PUBLISHED` | commento e chiusura riusciti (F11) | `CLOSED` |
 | `SPECIFYING` | figlia `SPEC_COMPLETED` | `QUALITY_REVIEWED` (poi F9) |
 | `SPECIFYING` | figlia `WAITING_DECISION` / `BLOCKED_ENVIRONMENT` / `BLOCKED` | stato omologo del parent |
-| `QUALITY_REVIEWED` (dry-run) | verifica assenza effetti remoti (§16) | `DRY_RUN_COMPLETED` |
+| `COMMIT_READY` (dry-run) | verifica assenza effetti remoti (§16) | `DRY_RUN_COMPLETED` |
 
 Diagramma illustrativo (le tabelle sono normative):
 
 ```mermaid
 flowchart TD
-    A[CREATED] --> B[PREFLIGHTED] --> C[ACQUIRED] --> T{F2 Triage}
-    T -->|FAST / DEEP| E[TRIAGED] --> F[ANALYZED]
+    A[CREATED] --> B[PREFLIGHTED] --> C[ACQUIRED] --> T{F2 Sonnet}
+    T -->|MICRO_DIRECT / FAST: contratto valido| I[ANALYSIS_GATED]
+    T -->|DEEP| E[TRIAGED] --> F[ANALYZED]
     T -->|OPENSPEC| S[SPECIFYING]
     T -->|BLOCKED| X[BLOCKED]
-    F -->|deep: F5 iniziale se assente| H[CHALLENGED]
-    F -->|fast| G{F4 Gate analisi}
-    H --> G
-    G -->|CHALLENGE_REQUIRED solo fast: F5 high| H
-    G -->|PROMOTE_DEEP: F5 ultra| H
+    F -->|F5 iniziale obbligatoria| H[CHALLENGED] --> G{F4 Gate deep}
     G -->|REWORK_ANALYSIS: F3| R[F3 analisi rielaborata]
     R -->|F4 senza nuova F5| G
     G -->|ROUTE_OPENSPEC| S
@@ -308,8 +309,10 @@ flowchart TD
     J -->|test fallito: correzione F6| J
     J --> K[MECHANICALLY_VERIFIED] --> L{F8 Quality review}
     L -->|APPROVED / WITH_NOTES| M[QUALITY_REVIEWED]
-    L -->|CHANGES_REQUESTED| J
-    L -->|REANALYSIS_REQUIRED: F3| R
+    L -->|CHANGES_REQUESTED micro: promuovi FAST/Sonnet| I
+    L -->|CHANGES_REQUESTED fast/deep| J
+    L -->|REANALYSIS_REQUIRED deep: F3| R
+    L -->|REANALYSIS_REQUIRED direct: promuovi DEEP| E
     L -->|NO_PROGRESS / breaker| X
     S -->|SPEC_COMPLETED| M
     M --> N[COMMIT_READY] --> O[PUBLISHED] --> P[CLOSED]
@@ -330,16 +333,15 @@ effettivamente valutata.
 | nessun artefatto | `CREATED` | F0 |
 | preflight valido, nessun task | `PREFLIGHTED` | F1 |
 | task presente, nessun triage | `ACQUIRED` | F2 |
-| triage `FAST`/`DEEP`, nessuna analisi | `TRIAGED` | F3 |
+| triage `MICRO_DIRECT`/`FAST` con contratto diretto valido, nessun diff/report | `ANALYSIS_GATED` | F6 |
+| triage `DEEP`, nessuna analisi | `TRIAGED` | F3 |
 | triage `OPENSPEC` | `SPECIFYING` | derivazione della run figlia (OpenSpec V2 §5) |
-| analisi presente, nessun gate relativo all'analisi corrente; controanalisi mai eseguita nella run | `ANALYZED` | F4 (fast) / F5 (deep) |
-| ultimo gate relativo all'analisi corrente `CHALLENGE_REQUIRED`; controanalisi `high` assente | `ANALYZED` | F5 `high` |
-| ultimo gate relativo all'analisi corrente `CHALLENGE_REQUIRED`; controanalisi `high` presente | `CHALLENGED` | F4 |
-| ultimo gate relativo all'analisi corrente `PROMOTE_DEEP`; controanalisi `ultra` di promozione assente | `ANALYZED` / `CHALLENGED` | F5 `ultra` (§8.3) |
-| ultimo gate relativo all'analisi corrente `PROMOTE_DEEP`; controanalisi `ultra` di promozione presente | `CHALLENGED` | F4 |
-| analisi presente, nessun gate relativo all'analisi corrente; controanalisi già eseguita nella run | `CHALLENGED` | F4 senza nuova F5 |
+| analisi deep presente, controanalisi assente | `ANALYZED` | F5 `ultra` |
+| analisi deep e controanalisi presenti, nessun gate relativo all'analisi corrente | `CHALLENGED` | F4 |
 | ultimo gate relativo all'analisi corrente `REWORK_ANALYSIS` | `ANALYZED` / `CHALLENGED` | F3 |
-| ultima review `REANALYSIS_REQUIRED`; `analisi_iterazione_valutata` della review uguale all'analisi corrente | `MECHANICALLY_VERIFIED` | F3 |
+| ultima review `CHANGES_REQUESTED` con `route_valutata: MICRO_DIRECT` e `promozione_percorso: micro_to_fast`, record promozione coerente, nessuna correzione successiva | `ANALYSIS_GATED` (route promossa a `FAST`) | F6 con Sonnet 5 |
+| ultima review `REANALYSIS_REQUIRED` in route `DEEP`; `analisi_iterazione_valutata` della review uguale all'analisi corrente | `MECHANICALLY_VERIFIED` | F3 |
+| ultima review `REANALYSIS_REQUIRED` con `route_valutata: MICRO_DIRECT|FAST` e `promozione_percorso: direct_to_deep`, record promozione coerente | `TRIAGED` (route promossa a `DEEP`) | F3 |
 | gate `READY` relativo all'analisi corrente; ultima review `REANALYSIS_REQUIRED` relativa a un'analisi precedente; nessuna implementazione con `correzione` successiva a `correzione_valutata` della review | `ANALYSIS_GATED` | F6 come correzione |
 | gate `READY` con `analisi_iterazione_valutata` uguale all'analisi corrente, nessun diff/report | `ANALYSIS_GATED` | F6 |
 | report `DONE`, nessuna review per la correzione corrente | `IMPLEMENTED` | F7 (i controlli meccanici si rieseguono sempre) |
@@ -350,8 +352,10 @@ effettivamente valutata.
 | ultimo esito con decisione richiesta | `WAITING_DECISION` | fase sollevante, dopo la decisione (§10) |
 
 Regole di ripresa: prima azione = preflight ridotto (stato Git, hash risorse protette,
-canale GitHub); i controlli meccanici (F7) si rieseguono sempre; artefatti incoerenti o
-stato non derivabile → `BLOCKED`, nessuna ricostruzione inventata.
+canale GitHub); i controlli meccanici (F7) si rieseguono sempre. Una promozione è valida
+in ripresa solo se il record nella telemetria corrisponde alla review e al suo storico
+(iterazione, route, tipo e hash del contenuto); artefatti incoerenti o stato non derivabile
+→ `BLOCKED`, nessuna ricostruzione inventata.
 
 ## 8. Percorsi Di Esecuzione
 
@@ -359,30 +363,38 @@ stato non derivabile → `BLOCKED`, nessuna ricostruzione inventata.
 
 | Esito | Criteri |
 |-------|---------|
-| `FAST` | tutte vere: issue chiara senza decisioni di prodotto aperte; modifica locale e reversibile; nessun cambio di schema dati, contratto API o architettura; pochi file plausibilmente coinvolti; rischio basso; test e verifiche facilmente identificabili |
+| `MICRO_DIRECT` | tutte vere: causa dimostrata nel codice; un solo file o una modifica meccanica equivalente; diff atteso univoco e reversibile; nessun dato, API, schema, dipendenza, sicurezza o decisione UX aperta; verifiche eseguibili con strumenti già presenti. Se anche una condizione è incerta, non è valido |
+| `FAST` | issue chiara senza decisioni di prodotto aperte; modifica locale e reversibile; nessun cambio di schema dati, contratto API o architettura; pochi file plausibilmente coinvolti; rischio basso; test e verifiche identificabili. F2 deve inoltre chiudere le domande tecniche risolvibili e produrre il contratto diretto §17.4 |
 | `DEEP` | rischio medio-alto, multi-modulo, architetturale, difficile da verificare o con decisioni tecniche controverse — ma con requisiti e design già determinati |
 | `OPENSPEC` | serve costruire la specifica prima del codice: nuovo concetto di dominio; decisioni coordinate dati/API/UI; alternative architetturali valide; scomposizione in incrementi dipendenti; requisiti osservabili da formalizzare. Una migration piccola e chiaramente richiesta non impone da sola OpenSpec |
 | `BLOCKED` | manca una condizione essenziale non risolvibile da issue, commenti, codebase o ricerca |
 
 ### 8.2 Sequenze
 
+Micro direct:
+
+```text
+F0 -> F1 -> F2 (Sonnet 5 high, contratto diretto) -> F6 (Haiku 4.5 high)
+   -> F7 -> F8 (Terra high) -> F9 -> F10 -> F11
+```
+
 Fast:
 
 ```text
-F0 -> F1 -> F2 -> F3 (high) -> F4 (Terra high)
-  READY              -> F6 (Sonnet high) -> F7 -> F8 (Terra high) -> F9 -> F10 -> F11
-  CHALLENGE_REQUIRED -> F5 (Sol high) -> F4 (consolidamento) -> come sopra
+F0 -> F1 -> F2 (Sonnet 5 high, analisi compatta e contratto diretto)
+   -> F6 (Sonnet 5 high) -> F7 -> F8 (Terra high) -> F9 -> F10 -> F11
 ```
 
 Deep:
 
 ```text
-F0 -> F1 -> F2 -> F3 (massimo) -> F5 (Sol ultra, obbligatoria) -> F4 (Terra xhigh)
+F0 -> F1 -> F2 (Sonnet 5 high) -> F3 (Claude massimo) -> F5 (Sol ultra, obbligatoria) -> F4 (Terra xhigh)
    -> F6 (Sonnet massimo) -> F7 -> F8 (Terra xhigh) -> F9 -> F10 -> F11
 ```
 
-Le sequenze descrivono la prima discesa. Dopo un rientro in F3 da F4 o F8 si procede
-direttamente a F4 senza ripetere F5; resta ferma la sola eccezione di promozione (§8.3).
+Le sequenze descrivono la prima discesa. Un `CHANGES_REQUESTED` in `MICRO_DIRECT` promuove
+la correzione a `FAST`; un `REANALYSIS_REQUIRED` in `MICRO_DIRECT` o `FAST` promuove la run
+a `DEEP`. I rientri deep in F3 procedono direttamente a F4 senza ripetere F5.
 
 OpenSpec:
 
@@ -390,14 +402,34 @@ OpenSpec:
 F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 -> F11
 ```
 
-### 8.3 Promozione FAST → DEEP
+### 8.3 Promozioni Di Percorso
 
-- Richiedibile solo dal gate dell'analisi con esito `PROMOTE_DEEP`; una sola volta per run;
-  il downgrade `DEEP → FAST` è vietato.
+#### 8.3.1 `MICRO_DIRECT` → `FAST`
+
+- Richiedibile solo dalla quality review F8 con esito `CHANGES_REQUESTED` e
+  `promozione_percorso: micro_to_fast`; una sola volta per run.
+- Significato: il contratto diretto resta valido, ma l'implementazione Haiku non soddisfa il
+  review gate. Non si invoca F3, F4 o F5.
+- Effetti: `route = FAST`; la correzione in F6 usa Sonnet 5 `high` senza Ultracode, consuma
+  una correzione e conserva contratto, test ed evidenze già validi. Il downgrade a
+  `MICRO_DIRECT` è vietato.
+- Prima di F6, l'orchestratore aggiorna `route` e aggiunge la promozione alla telemetria.
+  Il record conserva iterazione e hash del contenuto della review, route valutata, tipo e destinazione;
+  deve coincidere con `promozione_percorso` e `route_valutata` della review, che restano
+  disponibili anche nello storico dopo le iterazioni successive.
+
+#### 8.3.2 `MICRO_DIRECT`/`FAST` → `DEEP`
+
+- Richiedibile solo dalla quality review F8 con esito `REANALYSIS_REQUIRED` e
+  `promozione_percorso: direct_to_deep`; una sola volta per run; il downgrade `DEEP → FAST`
+  è vietato.
 - Effetti: `route = DEEP` in modo irreversibile; i limiti diventano quelli deep senza
-  azzerare i contatori già consumati; l'analisi esistente resta valida; la controanalisi
-  viene eseguita (o ripetuta, unica eccezione alla regola §9/F5) con Sol `ultra`; il gate di
-  consolidamento successivo usa Terra `xhigh`.
+  azzerare i contatori già consumati; F3, F5 e F4 vengono eseguiti nell'ordine previsto dal
+  deep. Il contratto diretto resta evidenza storica ma non autorizza ulteriori modifiche.
+- Prima di F3, l'orchestratore aggiorna `route` e aggiunge la promozione alla telemetria.
+  Il record conserva iterazione e hash del contenuto della review, route valutata, tipo e destinazione;
+  deve coincidere con `promozione_percorso` e `route_valutata` della review, che restano
+  disponibili anche nello storico dopo le iterazioni successive.
 
 ## 9. Fasi Operative
 
@@ -408,7 +440,9 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
 - Input: profilo di progetto, checkout locale.
 - Azioni (checklist, tutte):
   1. risolvere il profilo di progetto; chiavi necessarie presenti;
-  2. verificare root, branch e remote attesi; registrare il commit base;
+  2. verificare root e remote attesi; per una run live il branch corrente deve essere
+     `branch_atteso`, per una dry-run deve essere un branch o worktree locale isolato;
+     registrare `modalita_run`, `branch_run` e commit base;
   3. `git status --short`: registrare l'elenco delle modifiche preesistenti (non
      attribuibili alla run, mai da includere nello staging);
   4. se esistono artefatti della stessa issue con stato derivato non terminale → procedura
@@ -442,18 +476,23 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
 - Esiti: completata → `ACQUIRED`; download fallito → 1 retry; poi `BLOCKED_ENVIRONMENT`
   (diagnosi autenticazione/rete, senza inventare il task).
 
-### F2 — Triage
+### F2 — Triage E Analisi Rapida
 
-- Transizione: `ACQUIRED` → `TRIAGED` | `SPECIFYING` | `BLOCKED`/`WAITING_DECISION`.
-- Esecutore: agente Terra `high`, read-only sul checkout.
+- Transizione: `ACQUIRED` → `ANALYSIS_GATED` (`MICRO_DIRECT`/`FAST`) | `TRIAGED` (`DEEP`)
+  | `SPECIFYING` | `BLOCKED`/`WAITING_DECISION`.
+- Esecutore: agente Sonnet 5 `high`, read-only sul checkout.
 - Input: `<base>.task.md`, profilo di progetto, checkout.
 - Azioni dell'agente: classificare il lavoro (tipo, aree, rischio), applicare i criteri di
   routing §8.1, dichiarare le verifiche obbligatorie e i flag `ui_evidence_required` e
-  `shared_persistent_data_update`.
+  `shared_persistent_data_update`. Per `MICRO_DIRECT` e `FAST` verifica la causa sul codice
+  e aggiunge il contratto diretto §17.4: scope, comportamento per ogni `AC-n`, piano,
+  verifiche, rischi e fuori scope. Non puo' assegnare un percorso diretto quando una domanda
+  tecnica risolvibile resta aperta.
 - Output: `<base>.triage.md` (§17.4).
 - Validazione: V-OUT; nessuna modifica al checkout.
-- Esiti e transizioni: `FAST`/`DEEP` → `TRIAGED`; `OPENSPEC` → `SPECIFYING` (apre la run
-  figlia OpenSpec V2); `BLOCKED` → §10 per `tipo_blocco`.
+- Esiti e transizioni: `MICRO_DIRECT`/`FAST` con contratto diretto completo →
+  `ANALYSIS_GATED`; `DEEP` → `TRIAGED`; `OPENSPEC` → `SPECIFYING` (apre la run figlia
+  OpenSpec V2); `BLOCKED` → §10 per `tipo_blocco`.
 - Limiti: 1 retry tecnico. L'orchestratore non sostituisce un triage incompleto con una
   propria classificazione.
 
@@ -462,10 +501,10 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
 - Transizione: `TRIAGED` → `ANALYZED`; nei rientri da `REWORK_ANALYSIS` (F4) e
   `REANALYSIS_REQUIRED` (F8), dopo l'output lo stato è `CHALLENGED` se la controanalisi è
   già stata eseguita nella run, altrimenti `ANALYZED`.
-- Esecutore: agente Claude (§3.4), skill `task-codebase-analysis`; lettura del repository e
-  scrittura del solo artefatto di analisi; ricerca autorizzata su fonti primarie quando
-  serve a rispondere a domande concrete.
-- Effort: `high` (fast) / massimo (deep).
+- Esecutore: agente Claude (§3.4), solo route `DEEP`, skill `task-codebase-analysis`; lettura
+  del repository e scrittura del solo artefatto di analisi; ricerca autorizzata su fonti
+  primarie quando serve a rispondere a domande concrete.
+- Effort: massimo.
 - Input: task, triage, checkout; nei rientri anche l'artefatto che ha richiesto il rework
   (gate o review).
 - Output: `<base>.analysis.md` (§17.5).
@@ -476,16 +515,14 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
   1 retry → `BLOCKED`.
 - Contatori: ogni rientro consuma 1 rework dell'analisi (§11).
 - Fase successiva: F5 dopo la prima analisi deep se la controanalisi non è mai stata
-  eseguita nella run, oppure nella promozione disciplinata da §8.3; F4 nel fast e dopo ogni
-  rientro. Una controanalisi già prodotta resta input di F4, che verifica i finding rispetto
-  all'analisi rielaborata senza invocare nuovamente F5.
+  eseguita nella run; F4 dopo ogni rientro. Una controanalisi già prodotta resta input di F4,
+  che verifica i finding rispetto all'analisi rielaborata senza invocare nuovamente F5.
 
 ### F4 — Gate Dell'Analisi (Consolidamento Unico)
 
-- Transizione: `ANALYZED` | `CHALLENGED` → `ANALYSIS_GATED` | rework | promozione |
-  `SPECIFYING` | blocco.
-- Esecutore: agente Terra, read-only — `high` (fast) / `xhigh` (deep e consolidamento
-  post-promozione).
+- Transizione: `ANALYZED` | `CHALLENGED` → `ANALYSIS_GATED` | rework |
+   `SPECIFYING` | blocco.
+- Esecutore: agente Terra `xhigh`, read-only, solo route `DEEP`.
 - Input: task, triage, analisi, controanalisi obbligatoria nel deep e ogni volta che sia già
   stata prodotta nella run, review precedente se rientro, checkout.
 - Ruolo: unica autorità di sintesi delle analisi. Verifica le affermazioni sul codice,
@@ -497,27 +534,22 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
 
   | Esito | Valido quando | Transizione |
   |-------|---------------|-------------|
-  | `READY` | `controanalisi_valutata: si` se F5 è stata eseguita; nel deep F5 è inoltre obbligatoria | `ANALYSIS_GATED` |
-  | `CHALLENGE_REQUIRED` | solo fast, prima valutazione, controanalisi assente | F5, poi F4 di consolidamento |
-  | `REWORK_ANALYSIS` | rework disponibile (§11) | F3 |
-  | `PROMOTE_DEEP` | solo fast, promozione non ancora usata | §8.3 |
-  | `ROUTE_OPENSPEC` | sempre | `SPECIFYING` |
+   | `READY` | `controanalisi_valutata: si`; F5 obbligatoria | `ANALYSIS_GATED` |
+   | `REWORK_ANALYSIS` | rework disponibile (§11) | F3 |
+   | `ROUTE_OPENSPEC` | sempre | `SPECIFYING` |
   | `BLOCKED` | sempre | §10 per `tipo_blocco` |
 
-  Un esito fuori validità (es. secondo `CHALLENGE_REQUIRED` nella stessa run) è un output
-  non conforme: 1 retry tecnico, poi `BLOCKED`.
+  Un esito fuori validità è un output non conforme: 1 retry tecnico, poi `BLOCKED`.
 - La controanalisi non si ripete dopo un rientro da `REWORK_ANALYSIS` o
   `REANALYSIS_REQUIRED`: il gate valuta se i finding registrati sono stati indirizzati
-  nell'analisi corrente (unica eccezione: promozione, §8.3).
+  nell'analisi corrente.
 
 ### F5 — Controanalisi (Controllo Strutturato)
 
-- Transizione: `ANALYZED` → `CHALLENGED`; nella sola ripetizione di promozione (§8.3),
-  `CHALLENGED` → `CHALLENGED`.
-- Quando: prima del primo gate deep e solo se non è mai stata eseguita nella run; nel fast
-  solo dopo `CHALLENGE_REQUIRED`. Non si ripete nei rientri F3; al massimo una per run
-  (eccezione: ripetizione a `ultra` per promozione, §8.3).
-- Esecutore: agente Sol (`high` fast / `ultra` deep), sessione nuova e indipendente,
+- Transizione: `ANALYZED` → `CHALLENGED`.
+- Quando: prima del gate deep e solo se non è mai stata eseguita nella run. Non si ripete nei
+  rientri F3; al massimo una per run.
+- Esecutore: agente Sol `ultra`, sessione nuova e indipendente,
   read-only, scrive solo il proprio artefatto.
 - Input: task, analisi primaria, triage, checkout (con gli artefatti non ancora
   committati). Nessuna conclusione privata dell'orchestratore, nessuna istruzione di
@@ -528,20 +560,20 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
 - Output: `<base>.counter-analysis.md` (§17.6) — verdetto + finding `CA-n` con severità,
   evidenza verificabile e area d'impatto. Non riscrive l'analisi; riporta prima i finding
   che possono cambiare causa, piano o test.
-- Validazione: V-OUT; `effort: high` dopo `CHALLENGE_REQUIRED`, `effort: ultra` nel deep e
-  in promozione; ogni finding con evidenza controllabile; nessun'altra modifica.
+- Validazione: V-OUT; `effort: ultra`; ogni finding con evidenza controllabile; nessun'altra
+  modifica.
 - Esiti: prodotta → `CHALLENGED` (il verdetto non decide la run: decide F4); non conforme o
   priva di evidenze → 1 retry → `BLOCKED`.
 
 ### F6 — Implementazione
 
 - Transizione: `ANALYSIS_GATED` → `IMPLEMENTED` (prima esecuzione o correzione).
-- Esecutore: agente Sonnet 5, skill `task-implementation` — `high` senza Ultracode (fast) /
-  effort massimo con Ultracode quando utile (deep); scrittura nello scope del contratto e
-  comandi di test autorizzati.
-- Input: task, analisi, gate dell'analisi (contratto vincolante), eventuale controanalisi;
-  nei cicli correttivi anche `.review.md` e/o gli esiti dei test falliti. L'orchestratore
-  passa inoltre i metadati configurati dell'invocazione: `modello`, `effort`, `ultracode`.
+- Esecutore: Haiku 4.5 `high`, senza Ultracode (`MICRO_DIRECT`); Sonnet 5 `high`, senza
+  Ultracode (`FAST`); Sonnet 5 effort massimo con Ultracode quando utile (`DEEP`).
+- Input: task e contratto diretto nel triage (`MICRO_DIRECT`/`FAST`), oppure task, triage,
+  analisi, gate dell'analisi e controanalisi (`DEEP`); nei cicli correttivi anche `.review.md`
+  e/o gli esiti dei test falliti. L'orchestratore passa inoltre i metadati configurati
+  dell'invocazione: `modello`, `effort`, `ultracode`.
 - Obblighi: seguire i pattern esistenti; modificare solo i file necessari; test
   proporzionati al rischio; motivare ogni deviazione materiale dal piano; correggere solo i
   finding pertinenti nei cicli correttivi; nessun commit, push o azione GitHub; non
@@ -568,8 +600,8 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
      artefatti previsti; file estranei o generati accidentalmente = finding meccanico;
   3. modifiche preesistenti intatte e non mescolate al diff;
   4. risorse protette: hash invariato rispetto al preflight (salvo policy §14.2);
-  5. esecuzione dei comandi di verifica obbligatori (triage + gate + profilo): test, build,
-     lint e type-check pertinenti;
+  5. esecuzione dei comandi di verifica obbligatori (triage e contratto diretto, oppure gate
+     deep, più profilo): test, build, lint e type-check pertinenti;
   6. evidenze UI quando `ui_evidence_required: si`: per ogni `AC-n` interessato registrare
      nel manifest viewport e stato richiesti, viewport e stato effettivi, visibilità dei
      controlli, overflow, errori console e rete, stati condizionali e una prova persistente
@@ -592,13 +624,14 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
 
 - Transizione: `MECHANICALLY_VERIFIED` → `QUALITY_REVIEWED` | correzione | rianalisi |
   blocco.
-- Esecutore: agente Terra (`high` fast / `xhigh` deep), read-only, secondo la skill
+- Esecutore: agente Terra (`high` micro/fast / `xhigh` deep), read-only, secondo la skill
   `task-implementation-review` integrata dal contratto §17.9.
 - Unifica verifica semantica e code review in un solo gate indipendente, dopo i controlli
   meccanici. Nessun altro passaggio valutativo tra F8 e la pubblicazione.
-- Input: task, triage, gate dell'analisi, report di implementazione, diff esplicito
-  (working tree, commit, intervallo o branch), `<base>.verification.source.json`, esiti dei
-  controlli meccanici e delle evidenze UI, review precedente nei cicli correttivi.
+- Input: task, triage e contratto diretto quando presente, oppure gate dell'analisi deep,
+  report di implementazione, diff esplicito (working tree, commit, intervallo o branch),
+  `<base>.verification.source.json`, esiti dei controlli meccanici e delle evidenze UI,
+  review precedente nei cicli correttivi.
 - Valuta: matrice dei criteri `AC-n`; correttezza del comportamento; bug e regressioni;
   rischi su dati e sicurezza; adeguatezza dei test; deviazioni dal piano; evidenze e
   limitazioni. Si fonda su diff e codice, non solo sui resoconti; non sostituisce
@@ -609,8 +642,10 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
   | Esito | Transizione |
   |-------|-------------|
   | `APPROVED` / `APPROVED_WITH_NOTES` | `QUALITY_REVIEWED` |
-  | `CHANGES_REQUESTED` | F6 (consuma 1 correzione) se disponibile, altrimenti `BLOCKED` |
-  | `REANALYSIS_REQUIRED` | F3, poi F4 senza nuova F5 (consuma 1 rework analisi; la successiva implementazione consumerà anche 1 correzione) — valido solo se il diff dimostra che causa, requisito o piano erano errati |
+  | `CHANGES_REQUESTED` (`MICRO_DIRECT`) | promozione `micro_to_fast`, poi F6 con Sonnet 5 (consuma 1 correzione) se disponibile, altrimenti `BLOCKED` |
+  | `CHANGES_REQUESTED` (`FAST`/`DEEP`) | F6 (consuma 1 correzione) se disponibile, altrimenti `BLOCKED` |
+  | `REANALYSIS_REQUIRED` (`DEEP`) | F3, poi F4 senza nuova F5 (consuma 1 rework analisi; la successiva implementazione consumerà anche 1 correzione) — valido solo se il diff dimostra che causa, requisito o piano erano errati |
+  | `REANALYSIS_REQUIRED` (`MICRO_DIRECT`/`FAST`) | promozione unica a `DEEP`, poi F3 → F5 → F4 (consuma 1 rework analisi) |
   | `NO_PROGRESS` | `BLOCKED` |
   | `BLOCKED_ENVIRONMENT` | `BLOCKED_ENVIRONMENT` |
   | `BLOCKED` | §10 per `tipo_blocco` |
@@ -622,11 +657,15 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
 - Transizione: `QUALITY_REVIEWED` → `COMMIT_READY`.
 - Esecutore: orchestratore.
 - Checklist (tutte vere):
-  1. triage valido e percorso rispettato;
-  2. gate dell'analisi `READY` con `analisi_iterazione_valutata` uguale all'analisi corrente;
-  3. controanalisi presente quando richiesta dal percorso;
-  4. review `APPROVED` o `APPROVED_WITH_NOTES`, riferita all'analisi corrente nel percorso
-     GitHub (`non_applicabile` in OpenSpec) e con note residue esplicitamente non bloccanti;
+  1. triage valido e percorso rispettato; per ogni promozione §8.3 il record in telemetria
+     deve corrispondere a una riga dello storico della review (iterazione, route, tipo e hash
+     del contenuto), altrimenti `BLOCKED`;
+  2. `MICRO_DIRECT`/`FAST`: contratto diretto F2 completo e coerente con il diff; `DEEP`:
+     gate dell'analisi `READY` con `analisi_iterazione_valutata` uguale all'analisi corrente;
+  3. controanalisi presente solo quando richiesta dal percorso `DEEP`;
+  4. review `APPROVED` o `APPROVED_WITH_NOTES`, riferita all'analisi corrente nel `DEEP` e
+     `non_applicabile` per analisi nei percorsi diretti/OpenSpec, con note residue
+     esplicitamente non bloccanti;
   5. matrice `AC-n` senza criteri `non dimostrato`;
   6. test obbligatori superati; `<base>.verification.source.json` presente quando richiesto
      e tutti i controlli UI obbligatori `passed` nelle condizioni esatte dell'AC;
@@ -636,7 +675,8 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
   9. modifiche preesistenti escluse dallo staging previsto;
   10. nessun segreto o dato sensibile nel diff o negli artefatti;
   11. risorse protette conformi alla policy §14.2;
-  12. branch corrente = `branch_atteso`;
+  12. run live: branch corrente = `branch_atteso`; dry-run: branch/worktree locale isolato
+      = `branch_run` registrato dal preflight;
   13. artefatti coerenti con il codice finale (blocchi esito aggiornati);
   14. percorso OpenSpec: archive eseguito e `openspec validate --all` positivo.
 - Percorso OpenSpec: le voci 2–3 sono sostituite da "tre gate di specifica `READY` e
@@ -713,21 +753,22 @@ Conteggi:
 - l'implementazione iniziale non è una correzione;
 - consuma 1 correzione ogni rientro in F6, sia da test falliti (F7) sia da review (F8);
 - consuma 1 rework dell'analisi ogni rientro in F3 (da F4 `REWORK_ANALYSIS` o F8
-  `REANALYSIS_REQUIRED`);
+  `REANALYSIS_REQUIRED`); una review che rianalizza una route diretta promuove prima a
+  `DEEP` (§8.3);
 - i retry tecnici hanno budget separato (1 per invocazione) e non contano come correzioni
   se non producono un nuovo output revisionabile.
 
-| Contatore | Fast | Deep | All'esaurimento |
-|-----------|------|------|-----------------|
-| Retry tecnico per invocazione | 1 | 1 | transizione di errore della fase (§15) |
-| Rework dell'analisi | 1 | 2 | `BLOCKED` |
-| Correzioni dell'implementazione | 2 | 3 | `BLOCKED` |
-| Promozione fast → deep | 1 | — | ulteriore `PROMOTE_DEEP` invalido |
-| Controanalisi per run | 1 (su richiesta) | 1 (obbligatoria) | ulteriore richiesta invalida, salvo §8.3 |
+| Contatore | Micro Direct | Fast | Deep | All'esaurimento |
+|-----------|--------------|------|------|-----------------|
+| Retry tecnico per invocazione | 1 | 1 | 1 | transizione di errore della fase (§15) |
+| Rework dell'analisi | 1 | 1 | 2 | `BLOCKED` |
+| Correzioni dell'implementazione | 2 | 2 | 3 | `BLOCKED` |
+| Promozione micro → fast | 1 | — | — | ulteriore promozione invalida |
+| Promozione diretta → deep | 1 | 1 | — | ulteriore promozione invalida |
+| Controanalisi per run | 0 | 0 | 1 (obbligatoria) | ulteriore richiesta invalida |
 
-La promozione adotta i limiti deep senza azzerare i consumi già effettuati.
-La sola deroga al limite di controanalisi è la promozione (§8.3): se F5 era già stata
-eseguita nel fast a `high`, può essere ripetuta una volta a `ultra`. Né un rework né
+Ogni promozione adotta il percorso di destinazione senza azzerare i consumi già effettuati.
+La controanalisi è una sola e appartiene esclusivamente al deep; né un rework né
 `REANALYSIS_REQUIRED` autorizzano ulteriori ripetizioni.
 
 Arresto anticipato (confronti meccanici sugli output strutturati, prima dell'esaurimento):
@@ -841,9 +882,9 @@ chiudere, verificare lo stato già raggiunto.
 
 ## 16. Dry-Run
 
-- Percorso identico fino a F9 compreso. F10–F11 sostituite da: verifica esplicita che push,
-  commento e chiusura non siano avvenuti. Il commit può restare locale su un branch
-  isolato.
+- Percorso identico fino a F9 compreso: la run raggiunge `COMMIT_READY`. F10–F11 non sono
+  eseguite e sono sostituite da una verifica esplicita che push, commento e chiusura non siano
+  avvenuti. Un eventuale commit creato manualmente resta solo locale su `branch_run` isolato.
 - Output aggiuntivo: `<base>.dry-run.md` (§17.10).
 - Il report dry-run riporta anche il riepilogo di `<base>.metrics.source.json` (§17.11),
   dichiarando separatamente i dati di uso non disponibili.
@@ -875,7 +916,9 @@ JSON scritto dall'orchestratore. Locale, mai committato. Chiavi obbligatorie:
   "fase": "preflight",
   "esito": "OK | BLOCKED_ENVIRONMENT",
   "data": "<AAAA-MM-GG>",
-  "branch": "...",
+  "modalita_run": "live | dry-run",
+  "branch_run": "...",
+  "branch_atteso_live": "...",
   "commit_base": "...",
   "modifiche_preesistenti": ["<path>"],
   "hash_risorse_protette": {"<path>": "<hash>"},
@@ -894,16 +937,21 @@ JSON scritto dall'orchestratore. Locale, mai committato. Chiavi obbligatorie:
 
 ### 17.4 `<base>.triage.md`
 
-- Blocco esito: `fase: triage`, `esito: FAST|DEEP|OPENSPEC|BLOCKED`,
+- Blocco esito: `fase: triage`, `esito: MICRO_DIRECT|FAST|DEEP|OPENSPEC|BLOCKED`,
   `classificazione: bug|manutenzione|evolutiva`, `aree: <frontend|backend|dati|infrastruttura, elenco>`,
   `rischio: basso|medio|alto`, `ui_evidence_required: si|no`,
   `shared_persistent_data_update: si|no`, `tipo_blocco: decisione|tecnico|nessuno`,
+  `contratto_diretto: si|no`,
   `iterazione`, `data`.
 - Sezioni obbligatorie: Motivazione del routing (criteri §8.1 richiamati); Evidenze;
   Verifiche obbligatorie (aree e comandi che F7 deve coprire); Decisione richiesta (solo se
-  `BLOCKED` con `tipo_blocco: decisione`).
-- Invocazione: sessione Terra `high` read-only; input task, profilo e repository; applicare
-  i criteri §8.1; scrivere soltanto `<base>.triage.md` conforme a §17.4.
+  `BLOCKED` con `tipo_blocco: decisione`). Con `contratto_diretto: si` sono inoltre
+  obbligatorie le sezioni: Causa con riferimenti al codice; Contratto di implementazione
+  (scope, comportamento per `AC-n`, vincoli); Piano minimo; Verifiche; Rischi e fuori scope.
+- Regole: `contratto_diretto: si` solo con esito `MICRO_DIRECT` o `FAST`; tutte le sezioni
+  dirette devono essere non vuote e le domande tecniche risolvibili devono essere chiuse.
+- Invocazione: sessione Sonnet 5 `high` read-only; input task, profilo e repository;
+  applicare i criteri §8.1; scrivere soltanto `<base>.triage.md` conforme a §17.4.
 
 ### 17.5 `<base>.analysis.md`
 
@@ -912,21 +960,19 @@ JSON scritto dall'orchestratore. Locale, mai committato. Chiavi obbligatorie:
 - Sezioni obbligatorie: Comportamento corrente e atteso; Mappa dei file e dei flussi;
   Causa con riferimenti al codice; Aree di modifica; Piano di implementazione; Piano di
   test e verifica; Rischi, dipendenze e fuori scope; Domande aperte.
-- Fast: concentrata su causa, diff probabile e verifiche; alternative solo se cambiano una
-  decisione. Le conclusioni di ricerca che influenzano il piano riportano il riferimento
-  alla fonte.
+- Prodotta solo nel percorso `DEEP` o dopo la sua promozione. Le conclusioni di ricerca che
+  influenzano il piano riportano il riferimento alla fonte.
 
 ### 17.6 `<base>.counter-analysis.md`
 
 - Blocco esito: `fase: counter-analysis`,
-  `esito: CONFIRMED|MATERIAL_FINDINGS|INSUFFICIENT_INPUTS`, `effort: high|ultra`,
+  `esito: CONFIRMED|MATERIAL_FINDINGS|INSUFFICIENT_INPUTS`, `effort: ultra`,
   `finding_totali: <n>`, `finding_bloccanti: <n>`, `iterazione`, `data`.
 - Sezioni obbligatorie: Finding (tabella: `CA-n` | severità `bloccante|maggiore|minore` |
   impatto su `causa|piano|test|scope|dati|sicurezza` | affermazione | evidenza
   verificabile); Punti confermati; Punti non valutabili e perché.
-- Regole: `effort: high` nel fast dopo `CHALLENGE_REQUIRED`; `effort: ultra` nel deep e in
-  promozione; finding ordinati per severità; nessuna riscrittura dell'analisi; il verdetto
-  non decide la run (decide F4).
+- Regole: `effort: ultra`; finding ordinati per severità; nessuna riscrittura dell'analisi;
+  il verdetto non decide la run (decide F4).
 - Invocazione: sessione Sol nuova e indipendente, read-only; input task, analisi primaria,
   triage, repository; cercare errori, assunzioni fragili e alternative; scrivere soltanto
   `<base>.counter-analysis.md` conforme a §17.6; nessuna istruzione di confermare
@@ -935,8 +981,8 @@ JSON scritto dall'orchestratore. Locale, mai committato. Chiavi obbligatorie:
 ### 17.7 `<base>.analysis-gate.md`
 
 - Blocco esito: `fase: analysis-gate`,
-  `esito: READY|CHALLENGE_REQUIRED|REWORK_ANALYSIS|PROMOTE_DEEP|ROUTE_OPENSPEC|BLOCKED`,
-  `percorso: fast|deep`, `analisi_iterazione_valutata: <n>`,
+  `esito: READY|REWORK_ANALYSIS|ROUTE_OPENSPEC|BLOCKED`,
+  `percorso: deep`, `analisi_iterazione_valutata: <n>`,
   `controanalisi_valutata: si|no`, `tipo_blocco: decisione|tecnico|nessuno`, `iterazione`,
   `data`.
 - Sezioni obbligatorie: Verifiche svolte; Finding accettati (`CA-n` → azione recepita nel
@@ -949,26 +995,27 @@ JSON scritto dall'orchestratore. Locale, mai committato. Chiavi obbligatorie:
   che soddisfa gli `AC-n`; scope non ampliato senza motivo; test proporzionati; ricerche
   pertinenti e supportate; domande tecniche risolvibili chiuse; vere decisioni di prodotto
   identificate.
-- `analisi_iterazione_valutata` deve coincidere con `iterazione` dell'analisi ricevuta. Se F5
-  è stata eseguita, `READY` richiede `controanalisi_valutata: si`; con `percorso: deep`
-  richiede inoltre l'artefatto F5 obbligatorio della run. Nei rientri si riusa tale artefatto
-  e lo si valuta rispetto all'analisi corrente; non si richiede una nuova F5.
-- Invocazione: sessione Terra read-only (`high`/`xhigh` per percorso); input task, triage,
+- `analisi_iterazione_valutata` deve coincidere con `iterazione` dell'analisi ricevuta.
+  `READY` richiede `controanalisi_valutata: si` e l'artefatto F5 obbligatorio della run. Nei
+  rientri si riusa tale artefatto e lo si valuta rispetto all'analisi corrente; non si
+  richiede una nuova F5.
+- Invocazione: sessione Terra `xhigh` read-only; input task, triage,
   analisi, controanalisi obbligatoria nel deep o se già prodotta nella run, eventuale review
   precedente, repository; scrivere soltanto `<base>.analysis-gate.md` conforme a §17.7.
 
 ### 17.8 `<base>.implementation.md`
 
 - Blocco esito: `fase: implementation`, `esito: DONE|FAILED|NEEDS_DECISION`,
-  `modello: Sonnet 5`, `effort: high|massimo`, `ultracode: si|no`,
+  `modello: Haiku 4.5|Sonnet 5`, `effort: high|massimo`, `ultracode: si|no`,
   `correzione: <n>` (0 = prima implementazione), `test_eseguiti: si|parziale|no`,
   `iterazione`, `data`.
 - Sezioni obbligatorie: File modificati; Comportamento ottenuto per ogni `AC-n`; Test
   eseguiti e risultati; Verifiche non eseguite e motivo; Deviazioni dal piano; Rischi
   residui; Decisione richiesta (solo `NEEDS_DECISION`).
 - Regole: `modello`, `effort` e `ultracode` sono metadati forniti dall'orchestratore, non
-  una dichiarazione scelta dall'implementatore; non dichiarare eseguiti test non eseguiti
-  (F7 li ripete comunque); non incorporare modifiche preesistenti nel resoconto.
+  una dichiarazione scelta dall'implementatore; `Haiku 4.5` è valido solo in
+  `MICRO_DIRECT`, `Sonnet 5` nei percorsi `FAST`/`DEEP`; non dichiarare eseguiti test non
+  eseguiti (F7 li ripete comunque); non incorporare modifiche preesistenti nel resoconto.
 
 ### 17.9 `<base>.review.md`
 
@@ -976,6 +1023,8 @@ JSON scritto dall'orchestratore. Locale, mai committato. Chiavi obbligatorie:
   `esito: APPROVED|APPROVED_WITH_NOTES|CHANGES_REQUESTED|REANALYSIS_REQUIRED|NO_PROGRESS|BLOCKED_ENVIRONMENT|BLOCKED`,
   `finding_bloccanti: <n>`, `correzione_valutata: <n>`,
   `analisi_iterazione_valutata: <n>|non_applicabile`,
+  `route_valutata: MICRO_DIRECT|FAST|DEEP|OPENSPEC`,
+  `promozione_percorso: nessuna|micro_to_fast|direct_to_deep`,
   `tipo_blocco: decisione|tecnico|nessuno`, `iterazione`, `data`.
 - Sezioni obbligatorie: Matrice dei criteri di accettazione (`AC-n` |
   `dimostrato|non dimostrato|non applicabile` | evidenza); Finding bloccanti (`QR-n` |
@@ -985,13 +1034,20 @@ JSON scritto dall'orchestratore. Locale, mai committato. Chiavi obbligatorie:
   consecutive, i difetti nuovi ricevono ID nuovi; fondata su diff e codice;
   `REANALYSIS_REQUIRED` solo quando causa, requisito o piano erano errati e una correzione
   locale sarebbe inaffidabile; `APPROVED_WITH_NOTES` autorizza la pubblicazione solo con
-  note esplicitamente non bloccanti. Nel workflow GitHub
-  `analisi_iterazione_valutata` copia il valore del gate ricevuto; nel percorso OpenSpec è
-  `non_applicabile`.
-- Invocazione: sessione Terra read-only (`high`/`xhigh` per percorso); input task, triage,
-  gate dell'analisi, report di implementazione, diff esplicito, esiti dei controlli
-  meccanici, eventuale review precedente; scrivere soltanto `<base>.review.md` conforme a
-  §17.9.
+  note esplicitamente non bloccanti. Nel workflow GitHub `DEEP`,
+  `analisi_iterazione_valutata` copia il valore del gate ricevuto; nei percorsi
+  `MICRO_DIRECT`/`FAST` e OpenSpec è `non_applicabile`.
+  `promozione_percorso` è `micro_to_fast` solo con `CHANGES_REQUESTED` in una run
+  `MICRO_DIRECT`, `direct_to_deep` solo con `REANALYSIS_REQUIRED` in una route diretta; in
+  tutti gli altri casi è `nessuna`. `route_valutata` è la route configurata prima della
+  review e non cambia nella sua iterazione. Dalla seconda iterazione, lo `Storico` della
+  review riporta anche `route_valutata`, `promozione_percorso` e
+  `hash_contenuto_precedente` per ogni review precedente; l'hash è calcolato
+  dall'orchestratore prima della sovrascrittura e viene passato al reviewer per la riga storica.
+- Invocazione: sessione Terra read-only (`high` per `MICRO_DIRECT`/`FAST`, `xhigh` per
+  `DEEP`); input task, triage e contratto diretto quando presente, oppure gate dell'analisi
+  deep, report di implementazione, diff esplicito, esiti dei controlli meccanici, eventuale
+  review precedente; scrivere soltanto `<base>.review.md` conforme a §17.9.
 
 ### 17.10 `<base>.dry-run.md`
 
@@ -1013,17 +1069,28 @@ Schema minimo:
 {
   "run_id": "<uuid o identificatore stabile>",
   "mode": "live | dry-run",
-  "route": "NOT_SELECTED | FAST | DEEP | OPENSPEC | BLOCKED",
+  "route": "NOT_SELECTED | MICRO_DIRECT | FAST | DEEP | OPENSPEC | BLOCKED",
   "started_at": "<ISO-8601>",
   "ended_at": "<ISO-8601 | null>",
   "terminal_state": "<stato V2 | null>",
+  "promotions": [
+    {
+      "from": "MICRO_DIRECT | FAST",
+      "to": "FAST | DEEP",
+      "trigger": "F8/CHANGES_REQUESTED | F8/REANALYSIS_REQUIRED",
+      "review_iteration": 1,
+      "review_route": "MICRO_DIRECT | FAST",
+      "review_content_sha256": "<hash>",
+      "at": "<ISO-8601>"
+    }
+  ],
   "phases": [
     {
       "phase": "F2",
       "role": "triage",
       "attempt": 1,
       "outcome": "FAST",
-      "model": "GPT-5.6 Terra",
+      "model": "Sonnet 5",
       "effort": "high",
       "ultracode": "not_applicable | si | no",
       "started_at": "<ISO-8601>",
@@ -1063,8 +1130,9 @@ espone in modo attendibile. L'orchestratore non stima token dal testo e non calc
 prezzi ricordati: in assenza di fonte usa `not_available`. Una stima basata su un rate card
 versionato è consentita solo con `source: rate_card` e con riferimento alla versione usata.
 
-La telemetria minima sempre disponibile è: route, fase, ruolo, modello configurato, effort,
-Ultracode, tentativo, esito, timestamp, durata, retry, rework, correzione e stato terminale.
+La telemetria minima sempre disponibile è: route, promozioni, fase, ruolo, modello
+configurato, effort, Ultracode, tentativo, esito, timestamp, durata, retry, rework,
+correzione e stato terminale.
 I confronti di efficienza raggruppano run dello stesso tipo e usano anche qualità finale,
 finding della review, promozioni e interventi umani: durata o token da soli non definiscono
 un routing corretto.
@@ -1118,9 +1186,9 @@ Schema minimo:
 | I9 | Lo staging è sempre esplicito per allowlist. |
 | I10 | Un esito negativo o inconcludente non diventa positivo per decorso del tempo o esaurimento dei retry. |
 | I11 | Nessun fallback silenzioso di modello o effort. |
-| I12 | Il downgrade di percorso è vietato; la promozione è unica e non azzera i contatori. |
+| I12 | Il downgrade di percorso è vietato; ciascuna promozione ammessa da §8.3 è unica e non azzera i contatori. |
 | I13 | Un test fallito non viene mai dichiarato superato. |
-| I14 | La controanalisi è un controllo indipendente: una sola per run, salvo la ripetizione a `ultra` imposta dalla promozione (§8.3); output strutturato e consolidamento solo nel gate dell'analisi. |
+| I14 | La controanalisi è un controllo indipendente: una sola per run `DEEP`; output strutturato e consolidamento solo nel gate dell'analisi approfondita. |
 | I15 | Un criterio UI non è `dimostrato` senza un controllo `passed` nel manifest F7, nelle condizioni esatte richieste. |
 
 ## 19. Criteri Di Completamento
@@ -1129,9 +1197,11 @@ Run live completata solo quando tutte:
 
 - [ ] il task rappresenta correttamente issue e commenti;
 - [ ] il triage esterno ha assegnato un percorso valido;
-- [ ] il gate dell'analisi ha dichiarato `READY` l'analisi corrente;
-- [ ] la controanalisi è stata completata quando richiesta dal percorso;
-- [ ] le divergenze materiali sono state risolte dal gate dell'analisi;
+- [ ] `MICRO_DIRECT`/`FAST`: il contratto diretto F2 è completo e coerente con il diff;
+      `DEEP`: il gate dell'analisi ha dichiarato `READY` l'analisi corrente;
+- [ ] la controanalisi è stata completata quando richiesta dal percorso `DEEP`;
+- [ ] le divergenze materiali sono state risolte dal gate dell'analisi approfondita quando
+      il percorso è `DEEP`;
 - [ ] tutti gli `AC-n` risultano `dimostrato` nella matrice della review;
 - [ ] test e verifiche eseguiti, o limitazioni rese esplicite e accettate dalla review;
 - [ ] quality review `APPROVED` o `APPROVED_WITH_NOTES`;
