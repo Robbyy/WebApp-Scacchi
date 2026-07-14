@@ -141,6 +141,20 @@ modello ed effort effettivamente richiesti. Adapter, modello o effort non dispon
 attiva solo con il meccanismo concreto esposto dal client; `ultracode` non è un valore di
 `--effort`.
 
+Prima di avviare un processo, l'orchestratore costruisce e valida un *envelope di
+invocazione* con: `run_id`, fase, ruolo, adapter, checkout o worktree, modello, effort,
+permessi della fase, riferimenti agli input, prompt testuale non vuoto, output atteso,
+timeout e destinazione locale per stdout, stderr e metadati. L'adapter riceve l'envelope,
+non una stringa di shell costruita per interpolazione. Cattura codice di uscita, stdout e
+stderr; l'orchestratore valida l'output contro il contratto V-OUT e soltanto allora scrive o
+aggiorna l'artefatto di fase.
+
+Un prompt assente o vuoto, un input mancante o un output atteso non autorizzato è un errore
+locale `ADAPTER_INPUT_INVALID`: non si avvia il client, non si incrementa il tentativo della
+fase e non si registra un'invocazione del modello. La run passa a `BLOCKED_ENVIRONMENT` fino
+alla correzione dell'envelope, poi riprende dalla stessa fase. Gli artefatti locali di debug
+restano fuori da Git e non contengono segreti.
+
 ## 4. Confini Dell'Orchestratore
 
 Esegue direttamente (azioni deterministiche):
@@ -497,7 +511,8 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
 - Input: `<base>.task.md`, profilo di progetto, checkout.
 - Precondizione tecnica: prima dell'invocazione risolvere l'adapter Sonnet 5 `high` del
   profilo e verificare che il client lo accetti; indisponibilità → `BLOCKED_ENVIRONMENT`,
-  senza routing sostitutivo.
+  senza routing sostitutivo. Costruire e validare l'envelope di §3.5, incluso il prompt
+  completo della fase; un envelope non valido non è un tentativo di triage.
 - Azioni dell'agente: classificare il lavoro (tipo, aree, rischio), applicare i criteri di
   routing §8.1, dichiarare le verifiche obbligatorie e i flag `ui_evidence_required` e
   `shared_persistent_data_update`. Per `MICRO_DIRECT` e `FAST` verifica la causa sul codice
@@ -892,6 +907,7 @@ credenziali e dati sensibili; file locali di run mai committati; output temporan
 | Commento o chiusura falliti | 1 retry idempotente → `PUBLISH_FAILED` |
 | Stato non derivabile o artefatti incoerenti | `BLOCKED`, nessuna ricostruzione inventata |
 | Adapter, modello o effort non disponibile | `BLOCKED_ENVIRONMENT`, nessun fallback silenzioso |
+| Envelope adapter non valido (prompt/input/output) | `ADAPTER_INPUT_INVALID`, nessun processo o tentativo modello; correggere e riprendere la stessa fase |
 
 Ogni retry è idempotente quando possibile: prima di riscaricare, ricreare, commentare o
 chiudere, verificare lo stato già raggiunto.

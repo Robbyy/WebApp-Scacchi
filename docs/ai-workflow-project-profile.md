@@ -43,7 +43,7 @@ utilizzabile blocca la fase interessata senza fallback automatico.
 
 | ID | Ruoli e mapping | Verifica F0 | Vincoli di invocazione |
 |----|-----------------|-------------|------------------------|
-| `claude-code-local` | Claude: `Sonnet 5` → `sonnet`; `Haiku 4.5` → `haiku`; `Fable` → `fable`; `Opus 4.8` → `opus` | `claude` raggiungibile e `claude auth status` autenticato | Eseguire dal checkout o worktree della run; comando base `claude -p --model <alias> --effort <livello> <prompt>`; applicare i permessi della fase; non usare `--dangerously-skip-permissions`. |
+| `claude-code-local` | Claude: `Sonnet 5` → `sonnet`; `Haiku 4.5` → `haiku`; `Fable` → `fable`; `Opus 4.8` → `opus` | `claude` raggiungibile e `claude auth status` autenticato | Eseguire dal checkout o worktree della run secondo il contratto operativo sotto; applicare i permessi della fase; non usare `--dangerously-skip-permissions`. |
 | `codex-session` | GPT-5.6 Luna, Terra e Sol nelle rispettive sessioni esterne | Il runtime della sessione espone la delega al modello previsto | Usare la sessione esterna effimera prevista dalla V2, con permessi minimi della fase. |
 
 Per `claude-code-local`, alias ed effort sono verificati all'invocazione effettiva. Le fasi
@@ -51,6 +51,27 @@ read-only configurano strumenti read-only; F6 riceve scrittura limitata al check
 e allo scope autorizzato. Ultracode non ha un flag CLI assunto dal profilo: quando è utile e
 il client lo espone concretamente, l'adapter lo abilita e registra `ultracode: si`; altrimenti
 usa l'effort previsto con `ultracode: no` se la fase lo consente.
+
+### Contratto Operativo Di `claude-code-local`
+
+L'adapter riceve l'envelope di §3.5 della V2. Prima di creare il processo legge il prompt
+dall'envelope, rifiuta testo assente o composto solo da spazi e verifica che gli input e la
+destinazione di output siano consentiti. Il prompt è un argomento posizionale obbligatorio di
+Claude Code: non va omesso, sostituito con un flag né incorporato in una stringa da passare a
+una shell.
+
+In PowerShell il lancio base usa una lista di argomenti equivalente a:
+
+```powershell
+$promptText = <prompt non vuoto validato dall'envelope>
+& claude -p --model $alias --effort $effort --output-format json $promptText
+```
+
+L'adapter esegue dal worktree della run, attende il processo, cattura stdout, stderr e codice
+di uscita e li restituisce all'orchestratore. Per una fase read-only, l'agente non scrive nel
+checkout: l'orchestratore estrae la risposta dall'output, la valida e persiste il solo
+artefatto previsto dal contratto. Un processo non viene avviato se l'envelope non è valido;
+questo caso è `ADAPTER_INPUT_INVALID`, non un retry del modello.
 
 ## Risorse Protette E Dati
 
