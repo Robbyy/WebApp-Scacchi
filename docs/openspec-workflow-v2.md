@@ -40,7 +40,7 @@ riflettono nello stato omologo del parent.
 | Ruolo | Esecutore | Note |
 |-------|-----------|------|
 | Orchestratore | GPT-5.6 Luna `xhigh`, sessione fissa | esegue comandi OpenSpec, controlli meccanici, Git |
-| Triage | GPT-5.6 Terra `high` | solo standalone; la figlia riusa il triage della issue |
+| Triage | Sonnet 5 `high` | solo standalone; la figlia riusa il triage della issue |
 | Autore OpenSpec | modello dell'analisi deep (politica temporale §3.4 del workflow GitHub V2: Fable fino al 19 luglio 2026 incluso; Opus 4.8 dal 20 luglio 2026), effort massimo | una nuova invocazione effimera per ogni gruppo di artefatti, basata sui file versionati, mai sulla memoria di una sessione precedente |
 | Gate di specifica | GPT-5.6 Terra `xhigh` | tre gate distinti: proposal; design+specs; tasks |
 | Implementatore, controlli, quality review | come workflow GitHub V2 con parametri deep | fasi F6–F8 richiamate in S9 |
@@ -171,7 +171,7 @@ prima di riprendere la figlia il parent torna allo stato `SPECIFYING`.
   senza errori bloccanti (mai rilanciare `openspec init` alla cieca); worktree o branch di
   lavoro previsto dal profilo.
 - Standalone: preflight completo (F0 del workflow GitHub V2, senza canale issue) + triage
-  Terra `high` read-only con output `governance/triage.md` (contratto §17.4 GitHub V2).
+  Sonnet 5 `high` read-only con output `governance/triage.md` (contratto §17.4 GitHub V2).
   Esiti validi: `OPENSPEC` (conferma il percorso, delimita lo scope, indica se la change va
   spezzata prima di creare file) e `BLOCKED` (con `tipo_blocco: decisione` quando il
   percorso corretto è un'altra scelta del committente).
