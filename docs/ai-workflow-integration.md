@@ -13,8 +13,9 @@ dell'harness valido per una run.
 4. selezionare `github-issue-v2` per issue GitHub o `openspec-v2` per change evolutive;
 5. applicare il workflow selezionato insieme al profilo locale.
 
-La run usa una sola revisione dell'harness dall'inizio alla fine. Se il commit dichiarato non
-è disponibile, il preflight termina con `BLOCKED_ENVIRONMENT`: non si sostituisce
+La run usa una sola revisione dell'harness dall'inizio alla fine. F0 verifica repository,
+commit e catalogo dichiarati nel profilo e li registra nel preflight. Se il commit dichiarato
+non è disponibile, il preflight termina con `BLOCKED_ENVIRONMENT`: non si sostituisce
 automaticamente una revisione diversa.
 
 ## Confini Delle Fonti

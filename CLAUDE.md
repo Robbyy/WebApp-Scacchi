@@ -2,15 +2,17 @@
 
 ## Workflow AI Per Issue E Change
 
-Per una richiesta di gestione completa di una GitHub issue, usa come procedura canonica
-[`docs/github-issue-ai-workflow-v2.md`](docs/github-issue-ai-workflow-v2.md) insieme al
-[`docs/ai-workflow-project-profile.md`](docs/ai-workflow-project-profile.md). Il documento
+Per una richiesta di gestione completa di una GitHub issue, partire da
+[`docs/ai-workflow-integration.md`](docs/ai-workflow-integration.md) e dal
+[`docs/ai-workflow-project-profile.md`](docs/ai-workflow-project-profile.md), poi risolvere
+il workflow GitHub V2 dal catalogo dell'harness al commit dichiarato. Il documento
 `docs/github-issue-ai-workflow.md` resta una guida narrativa e didattica: non usarlo per
 determinare autonomamente stati, transizioni o gate di una nuova run.
 
-Per una change OpenSpec, o quando il triage della issue restituisce `OPENSPEC`, usa
-[`docs/openspec-workflow-v2.md`](docs/openspec-workflow-v2.md) insieme allo stesso profilo.
-La guida `docs/openspec-workflow.md` resta un riferimento narrativo per concetti e comandi.
+Per una change OpenSpec, o quando il triage della issue restituisce `OPENSPEC`, partire dalla
+stessa integrazione e dallo stesso profilo, poi risolvere il workflow OpenSpec V2 dal catalogo
+dell'harness al commit dichiarato. La guida `docs/openspec-workflow.md` resta un riferimento
+narrativo per concetti e comandi.
 
 Durante una run V2 non usare i comandi sperimentali `/opsx:*` in `.claude/commands/opsx/`:
 possono generare o applicare artefatti senza attraversare i gate sequenziali della V2. Restano
@@ -27,8 +29,8 @@ Per ogni sessione, leggi nell'ordine:
 1. `README.md` — panoramica progetto, stack, struttura repo
 2. `docs/stato-corrente.md` — cosa esiste oggi, funzionalità, aree delicate
 3. Documento specifico per il task:
-   - gestione completa di una GitHub issue → `docs/github-issue-ai-workflow-v2.md` + `docs/ai-workflow-project-profile.md`
-   - change OpenSpec o triage `OPENSPEC` → `docs/openspec-workflow-v2.md` + `docs/ai-workflow-project-profile.md`
+   - gestione completa di una GitHub issue → `docs/ai-workflow-integration.md` + `docs/ai-workflow-project-profile.md` + workflow GitHub V2 risolto dall'harness
+   - change OpenSpec o triage `OPENSPEC` → `docs/ai-workflow-integration.md` + `docs/ai-workflow-project-profile.md` + workflow OpenSpec V2 risolto dall'harness
    - architettura / API / dati → `docs/architettura.md` (+ il codice, che è la fonte autorevole)
    - setup e test → `backend/README.md`, `frontend/README.md`, `docs/checklist-e2e.md`
    - decisioni tecniche → `docs/adr/decisioni-tecniche.md` (solo se il task tocca decisioni architetturali)

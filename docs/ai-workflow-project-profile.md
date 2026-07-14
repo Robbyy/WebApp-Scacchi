@@ -15,7 +15,9 @@
 | Artefatti issue | `docs/work-items/github-issues/` |
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, ignorati da Git |
-| Harness workflow | `Robbyy/ai-harness-lab`, catalogo `harness/WORKFLOWS.md`, commit `ace4c3086b1ed754b90d219fa562be83942180b5` |
+| `harness_repository` | `Robbyy/ai-harness-lab` |
+| `harness_commit` | `2196de2211917d40bd44320cea576f4971eb1d0e` |
+| `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
 locale isolato, registrato come `branch_run` nel preflight, e non esegue push, commenti o
