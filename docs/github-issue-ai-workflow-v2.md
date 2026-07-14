@@ -73,6 +73,13 @@ Se V-OUT fallisce: 1 retry tecnico con istruzioni ristrette; al secondo fallimen
 applica la transizione di errore della fase (§15). L'orchestratore non corregge, non
 completa e non interpreta un output non conforme.
 
+Prima di ogni transizione positiva successiva a una delega, l'orchestratore registra nella
+voce di fase di `<base>.metrics.source.json` l'esito meccanico di V-OUT: chiavi richieste,
+chiavi mancanti, validita' dell'enum, completezza delle sezioni, controllo di scope e,
+quando applicabile, corrispondenza dei metadati di invocazione. La transizione e' vietata se
+`output_validation.status` non e' `passed`; un report apparentemente utile ma incompleto o
+con metadati difformi resta un output non conforme.
+
 ## 3. Ruoli, Sessioni E Modelli
 
 ### 3.1 Sessione Fissa Dell'Orchestratore
@@ -86,7 +93,7 @@ effort dell'orchestratore.
 
 | Ruolo | Esecutore | Fasi | Scrive |
 |-------|-----------|------|--------|
-| Orchestratore | GPT-5.6 Luna `xhigh`, sessione fissa | F0, F1, F7, F9, F10, F11, coordinamento | `.preflight.source.json`, `.dry-run.md` |
+| Orchestratore | GPT-5.6 Luna `xhigh`, sessione fissa | F0, F1, F7, F9, F10, F11, coordinamento | `.preflight.source.json`, `.verification.source.json`, `.dry-run.md` |
 | Triage | GPT-5.6 Terra | F2 | `.triage.md` |
 | Analista | Claude (§3.4) | F3 | `.analysis.md` |
 | Controanalista | GPT-5.6 Sol | F5 | `.counter-analysis.md` |
@@ -195,12 +202,14 @@ Directory: `directory_artefatti` del profilo. Prefisso comune `<base>`.
 | `<base>.review.md` | quality reviewer | committato | §17.9 |
 | `<base>.dry-run.md` | orchestratore | solo nelle simulazioni | §17.10 |
 | `<base>.metrics.source.json` | orchestratore | locale, mai committato | §17.11 |
+| `<base>.verification.source.json` | orchestratore | locale, mai committato | §17.12 |
 
 I file locali usano il suffisso `.source.json` per rientrare nella regola di esclusione Git
 già prevista dal repository per i dati locali di run.
 
 Il V2 non produce `.verification.md`: i controlli meccanici sono eseguiti
-dall'orchestratore (F7) e la valutazione semantica confluisce nella quality review (F8).
+dall'orchestratore (F7), registrati nel manifest locale strutturato e la valutazione
+semantica confluisce nella quality review (F8).
 
 Budget righe (soft: il superamento produce un warning, mai un blocco; non è un criterio di
 accettazione):
@@ -540,6 +549,9 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
 - Output: diff sul working tree + `<base>.implementation.md` (§17.8).
 - Validazione: V-OUT; diff presente e nel perimetro del contratto; hash delle risorse
   protette invariati; metadati nel report identici a quelli configurati dall'orchestratore.
+  La voce F6 della telemetria deve riportare `output_validation.status: passed` prima della
+  transizione a `IMPLEMENTED`; in particolare `modello`, `effort` e `ultracode` assenti o
+  diversi dai valori registrati rendono obbligatorio il retry tecnico.
 - Esiti: `DONE` → `IMPLEMENTED`; `NEEDS_DECISION` → `WAITING_DECISION` (§10); `FAILED` o
   non conforme → 1 retry tecnico → `BLOCKED`.
 - Contatori: la prima implementazione non consuma correzioni; ogni rientro successivo ne
@@ -548,8 +560,8 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
 ### F7 — Controlli Meccanici
 
 - Transizione: `IMPLEMENTED` → `MECHANICALLY_VERIFIED`.
-- Esecutore: orchestratore (nessuna delega). Fase sempre rieseguibile; non produce un
-  artefatto dedicato: gli esiti entrano nell'input di F8.
+- Esecutore: orchestratore (nessuna delega). Fase sempre rieseguibile; aggiorna
+  `<base>.verification.source.json` (§17.12), che entra nell'input di F8.
 - Checklist:
   1. `git status --short`, `git diff --stat`, diff completo;
   2. perimetro: ogni file modificato appartiene allo scope del contratto del gate o agli
@@ -558,16 +570,23 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
   4. risorse protette: hash invariato rispetto al preflight (salvo policy §14.2);
   5. esecuzione dei comandi di verifica obbligatori (triage + gate + profilo): test, build,
      lint e type-check pertinenti;
-  6. evidenze UI quando `ui_evidence_required: si`: viewport, stato e visibilità dei
-     controlli, overflow, errori console e rete, stati condizionali richiesti, tramite
-     `comandi_ui` del profilo;
+  6. evidenze UI quando `ui_evidence_required: si`: per ogni `AC-n` interessato registrare
+     nel manifest viewport e stato richiesti, viewport e stato effettivi, visibilità dei
+     controlli, overflow, errori console e rete, stati condizionali e una prova persistente
+     (screenshot oppure sonda DOM/asserzione serializzata) tramite `comandi_ui` del profilo.
+     Un controllo UI e' `passed` soltanto se condizioni effettive e richieste coincidono;
+     una viewport inferiore, uno stato di dati diverso o una cattura non riuscita non sono
+     equivalenti;
   7. nessun segreto o dato locale nel diff;
-  8. sintesi delle evidenze per la quality review.
+  8. controllo che il manifest sia coerente con gli esiti dichiarati e sintesi delle
+     evidenze per la quality review.
 - Gestione dei test falliti: classificazione deterministica §13.
 - Esiti: checklist superata → `MECHANICALLY_VERIFIED`; finding meccanico (perimetro,
   protezioni, test da codice) → F6 come correzione (consuma 1) se disponibile, altrimenti
-  `BLOCKED`; browser richiesto ma indisponibile → `BLOCKED_ENVIRONMENT` (live) o
-  limitazione dichiarata (dry-run).
+  `BLOCKED`; un'evidenza UI richiesta ma non producibile, incompleta o non corrispondente
+  alle condizioni dell'AC → `BLOCKED_ENVIRONMENT` finche' non sia ripetibile. In dry-run il
+  limite resta registrato, ma non puo' essere convertito in un AC dimostrato o in F9
+  `COMMIT_READY`.
 
 ### F8 — Quality Review
 
@@ -578,8 +597,8 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
 - Unifica verifica semantica e code review in un solo gate indipendente, dopo i controlli
   meccanici. Nessun altro passaggio valutativo tra F8 e la pubblicazione.
 - Input: task, triage, gate dell'analisi, report di implementazione, diff esplicito
-  (working tree, commit, intervallo o branch), esiti dei controlli meccanici e delle
-  evidenze UI, review precedente nei cicli correttivi.
+  (working tree, commit, intervallo o branch), `<base>.verification.source.json`, esiti dei
+  controlli meccanici e delle evidenze UI, review precedente nei cicli correttivi.
 - Valuta: matrice dei criteri `AC-n`; correttezza del comportamento; bug e regressioni;
   rischi su dati e sicurezza; adeguatezza dei test; deviazioni dal piano; evidenze e
   limitazioni. Si fonda su diff e codice, non solo sui resoconti; non sostituisce
@@ -609,7 +628,8 @@ F0 -> F1 -> F2 -> SPECIFYING (run figlia: openspec-workflow-v2.md) -> F9 -> F10 
   4. review `APPROVED` o `APPROVED_WITH_NOTES`, riferita all'analisi corrente nel percorso
      GitHub (`non_applicabile` in OpenSpec) e con note residue esplicitamente non bloccanti;
   5. matrice `AC-n` senza criteri `non dimostrato`;
-  6. test obbligatori superati; evidenze UI presenti quando richieste;
+  6. test obbligatori superati; `<base>.verification.source.json` presente quando richiesto
+     e tutti i controlli UI obbligatori `passed` nelle condizioni esatte dell'AC;
   7. circuit breaker non scattato;
   8. diff limitato allo scope; nessun file estraneo, temporaneo o locale
      (`*.source.json`);
@@ -828,9 +848,10 @@ chiudere, verificare lo stato già raggiunto.
 - Il report dry-run riporta anche il riepilogo di `<base>.metrics.source.json` (§17.11),
   dichiarando separatamente i dati di uso non disponibili.
 - Stato terminale: `DRY_RUN_COMPLETED`.
-- Le carenze che riguardano solo la pubblicazione (canale GitHub scrivente, browser per
-  evidenze non richieste dai criteri) vengono dichiarate come limitazioni, non simulate
-  come riuscite.
+- Le carenze che riguardano solo la pubblicazione (per esempio il canale GitHub scrivente)
+  vengono dichiarate come limitazioni, non simulate come riuscite. Un browser assente o
+  un'evidenza UI mancante per un criterio obbligatorio non e' una carenza di pubblicazione:
+  impedisce F7/F9 anche in dry-run.
 
 ## 17. Contratti Degli Artefatti
 
@@ -1022,7 +1043,16 @@ Schema minimo:
       "tool_calls": 0,
       "retry": false,
       "rework": false,
-      "correction": false
+      "correction": false,
+      "output_validation": {
+        "status": "passed | failed | not_applicable",
+        "required_keys": ["..."],
+        "missing_keys": [],
+        "enum_valid": true,
+        "sections_complete": true,
+        "scope_check": "passed | failed | not_applicable",
+        "metadata_match": "passed | failed | not_applicable"
+      }
     }
   ]
 }
@@ -1038,6 +1068,40 @@ Ultracode, tentativo, esito, timestamp, durata, retry, rework, correzione e stat
 I confronti di efficienza raggruppano run dello stesso tipo e usano anche qualità finale,
 finding della review, promozioni e interventi umani: durata o token da soli non definiscono
 un routing corretto.
+
+### 17.12 `<base>.verification.source.json`
+
+JSON locale, mai committato, scritto e aggiornato solo dall'orchestratore in F7. Conserva le
+evidenze meccaniche e UI senza prompt, stream grezzi, segreti o dati persistenti non necessari.
+Per ogni controllo richiesto riporta almeno: `id` (un `AC-n` o un controllo meccanico),
+`required`, `outcome` (`passed|failed|not_run`), condizioni richieste, condizioni osservate,
+comando o procedura usata, prova persistente e limitazione eventuale. Per i controlli UI le
+condizioni includono viewport, route e stato dati; la prova persistente è un percorso di
+screenshot con hash oppure una sonda DOM/asserzione serializzata nel JSON. Il reviewer usa
+questo file come evidenza primaria; non può elevare `failed` o `not_run` a `dimostrato`.
+
+Schema minimo:
+
+```json
+{
+  "fase": "mechanical-verification",
+  "esito": "MECHANICALLY_VERIFIED | BLOCKED_ENVIRONMENT | FAILED",
+  "data": "<AAAA-MM-GG>",
+  "checks": [
+    {
+      "id": "AC-1",
+      "kind": "ui | command | protection",
+      "required": true,
+      "outcome": "passed | failed | not_run",
+      "required_conditions": {"viewport": "1920x1080", "route": "/", "state": "..."},
+      "observed_conditions": {"viewport": "1920x1080", "route": "/", "state": "..."},
+      "procedure": "<comando o procedura>",
+      "evidence": {"kind": "screenshot | dom-probe", "path_or_payload": "...", "hash": "..."},
+      "limitation": "<stringa vuota se non applicabile>"
+    }
+  ]
+}
+```
 
 ## 18. Invarianti
 
@@ -1057,6 +1121,7 @@ un routing corretto.
 | I12 | Il downgrade di percorso è vietato; la promozione è unica e non azzera i contatori. |
 | I13 | Un test fallito non viene mai dichiarato superato. |
 | I14 | La controanalisi è un controllo indipendente: una sola per run, salvo la ripetizione a `ultra` imposta dalla promozione (§8.3); output strutturato e consolidamento solo nel gate dell'analisi. |
+| I15 | Un criterio UI non è `dimostrato` senza un controllo `passed` nel manifest F7, nelle condizioni esatte richieste. |
 
 ## 19. Criteri Di Completamento
 
@@ -1077,6 +1142,8 @@ Run live completata solo quando tutte:
 - [ ] modifiche preesistenti e risorse protette rimaste conformi (§14).
 - [ ] `<base>.metrics.source.json` completato fino allo stato terminale, con ogni dato non
       disponibile dichiarato come tale.
+- [ ] `<base>.verification.source.json` coerente con F7; ogni criterio UI richiesto ha una
+      prova persistente `passed` nelle condizioni richieste.
 
 In una dry-run, le ultime quattro voci sono sostituite dalla verifica esplicita che push,
 commento e chiusura non siano avvenuti (`DRY_RUN_COMPLETED`).

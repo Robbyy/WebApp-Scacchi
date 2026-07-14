@@ -55,11 +55,14 @@ ripristinata, attribuita alla issue o inserita nello staging della run.
 |------|----------------------------|
 | Backend | da `backend/`: `mvnw.cmd test` |
 | Frontend | da `frontend/`: `npm test -- --watch=false`; `npm run build` quando pertinente |
-| UI | quando `ui_evidence_required: si`, browser o preview con database temporaneo; registrare viewport, stato, controlli richiesti, overflow, console e rete |
+| UI | quando `ui_evidence_required: si`, browser o preview con database temporaneo; registrare in `<base>.verification.source.json` viewport e stato richiesti/effettivi, controlli, overflow, console, rete e screenshot o sonda DOM persistente |
 
 Il triage e il gate dell'analisi possono aggiungere verifiche pertinenti; non possono
-dichiarare superati test non eseguiti. Se un'evidenza UI obbligatoria non e' producibile,
-una run live passa a `BLOCKED_ENVIRONMENT`.
+dichiarare superati test non eseguiti. Un'evidenza UI e' `passed` solo se la viewport e lo
+stato osservati coincidono con quelli richiesti dal criterio; una verifica approssimata o una
+cattura non riuscita resta `not_run` o `failed`. Se un'evidenza UI obbligatoria non e'
+producibile, una run live passa a `BLOCKED_ENVIRONMENT`; una dry-run non puo' simulare F9
+`COMMIT_READY` su quel criterio.
 
 ## GitHub, Ricerca E Autonomia
 
