@@ -1,9 +1,11 @@
 # OpenSpec Workflow
 
-> Stato: guida narrativa e didattica. Per avviare o riprendere una change OpenSpec usare la
-> specifica operativa [`openspec-workflow-v2.md`](openspec-workflow-v2.md) e il
+> Stato: guida narrativa e didattica locale. Per avviare o riprendere una change OpenSpec
+> usare il workflow OpenSpec V2 dell'harness risolto da
+> [`ai-workflow-integration.md`](ai-workflow-integration.md) e il
 > [`profilo di progetto`](ai-workflow-project-profile.md). In caso di conflitto operativo
-> prevale la V2; questa guida conserva concetti, comandi e contesto storico.
+> prevale la specifica dell'harness; questa guida conserva concetti, comandi e contesto
+> storico della WebApp.
 
 Questa guida descrive il modo in cui usiamo OpenSpec in questo progetto per gestire
 attività evolutive che richiedono una specifica prima dell'implementazione.

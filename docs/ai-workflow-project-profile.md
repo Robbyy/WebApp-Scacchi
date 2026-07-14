@@ -1,9 +1,9 @@
 # Profilo Di Progetto Per Workflow AI
 
-> Profilo operativo della WebApp Scacchi per
-> [`github-issue-ai-workflow-v2.md`](github-issue-ai-workflow-v2.md) e
-> [`openspec-workflow-v2.md`](openspec-workflow-v2.md). E' un input obbligatorio delle run,
-> non una guida generale riutilizzabile da altri repository.
+> Profilo operativo locale della WebApp Scacchi per le specifiche normative dell'harness.
+> Il punto di ingresso, la revisione selezionata e le regole di risoluzione sono in
+> [`ai-workflow-integration.md`](ai-workflow-integration.md). E' un input obbligatorio delle
+> run, non una guida generale riutilizzabile da altri repository.
 
 ## Identita' E Git
 
@@ -15,6 +15,7 @@
 | Artefatti issue | `docs/work-items/github-issues/` |
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, ignorati da Git |
+| Harness workflow | `Robbyy/ai-harness-lab`, catalogo `harness/WORKFLOWS.md`, commit `ace4c3086b1ed754b90d219fa562be83942180b5` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
 locale isolato, registrato come `branch_run` nel preflight, e non esegue push, commenti o
@@ -30,9 +31,9 @@ branch remoti; staging e commit usano sempre una allowlist esplicita.
 | Adapter di delega dichiarati | esecuzione dei soli client elencati nel profilo; configurazioni e credenziali del client non vengono modificate |
 | Altre directory o sistema operativo | vietati salvo decisione esplicita del committente |
 
-L'harness attivo viene risolto dal catalogo di skill disponibile nella sessione. Nel workspace
-attuale corrisponde a `C:\Sviluppo\Workspace - AI\AI Stuff`; il percorso non va assunto in
-un ambiente copiato o diverso.
+L'harness attivo viene risolto dalla configurazione della sessione e dal catalogo dichiarato
+in `ai-workflow-integration.md`. La run verifica che il commit selezionato sia disponibile;
+un percorso locale è un dettaglio dell'ambiente, non parte dell'identità del workflow.
 
 ## Adapter Di Delega
 
