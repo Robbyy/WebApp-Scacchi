@@ -16,7 +16,7 @@
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, ignorati da Git |
 | `harness_repository` | `Robbyy/ai-harness-lab` |
-| `harness_commit` | `9b7907a4b47ab16452596bba60a8be3b2d05aa3a` |
+| `harness_commit` | `7a26fdcb215a1b1c28495e82cc6fe1cc1b387554` |
 | `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
@@ -75,18 +75,35 @@ $arguments = @(
   '--output-format', 'stream-json', '--verbose',
   '--include-partial-messages', '--no-session-persistence',
   '--permission-mode', $permissionMode,
-  '--allowedTools', $allowedTools
+  "--allowedTools=$allowedTools"
 )
-& claude @arguments $promptText
+$resultText = $null
+$streamEvents = 0
+& claude @arguments $promptText | ForEach-Object {
+  $event = $_ | ConvertFrom-Json -ErrorAction Stop
+  $streamEvents += 1
+  if ($event.type -eq 'result') {
+    if ($event.result -isnot [string] -or [string]::IsNullOrWhiteSpace($event.result)) {
+      throw 'ADAPTER_RESULT_EXTRACTION_FAILED: result field missing or blank'
+    }
+    $resultText = $event.result
+  }
+}
+$exitCode = $LASTEXITCODE
+if ($exitCode -ne 0 -or [string]::IsNullOrWhiteSpace($resultText)) {
+  throw 'ADAPTER_RESULT_EXTRACTION_FAILED: no materialized final result'
+}
 ```
 
 L'adapter esegue dal worktree della run, analizza lo stream senza conservarne il contenuto
-grezzo e restituisce all'orchestratore eventi, ultimo timestamp, codice di uscita e risultato
-finale. Il watchdog viene rinnovato solo da eventi con stato nuovo; il limite totale resta
-separato. Per una fase read-only, l'agente non scrive nel checkout: l'orchestratore estrae il
-risultato finale validato e persiste il solo artefatto previsto dal contratto. Un processo non
-viene avviato se l'envelope non è valido; questo caso è `ADAPTER_INPUT_INVALID`, non un retry
-del modello.
+grezzo e materializza `result` direttamente dall'evento finale in un buffer effimero. Registra
+contatore eventi, ultimo timestamp, codice di uscita, `result_materialized`, lunghezza e hash;
+passa poi il testo a V-OUT e persiste il solo artefatto previsto dal contratto. Un evento
+`result` privo di testo e' `ADAPTER_RESULT_EXTRACTION_FAILED`: non e' un V-OUT e blocca la
+fase fino alla correzione dell'adapter e al superamento della fixture locale. Il watchdog viene
+rinnovato solo da eventi con stato nuovo; il limite totale resta separato. Per una fase
+read-only, l'agente non scrive nel checkout. Un processo non viene avviato se l'envelope non è
+valido; questo caso è `ADAPTER_INPUT_INVALID`, non un retry del modello.
 
 ## Risorse Protette E Dati
 
