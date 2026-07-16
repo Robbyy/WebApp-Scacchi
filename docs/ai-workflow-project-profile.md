@@ -16,7 +16,7 @@
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, inclusi diagnostici di output non conforme, ignorati da Git |
 | `harness_repository` | `Robbyy/ai-harness-lab` |
-| `harness_commit` | `8f7633f1114dbd30416b28ed7a00b6f5412b8cae` |
+| `harness_commit` | `529b4b0c23532e97871caaeaac6868abb67e6d2a` |
 | `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
@@ -75,6 +75,12 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($promptText)) {
 }
 ```
 
+F2 usa un budget dedicato: 240 secondi totali, 12 tool call semantiche e `$0.40` USD. Il
+limite economico entra negli argomenti del client; il limite di tool call richiede il monitor
+del processo dell'adapter, che conta solo eventi di uso strumento e termina l'albero del
+processo al tredicesimo evento prima del risultato. Un esaurimento e'
+`ADAPTER_BUDGET_EXCEEDED`, non abilita un retry identico e viene registrato in telemetria.
+
 In PowerShell il lancio usa una lista di argomenti, non una stringa interpolata. Per ogni
 fase Claude Code emette eventi osservabili; `permissionMode` e `allowedTools` arrivano
 dall'envelope. Nelle fasi read-only `permissionMode` deve essere `plan` e l'allowlist non
@@ -89,6 +95,9 @@ $arguments = @(
   '--permission-mode', $permissionMode,
   "--allowedTools=$allowedTools"
 )
+if ($phase -eq 'F2') {
+  $arguments += @('--max-budget-usd', '0.40')
+}
 $resultText = $null
 $streamEvents = 0
 & claude @arguments $promptText | ForEach-Object {
