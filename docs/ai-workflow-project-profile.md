@@ -16,7 +16,7 @@
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, inclusi diagnostici di output non conforme, ignorati da Git |
 | `harness_repository` | `Robbyy/ai-harness-lab` |
-| `harness_commit` | `529b4b0c23532e97871caaeaac6868abb67e6d2a` |
+| `harness_commit` | `13f87957a44248a8c0e34dc4ef15343b0620377f` |
 | `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
@@ -63,84 +63,30 @@ destinazione di output siano consentiti. Il prompt è un argomento posizionale o
 Claude Code: non va omesso, sostituito con un flag né incorporato in una stringa da passare a
 una shell.
 
-Per F2 il prompt non viene composto manualmente. L'orchestratore lo ottiene dal contratto
-canonico dell'harness, con i percorsi e i metadati gia' validati dall'envelope:
+F2 non viene invocata direttamente dall'orchestratore. Luna costruisce un envelope JSON della
+run e chiama il runner deterministico dell'harness:
 
 ```powershell
-$promptText = python "$harnessRoot/harness/render_f2_triage_prompt.py" `
-  --task $taskPath --profile $profilePath --repository $repositoryRoot `
-  --artifact $triageArtifactPath --iteration $iteration --date $runDate
-if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($promptText)) {
-  throw 'ADAPTER_INPUT_INVALID: canonical F2 prompt was not rendered'
+python "$harnessRoot/harness/run_f2_triage.py" --envelope $f2EnvelopePath
+if ($LASTEXITCODE -ne 0) {
+  throw 'F2 runner did not produce a valid triage'
 }
 ```
 
-F2 usa un budget dedicato: 240 secondi totali, 12 tool call semantiche e `$0.40` USD. Il
-limite economico entra negli argomenti del client; il limite di tool call richiede il monitor
-del processo dell'adapter, che conta solo eventi di uso strumento e termina l'albero del
-processo al tredicesimo evento prima del risultato. Un esaurimento e'
-`ADAPTER_BUDGET_EXCEEDED`, non abilita un retry identico e viene registrato in telemetria.
+L'envelope dichiara task, profilo, checkout, directory artefatti, destinazioni di triage e
+telemetria gia' esistente, revisione dell'harness, adapter Claude, alias modello, iterazione,
+data e budget. Per F2 i valori sono fissi: `Sonnet 5` `high`, `plan`, allowlist `Read`,
+`Glob`, `Grep`, 240 secondi, 12 tool call e `$0.40` USD. Il runner rifiuta ogni valore o
+percorso non conforme prima di creare il processo.
 
-In PowerShell il lancio usa una lista di argomenti, non una stringa interpolata. Per ogni
-fase Claude Code emette eventi osservabili; `permissionMode` e `allowedTools` arrivano
-dall'envelope. Nelle fasi read-only `permissionMode` deve essere `plan` e l'allowlist non
-deve contenere strumenti di scrittura.
-
-```powershell
-$promptText = <prompt non vuoto validato dall'envelope>
-$arguments = @(
-  '-p', '--model', $alias, '--effort', $effort,
-  '--output-format', 'stream-json', '--verbose',
-  '--include-partial-messages', '--no-session-persistence',
-  '--permission-mode', $permissionMode,
-  "--allowedTools=$allowedTools"
-)
-if ($phase -eq 'F2') {
-  $arguments += @('--max-budget-usd', '0.40')
-}
-$resultText = $null
-$streamEvents = 0
-& claude @arguments $promptText | ForEach-Object {
-  $event = $_ | ConvertFrom-Json -ErrorAction Stop
-  $streamEvents += 1
-  if ($event.type -eq 'result') {
-    if ($event.result -isnot [string] -or [string]::IsNullOrWhiteSpace($event.result)) {
-      throw 'ADAPTER_RESULT_EXTRACTION_FAILED: result field missing or blank'
-    }
-    $resultText = $event.result
-  }
-}
-$exitCode = $LASTEXITCODE
-if ($exitCode -ne 0 -or [string]::IsNullOrWhiteSpace($resultText)) {
-  throw 'ADAPTER_RESULT_EXTRACTION_FAILED: no materialized final result'
-}
-```
-
-L'adapter esegue dal worktree della run, analizza lo stream senza conservarne il contenuto
-grezzo e materializza `result` direttamente dall'evento finale in un buffer effimero. Registra
-contatore eventi, ultimo timestamp, codice di uscita, `result_materialized`, lunghezza e hash;
-passa poi il testo a V-OUT e persiste il solo artefatto previsto dal contratto. Un evento
-`result` privo di testo e' `ADAPTER_RESULT_EXTRACTION_FAILED`: non e' un V-OUT e blocca la
-fase fino alla correzione dell'adapter e al superamento della fixture locale. Il watchdog viene
-rinnovato solo da eventi con stato nuovo; il limite totale resta separato. Per una fase
-read-only, l'agente non scrive nel checkout. Un processo non viene avviato se l'envelope non è
-valido; questo caso è `ADAPTER_INPUT_INVALID`, non un retry del modello.
-
-Se V-OUT respinge un risultato materializzato, l'adapter salva il diagnostico locale previsto
-da §17.13 della V2 prima di applicare il retry o il circuit breaker. `$harnessRoot`,
-`$artifactDirectory`, `$base`, `$phase`, `$attempt` e `$runId` provengono dall'envelope/F0;
-`--missing-key` viene ripetuto per ogni chiave assente.
-
-```powershell
-$resultText | python "$harnessRoot/harness/phase_failure_artifact.py" `
-  --destination "$artifactDirectory/$base.$phase.attempt-$attempt.failure.source.json" `
-  --run-id $runId --phase $phase --attempt $attempt --adapter 'claude-code-local' `
-  --model $model --effort $effort --reason 'V-OUT failed after final result materialization' `
-  --missing-key 'fenced_outcome_block' --result-stdin
-```
-
-Il diagnostico contiene solo l'output finale materializzato, soggetto a redazione e limite di
-dimensione. Non e' uno stream, non viene committato e non entra negli input degli agenti.
+Il runner genera il prompt dal contratto canonico, usa `stream-json` con messaggi parziali,
+conta le sole tool call, termina l'albero di processo al superamento del budget e materializza
+solo il campo `result` finale. Applica V-OUT, aggiorna `<base>.metrics.source.json` e scrive
+`<base>.triage.md` soltanto dopo una validazione superata. Un risultato assente e'
+`ADAPTER_RESULT_EXTRACTION_FAILED`; un output finale non conforme genera il diagnostico
+redatto `.failure.source.json`; nessuno dei due viene interpretato o trasformato da Luna.
+Il runner confronta inoltre lo stato Git prima e dopo la delega, bloccando F2 se un ruolo
+read-only modifica il checkout.
 
 ## Risorse Protette E Dati
 
