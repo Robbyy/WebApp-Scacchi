@@ -16,7 +16,7 @@
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, inclusi diagnostici di output non conforme, ignorati da Git |
 | `harness_repository` | `Robbyy/ai-harness-lab` |
-| `harness_commit` | `c72feb023cadf0f51e9999be5c028e47ce162819` |
+| `harness_commit` | `8f7633f1114dbd30416b28ed7a00b6f5412b8cae` |
 | `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
@@ -62,6 +62,18 @@ dall'envelope, rifiuta testo assente o composto solo da spazi e verifica che gli
 destinazione di output siano consentiti. Il prompt è un argomento posizionale obbligatorio di
 Claude Code: non va omesso, sostituito con un flag né incorporato in una stringa da passare a
 una shell.
+
+Per F2 il prompt non viene composto manualmente. L'orchestratore lo ottiene dal contratto
+canonico dell'harness, con i percorsi e i metadati gia' validati dall'envelope:
+
+```powershell
+$promptText = python "$harnessRoot/harness/render_f2_triage_prompt.py" `
+  --task $taskPath --profile $profilePath --repository $repositoryRoot `
+  --artifact $triageArtifactPath --iteration $iteration --date $runDate
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($promptText)) {
+  throw 'ADAPTER_INPUT_INVALID: canonical F2 prompt was not rendered'
+}
+```
 
 In PowerShell il lancio usa una lista di argomenti, non una stringa interpolata. Per ogni
 fase Claude Code emette eventi osservabili; `permissionMode` e `allowedTools` arrivano
