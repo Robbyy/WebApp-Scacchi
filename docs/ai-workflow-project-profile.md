@@ -14,9 +14,9 @@
 | Remote atteso | `origin` (`https://github.com/Robbyy/WebApp-Scacchi.git`) |
 | Artefatti issue | `docs/work-items/github-issues/` |
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
-| File locali di run | `*.source.json`, ignorati da Git |
+| File locali di run | `*.source.json`, inclusi diagnostici di output non conforme, ignorati da Git |
 | `harness_repository` | `Robbyy/ai-harness-lab` |
-| `harness_commit` | `7a26fdcb215a1b1c28495e82cc6fe1cc1b387554` |
+| `harness_commit` | `c72feb023cadf0f51e9999be5c028e47ce162819` |
 | `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
@@ -104,6 +104,22 @@ fase fino alla correzione dell'adapter e al superamento della fixture locale. Il
 rinnovato solo da eventi con stato nuovo; il limite totale resta separato. Per una fase
 read-only, l'agente non scrive nel checkout. Un processo non viene avviato se l'envelope non è
 valido; questo caso è `ADAPTER_INPUT_INVALID`, non un retry del modello.
+
+Se V-OUT respinge un risultato materializzato, l'adapter salva il diagnostico locale previsto
+da §17.13 della V2 prima di applicare il retry o il circuit breaker. `$harnessRoot`,
+`$artifactDirectory`, `$base`, `$phase`, `$attempt` e `$runId` provengono dall'envelope/F0;
+`--missing-key` viene ripetuto per ogni chiave assente.
+
+```powershell
+$resultText | python "$harnessRoot/harness/phase_failure_artifact.py" `
+  --destination "$artifactDirectory/$base.$phase.attempt-$attempt.failure.source.json" `
+  --run-id $runId --phase $phase --attempt $attempt --adapter 'claude-code-local' `
+  --model $model --effort $effort --reason 'V-OUT failed after final result materialization' `
+  --missing-key 'fenced_outcome_block' --result-stdin
+```
+
+Il diagnostico contiene solo l'output finale materializzato, soggetto a redazione e limite di
+dimensione. Non e' uno stream, non viene committato e non entra negli input degli agenti.
 
 ## Risorse Protette E Dati
 
