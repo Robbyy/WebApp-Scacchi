@@ -16,7 +16,7 @@
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, ignorati da Git |
 | `harness_repository` | `Robbyy/ai-harness-lab` |
-| `harness_commit` | `532cd669deafeddb6cd2fd7320465d044e362a67` |
+| `harness_commit` | `9b7907a4b47ab16452596bba60a8be3b2d05aa3a` |
 | `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
@@ -63,18 +63,30 @@ destinazione di output siano consentiti. Il prompt è un argomento posizionale o
 Claude Code: non va omesso, sostituito con un flag né incorporato in una stringa da passare a
 una shell.
 
-In PowerShell il lancio base usa una lista di argomenti equivalente a:
+In PowerShell il lancio usa una lista di argomenti, non una stringa interpolata. Per ogni
+fase Claude Code emette eventi osservabili; `permissionMode` e `allowedTools` arrivano
+dall'envelope. Nelle fasi read-only `permissionMode` deve essere `plan` e l'allowlist non
+deve contenere strumenti di scrittura.
 
 ```powershell
 $promptText = <prompt non vuoto validato dall'envelope>
-& claude -p --model $alias --effort $effort --output-format json $promptText
+$arguments = @(
+  '-p', '--model', $alias, '--effort', $effort,
+  '--output-format', 'stream-json', '--verbose',
+  '--include-partial-messages', '--no-session-persistence',
+  '--permission-mode', $permissionMode,
+  '--allowedTools', $allowedTools
+)
+& claude @arguments $promptText
 ```
 
-L'adapter esegue dal worktree della run, attende il processo, cattura stdout, stderr e codice
-di uscita e li restituisce all'orchestratore. Per una fase read-only, l'agente non scrive nel
-checkout: l'orchestratore estrae la risposta dall'output, la valida e persiste il solo
-artefatto previsto dal contratto. Un processo non viene avviato se l'envelope non è valido;
-questo caso è `ADAPTER_INPUT_INVALID`, non un retry del modello.
+L'adapter esegue dal worktree della run, analizza lo stream senza conservarne il contenuto
+grezzo e restituisce all'orchestratore eventi, ultimo timestamp, codice di uscita e risultato
+finale. Il watchdog viene rinnovato solo da eventi con stato nuovo; il limite totale resta
+separato. Per una fase read-only, l'agente non scrive nel checkout: l'orchestratore estrae il
+risultato finale validato e persiste il solo artefatto previsto dal contratto. Un processo non
+viene avviato se l'envelope non è valido; questo caso è `ADAPTER_INPUT_INVALID`, non un retry
+del modello.
 
 ## Risorse Protette E Dati
 
