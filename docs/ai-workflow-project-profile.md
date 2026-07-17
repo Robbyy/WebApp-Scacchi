@@ -16,7 +16,7 @@
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, inclusi diagnostici di output non conforme, ignorati da Git |
 | `harness_repository` | `Robbyy/ai-harness-lab` |
-| `harness_commit` | `7a6072758c40dbcfad16bb281b279a27df0d312a` |
+| `harness_commit` | `26fb3ab6ee914af5045238b26a8d2198c82e8fd8` |
 | `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
@@ -91,6 +91,8 @@ Nel solo retry tecnico F2 il runner passa al client il riepilogo filtrato della 
 precedente, mai il diagnostico o il suo output.
 Un singolo oggetto JSON completo può essere estratto da una wrapper prose o Markdown e viene
 segnalato in telemetria; i valori enum e il contratto restano comunque obbligatori.
+Per `iterazione`, il runner accetta anche stringhe numeriche integrali equivalenti e registra la
+normalizzazione applicata; valori non interi o diversi restano non conformi.
 Il runner confronta inoltre lo stato Git prima e dopo la delega, bloccando F2 se un ruolo
 read-only modifica il checkout. La telemetria F2 registra inoltre, in forma aggregata, nomi e
 numero delle tool call uniche, timestamp della prima e dell'ultima tool call, ultimo tipo di
