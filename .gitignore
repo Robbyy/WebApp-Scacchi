@@ -60,6 +60,7 @@ out/
 
 # ---------- Work items / issue task artifacts ----------
 docs/work-items/**/*.source.json
+docs/work-items/**/*.envelope.json
 
 # ---------- Sistema operativo ----------
 .DS_Store
