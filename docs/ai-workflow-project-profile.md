@@ -16,7 +16,7 @@
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, inclusi diagnostici di output non conforme, ignorati da Git |
 | `harness_repository` | `Robbyy/ai-harness-lab` |
-| `harness_commit` | `cacd1fd8316bac66f8a3657c79242a3ada3d5ae0` |
+| `harness_commit` | `32d4dd8287931226e639243592b14a7bc16f7950` |
 | `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
@@ -75,16 +75,18 @@ if ($LASTEXITCODE -ne 0) {
 
 L'envelope dichiara task, profilo, checkout, directory artefatti, destinazioni di triage e
 telemetria gia' esistente, revisione dell'harness, adapter Claude, alias modello, iterazione,
-data e budget. Per F2 i valori sono fissi: `Sonnet 5` `medium`, `plan`, allowlist `Read`,
-`Glob`, `Grep`, 240 secondi, 12 tool call e `$0.40` USD. Il runner rifiuta ogni valore o
-percorso non conforme prima di creare il processo.
+data e budget. Per F2 i valori sono fissi: `Sonnet 5` `medium`, `dontAsk`, soli strumenti
+disponibili `Read`, `Glob`, `Grep`, 240 secondi, 12 tool call e `$0.40` USD. Il runner
+rifiuta ogni valore o percorso non conforme prima di creare il processo.
 
 Il runner genera il prompt dal contratto canonico, usa `stream-json` con messaggi parziali,
-conta le sole tool call, termina l'albero di processo al superamento del budget e materializza
-solo il campo `result` finale. Applica V-OUT, aggiorna `<base>.metrics.source.json` e scrive
-`<base>.triage.md` soltanto dopo una validazione superata. Un risultato assente e'
-`ADAPTER_RESULT_EXTRACTION_FAILED`; un output finale non conforme genera il diagnostico
-redatto `.failure.source.json`; nessuno dei due viene interpretato o trasformato da Luna.
+conta le sole tool call, termina l'albero di processo al superamento del budget o all'uso di
+uno strumento non autorizzato e materializza solo il campo `result` finale. Il client riceve
+un JSON schema; il runner valida il JSON e genera localmente il Markdown F2. Applica V-OUT,
+aggiorna `<base>.metrics.source.json` e scrive `<base>.triage.md` soltanto dopo una validazione
+superata. Un risultato assente e' `ADAPTER_RESULT_EXTRACTION_FAILED`; un output finale non
+conforme genera il diagnostico redatto `.failure.source.json`; nessuno dei due viene
+interpretato o trasformato da Luna.
 Il runner confronta inoltre lo stato Git prima e dopo la delega, bloccando F2 se un ruolo
 read-only modifica il checkout. La telemetria F2 registra inoltre, in forma aggregata, nomi e
 numero delle tool call uniche, timestamp della prima e dell'ultima tool call, ultimo tipo di
