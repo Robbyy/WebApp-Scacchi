@@ -16,7 +16,7 @@
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, inclusi diagnostici di output non conforme, ignorati da Git |
 | `harness_repository` | `Robbyy/ai-harness-lab` |
-| `harness_commit` | `4acb7cd01f5979c45b30392401f1cd69643d1385` |
+| `harness_commit` | `8b16f896bb76469baec4b4cd570181919a5397b9` |
 | `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
@@ -85,7 +85,7 @@ uno strumento non autorizzato e materializza solo il campo `result` finale. Il c
 un oggetto JSON strutturato; il runner lo valida e genera localmente il Markdown F2. Applica V-OUT,
 aggiorna `<base>.metrics.source.json` e scrive `<base>.triage.md` soltanto dopo una validazione
 superata. Un risultato assente e' `ADAPTER_RESULT_EXTRACTION_FAILED`; un output finale non
-conforme o materializzato prima di un errore del client genera il diagnostico redatto `.failure.source.json`; nessuno dei due viene
+conforme o materializzato prima di un errore del client genera il diagnostico redatto `.failure.source.json`, che indica anche i campi enum non validi; nessuno dei due viene
 interpretato o trasformato da Luna.
 Il runner confronta inoltre lo stato Git prima e dopo la delega, bloccando F2 se un ruolo
 read-only modifica il checkout. La telemetria F2 registra inoltre, in forma aggregata, nomi e
