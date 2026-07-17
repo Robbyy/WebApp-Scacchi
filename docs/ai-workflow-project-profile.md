@@ -16,7 +16,7 @@
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, inclusi diagnostici di output non conforme, ignorati da Git |
 | `harness_repository` | `Robbyy/ai-harness-lab` |
-| `harness_commit` | `26fb3ab6ee914af5045238b26a8d2198c82e8fd8` |
+| `harness_commit` | `10686c5367f1e0b9f985f2672eaa31fc7b3f271a` |
 | `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
@@ -47,7 +47,8 @@ utilizzabile blocca la fase interessata senza fallback automatico.
 | ID | Ruoli e mapping | Verifica F0 | Vincoli di invocazione |
 |----|-----------------|-------------|------------------------|
 | `claude-code-local` | Claude: `Sonnet 5` → `sonnet`; `Haiku 4.5` → `haiku`; `Fable` → `fable`; `Opus 4.8` → `opus` | `claude` raggiungibile e `claude auth status` autenticato | Eseguire dal checkout o worktree della run secondo il contratto operativo sotto; applicare i permessi della fase; non usare `--dangerously-skip-permissions`. |
-| `codex-session` | GPT-5.6 Luna, Terra e Sol nelle rispettive sessioni esterne | Il runtime della sessione espone la delega al modello previsto | Usare la sessione esterna effimera prevista dalla V2, con permessi minimi della fase. |
+| `codex-session` | GPT-5.6 Luna, Terra e Sol nelle rispettive sessioni esterne | Il runtime della sessione espone la delega al modello previsto | Usare la sessione esterna effimera prevista dalla V2, con permessi minimi della fase. F4 resta su questo canale. |
+| `codex-cli-local` | GPT-5.6 Terra per la sola quality review F8 | `codex` raggiungibile e autenticato | Il runner F8 invoca `codex exec --json` con sandbox `read-only`, modello `gpt-5.6-terra` e `model_reasoning_effort` della fase; il messaggio finale viene scritto dal runner, non dall'agente. |
 
 Per `claude-code-local`, alias ed effort sono verificati all'invocazione effettiva. Le fasi
 read-only configurano strumenti read-only; F6 riceve scrittura limitata al checkout della run
