@@ -16,7 +16,7 @@
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, inclusi diagnostici di output non conforme, ignorati da Git |
 | `harness_repository` | `Robbyy/ai-harness-lab` |
-| `harness_commit` | `6b42b05809e5c02ee8c2351d5e13b0c404d4e085` |
+| `harness_commit` | `b12d10837070a39098c527c384a22a968dde06a2` |
 | `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
@@ -87,6 +87,8 @@ aggiorna `<base>.metrics.source.json` e scrive `<base>.triage.md` soltanto dopo 
 superata. Un risultato assente e' `ADAPTER_RESULT_EXTRACTION_FAILED`; un output finale non
 conforme o materializzato prima di un errore del client genera il diagnostico redatto `.failure.source.json`, che indica anche i campi enum non validi; nessuno dei due viene
 interpretato o trasformato da Luna.
+Nel solo retry tecnico F2 il runner passa al client il riepilogo filtrato della validazione
+precedente, mai il diagnostico o il suo output.
 Il runner confronta inoltre lo stato Git prima e dopo la delega, bloccando F2 se un ruolo
 read-only modifica il checkout. La telemetria F2 registra inoltre, in forma aggregata, nomi e
 numero delle tool call uniche, timestamp della prima e dell'ultima tool call, ultimo tipo di
