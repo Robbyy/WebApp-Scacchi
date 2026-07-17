@@ -16,7 +16,7 @@
 | Artefatti OpenSpec | directory della change e relativa `governance/` |
 | File locali di run | `*.source.json`, inclusi diagnostici di output non conforme, ignorati da Git |
 | `harness_repository` | `Robbyy/ai-harness-lab` |
-| `harness_commit` | `13f87957a44248a8c0e34dc4ef15343b0620377f` |
+| `harness_commit` | `cacd1fd8316bac66f8a3657c79242a3ada3d5ae0` |
 | `harness_catalog_path` | `harness/WORKFLOWS.md` |
 
 Una run live opera sul branch atteso dopo il preflight. Una dry-run usa un worktree o branch
@@ -75,7 +75,7 @@ if ($LASTEXITCODE -ne 0) {
 
 L'envelope dichiara task, profilo, checkout, directory artefatti, destinazioni di triage e
 telemetria gia' esistente, revisione dell'harness, adapter Claude, alias modello, iterazione,
-data e budget. Per F2 i valori sono fissi: `Sonnet 5` `high`, `plan`, allowlist `Read`,
+data e budget. Per F2 i valori sono fissi: `Sonnet 5` `medium`, `plan`, allowlist `Read`,
 `Glob`, `Grep`, 240 secondi, 12 tool call e `$0.40` USD. Il runner rifiuta ogni valore o
 percorso non conforme prima di creare il processo.
 
@@ -86,7 +86,9 @@ solo il campo `result` finale. Applica V-OUT, aggiorna `<base>.metrics.source.js
 `ADAPTER_RESULT_EXTRACTION_FAILED`; un output finale non conforme genera il diagnostico
 redatto `.failure.source.json`; nessuno dei due viene interpretato o trasformato da Luna.
 Il runner confronta inoltre lo stato Git prima e dopo la delega, bloccando F2 se un ruolo
-read-only modifica il checkout.
+read-only modifica il checkout. La telemetria F2 registra inoltre, in forma aggregata, nomi e
+numero delle tool call uniche, timestamp della prima e dell'ultima tool call, ultimo tipo di
+evento e ultima attivita' osservata; non conserva lo stream grezzo.
 
 ## Risorse Protette E Dati
 
