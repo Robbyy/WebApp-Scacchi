@@ -12,6 +12,10 @@
   margin-bottom: 1.5rem;
 }
 
+.list-head > :first-child {
+  flex-shrink: 0;
+}
+
 .list-kicker {
   margin: 0;
   text-transform: uppercase;
@@ -29,7 +33,7 @@
 .head-actions {
   display: flex;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .new-cta {
@@ -293,4 +297,15 @@
 .delete-btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+@media (max-width: 600px) {
+  .list-head {
+    flex-wrap: wrap;
+  }
+
+  .head-actions {
+    flex-wrap: wrap;
+    flex-shrink: 1;
+  }
 }
