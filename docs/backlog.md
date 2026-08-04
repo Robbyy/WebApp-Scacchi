@@ -25,13 +25,13 @@
 
 | ID | Titolo | Classe | Destinazione | Stato |
 |----|--------|--------|--------------|-------|
-| 001 | Layout `/play` errato su Full HD | bug | GitHub | [#1](https://github.com/Robbyy/WebApp-Scacchi/issues/1) |
-| 002 | Pulsanti motore fuori viewport | bug | GitHub | [#2](https://github.com/Robbyy/WebApp-Scacchi/issues/2) |
-| 003 | Header home: wrap titolo/pulsanti | bug | GitHub | [#3](https://github.com/Robbyy/WebApp-Scacchi/issues/3) |
-| 004 | Nessun suono dopo ritorno focus | bug | GitHub | [#4](https://github.com/Robbyy/WebApp-Scacchi/issues/4) |
-| 005 | Nessun suono mosse del computer | bug | GitHub | [#5](https://github.com/Robbyy/WebApp-Scacchi/issues/5) |
-| 006 | Badge "Misto": contrasto testo | bug | GitHub | [#6](https://github.com/Robbyy/WebApp-Scacchi/issues/6) |
-| 020 | Sotto-varianti annidate non allenate | bug | GitHub | [#7](https://github.com/Robbyy/WebApp-Scacchi/issues/7) |
+| 001 | Layout `/play` errato su Full HD | bug | GitHub | [#1](https://github.com/Robbyy/WebApp-Scacchi/issues/1) · ✅ chiusa |
+| 002 | Pulsanti motore fuori viewport | bug | GitHub | [#2](https://github.com/Robbyy/WebApp-Scacchi/issues/2) · ✅ chiusa |
+| 003 | Header home: wrap titolo/pulsanti | bug | GitHub | [#3](https://github.com/Robbyy/WebApp-Scacchi/issues/3) · ✅ chiusa |
+| 004 | Nessun suono dopo ritorno focus | bug | GitHub | [#4](https://github.com/Robbyy/WebApp-Scacchi/issues/4) · 🔴 aperta |
+| 005 | Nessun suono mosse del computer | bug | GitHub | [#5](https://github.com/Robbyy/WebApp-Scacchi/issues/5) · 🔴 aperta |
+| 006 | Badge "Misto": contrasto testo | bug | GitHub | [#6](https://github.com/Robbyy/WebApp-Scacchi/issues/6) · 🔴 aperta |
+| 020 | Sotto-varianti annidate non allenate | bug | GitHub | [#7](https://github.com/Robbyy/WebApp-Scacchi/issues/7) · 🔴 aperta |
 | 021 | Scaffold navigazione 3 sezioni ⭐ | manutenzione | diretto | da fare (primo) |
 | 007 | "Nascondi barra" ridondante | manutenzione | diretto | da fare |
 | 008 | Rimuovere "Auto-play" | manutenzione | diretto | da fare |
@@ -54,7 +54,7 @@
 **Fase 1 — bug + manutenzione evolutiva** (prima degli sviluppi importanti):
 
 1. ⭐ **ISSUE-021** (scaffold navigazione 3 sezioni) — da fare per primo: fissa la struttura a fasi a costo/rischio bassi.
-2. **Bug**: batch layout/UX (001, 002, 003, 006) e batch audio (004, 005); a sé il bug allenamento **020** (caso di test pronto).
+2. **Bug aperti**: batch layout/UX (006) e batch audio (004, 005); a sé il bug allenamento **020** (caso di test pronto). ISSUE-001, ISSUE-002 e ISSUE-003 sono completate.
 3. **Manutenzione evolutiva**: 007, 008, 009, 012, 015 (diretti); poi 010, 011, 013 (medi, con eventuale OpenSpec leggera).
 4. **ISSUE-018 (security audit)** — anticipabile e parallelo: indipendente, basso costo, alto valore (skill `/security-review`). Le criticità che emergono diventano bug → ticket.
 
@@ -81,7 +81,7 @@
 
 1. **ISSUE-016** — scope ampio, modello dati nuovo; senza OpenSpec rischio di sovra-ingegnerizzazione. Mitigazione: partire da `issue-016-phase-domain-model`, poi procedere con slice piccoli.
 2. **ISSUE-014** — incertezza sulle opzioni UCI realmente esposte dalla build asm.js. Mitigazione: audit prima della UI.
-3. **ISSUE-017** — refactor di `ReviewScheduler` da statico a parametrizzato tocca logica testata (66 test BE): rischio regressione SM-2.
+3. **ISSUE-017** — refactor di `ReviewScheduler` da statico a parametrizzato tocca logica testata (83 test BE): rischio regressione SM-2.
 4. **ISSUE-004** — `AudioContext` browser-dipendente, difficile da coprire in headless.
 5. **Cluster topbar affollato** (suono · "?" · ⚙ · Lichess · 3 sezioni) — rischio UX e di conflitti di merge tra ISSUE-011/015/017/021.
 
@@ -91,5 +91,10 @@
 
 - **ISSUE-019 — Introduzione Liquibase** ✅ (2026-06-29, commit `85b4a54`). Schema gestito da
   Liquibase (`spring-boot-liquibase`), baseline con precondizione `MARK_RAN`, `ddl-auto: none`;
-  66 test verdi, avvio dev verificato. Spec: [`specs/liquibase.md`](specs/liquibase.md).
+  Verifica iniziale: 66 test verdi; suite corrente: 83 test backend verdi. Avvio dev verificato.
+  Spec: [`specs/liquibase.md`](specs/liquibase.md).
   Ha risolto anche l'incoerenza sul DB di esempio (tracciato di proposito, doc allineati).
+
+- **ISSUE-001 — Layout `/play` errato su Full HD** ✅ Risolta e chiusa su GitHub; commit `23673cd`.
+- **ISSUE-002 — Pulsanti motore fuori viewport** ✅ Risolta e chiusa su GitHub; commit `b401f9c`.
+- **ISSUE-003 — Header home: wrap titolo/pulsanti** ✅ Risolta e chiusa su GitHub; commit `aa5048b`.

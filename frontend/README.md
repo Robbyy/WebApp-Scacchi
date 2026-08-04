@@ -27,7 +27,7 @@ cornice legno, pezzi Staunton SVG, layout a pannelli). Libreria regole/PGN:
 
 Scaffold Angular presente e operativo (componenti **standalone**, signals,
 `OnPush`). Parte 1 (Prototipi 0-6) e **Parte 2 (P7-P19)** implementate. Suite:
-**168 test** (Vitest) verdi.
+**175 test** (Vitest) verdi.
 
 Aree principali (sotto `src/app`):
 

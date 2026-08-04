@@ -1,6 +1,6 @@
 # Stato corrente — WebApp Scacchi
 
-> Aggiornato al: **2026-07-04** (fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi).
+> Aggiornato al: **2026-08-05** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi).
 > Non è un diario cronologico. La storia per-prototipo è in `docs/archive/stato-avanzamento-2026-06-28.md` e nel git log.
 
 ---
@@ -8,7 +8,7 @@
 ## Sintesi
 
 La webapp è funzionante in locale. **Parte 1 (P0–P6) e Parte 2 (P7–P19) completate e verificate.**
-Suite automatica verde: backend **83 test**, frontend **174 test**.
+Suite automatica verde: backend **83 test**, frontend **175 test**.
 La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE-019); restano Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
 In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre le Aperture: **ISSUE-016 (`issue-016-phase-domain-model`)** introduce `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), immutabile dopo la creazione — vedi [ADR 0014](adr/decisioni-tecniche.md).
 
@@ -41,7 +41,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Stack**: Angular 22 · TypeScript · Vitest · componenti standalone · signals · OnPush · chess.js · Stockfish asm.js.
 - **Aree**: `chessboard`, `variants`, `studies`, `stats`, `reviews`, `play`, `core`.
 - **Routing**: `/` → lista studi, `/studies/:id` → dettaglio studio, `/variants/:id` → dettaglio variante, `/variants/:id/training`, `/variants/:id/stats`, `/studies/:id/stats`, `/reviews`, `/play`.
-- **Test**: 174 verdi (`npm test -- --watch=false`, Vitest headless).
+- **Test**: 175 verdi (`npm test -- --watch=false`, Vitest headless).
 - **Avvio locale**: `npm start` (frontend su `http://localhost:4200`, con proxy verso `http://localhost:8080`).
 
 ---

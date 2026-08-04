@@ -4,16 +4,17 @@
 > **pronto-ticket GitHub** (titolo, label, passi, atteso vs attuale): quando si aprirà
 > la gestione a ticket basterà copiarla in una issue.
 > Indice e classificazione: [`../backlog.md`](../backlog.md). ID `ISSUE-0NN` stabili.
+> Le schede chiuse restano qui come storico della segnalazione; lo stato corrente è indicato nella tabella.
 
-| ID | Titolo | Severità | Area |
-|----|--------|:--------:|------|
-| 001 | Layout `/play` errato su Full HD | Media | frontend |
-| 002 | Pulsanti motore fuori viewport (dettaglio variante) | Media | frontend |
-| 003 | Header home: titolo e pulsanti vanno a capo | Bassa | frontend |
-| 004 | Nessun suono sulla prima mossa dopo ritorno focus | Bassa-media | audio |
-| 005 | Nessun suono per le mosse del computer | Bassa-media | audio |
-| 006 | Badge "Misto": testo illeggibile sulla metà scura | Bassa | frontend |
-| 020 | Allenamento: sotto-varianti annidate mai proposte | Media-alta | training |
+| ID | Titolo | Severità | Area | Stato |
+|----|--------|:--------:|------|-------|
+| 001 | Layout `/play` errato su Full HD | Media | frontend | ✅ chiuso su GitHub (#1) |
+| 002 | Pulsanti motore fuori viewport (dettaglio variante) | Media | frontend | ✅ chiuso su GitHub (#2) |
+| 003 | Header home: titolo e pulsanti vanno a capo | Bassa | frontend | ✅ chiuso su GitHub (#3) |
+| 004 | Nessun suono sulla prima mossa dopo ritorno focus | Bassa-media | audio | 🔴 aperto su GitHub (#4) |
+| 005 | Nessun suono per le mosse del computer | Bassa-media | audio | 🔴 aperto su GitHub (#5) |
+| 006 | Badge "Misto": testo illeggibile sulla metà scura | Bassa | frontend | 🔴 aperto su GitHub (#6) |
+| 020 | Allenamento: sotto-varianti annidate mai proposte | Media-alta | training | 🔴 aperto su GitHub (#7) |
 
 ---
 
