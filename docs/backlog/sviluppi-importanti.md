@@ -136,3 +136,7 @@ tutte le opzioni native sono disponibili. **Da fare prima di disegnare l'UI.**
 persistenza (ereditata da ISSUE-017).
 **Note:** confluisce in ISSUE-017 per accesso e salvataggio; questa scheda copre il
 contenuto specifico del motore.
+
+**Relazione con ISSUE-022:** `MultiPV` resta un possibile parametro configurabile di questa
+issue, mentre la visualizzazione della singola linea principale nel pannello motore è
+tracciata separatamente in **ISSUE-022** e non richiede la configurazione MultiPV.

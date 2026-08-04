@@ -85,6 +85,7 @@ Nessun bug bloccante attivo. **Policy DB**: finché non si migra a Supabase, il 
 - Runner E2E browser (Playwright/Cypress) — rinviato alla terza tornata.
 - Editor manuale di posizione e input/UI per FEN custom (Mediogioco/Finale) — prossima change `issue-016-custom-starting-fen`.
 - Viste/sezioni complete Mediogioco e Finale, commenti alle mosse, gioco contro il motore da una posizione salvata, tag/categorie — change successive a ISSUE-016 (vedi `docs/roadmap.md`).
+- Visualizzazione della linea migliore di Stockfish nel pannello laterale — ISSUE-022, documentata ma non ancora implementata.
 
 ---
 

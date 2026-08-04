@@ -15,6 +15,14 @@
 
 ---
 
+## Evolutive di prodotto pianificate
+
+- **ISSUE-022 — Linea migliore del motore:** visualizzazione della singola Principal
+  Variation nel pannello motore laterale, senza contenuti aggiuntivi sotto la scacchiera.
+  Preanalisi e criteri di accettazione: [`backlog/manutenzione-evolutiva.md`](backlog/manutenzione-evolutiva.md).
+
+---
+
 ## Più avanti
 
 - Responsive/UX scacchiera: layout a griglia per condividere la riga board+pannello tra ~800 e ~1280px (proposta UX §17 del planning, da validare con l'utente).

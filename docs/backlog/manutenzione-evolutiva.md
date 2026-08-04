@@ -9,6 +9,7 @@
 | ID | Titolo | Effort | Rischio | OpenSpec |
 |----|--------|:------:|:-------:|:--------:|
 | 021 | Scaffold navigazione 3 sezioni + segnaposto ⭐ | basso | basso | no |
+| 022 | Visualizzazione linea migliore del motore nel pannello laterale | medio | medio-basso | no |
 | 007 | "Nascondi barra" ridondante col motore attivo | basso | basso | no |
 | 008 | Rimuovere "Auto-play" dalla navigazione | basso | basso | no |
 | 009 | Elenco studi su due colonne | basso | basso | no |
@@ -42,6 +43,49 @@ posizione/FEN tecnico, commenti, gioco vs motore e import Lichess per sezioni no
 (restano in 016).
 **Ambiguità:** route esatte; testo del segnaposto; pulsanti vs tab; posizione nel cluster
 topbar (suono/«?»/ingranaggio).
+
+## ISSUE-022 — Visualizzazione linea migliore del motore nel pannello laterale
+**OpenSpec:** no · **Effort:** medio · **Rischio:** medio-basso.
+
+**Problema:** nel dettaglio variante, quando Stockfish è acceso, l'interfaccia mostra la
+barra di valutazione e la profondità, ma non mostra la linea principale calcolata dal motore
+(Principal Variation, PV). La linea sarebbe utile per comprendere il motivo della valutazione
+e studiare le mosse consigliate.
+
+**Obiettivo:** mostrare la linea migliore corrente di Stockfish in notazione scacchistica
+leggibile, aggiornata mentre l'analisi procede.
+
+**Posizione UI vincolante:** la linea deve vivere nel pannello motore laterale destro del
+dettaglio variante (`.engine-panel`), subito sotto i controlli del motore e prima di
+«Allena questa variante». Non deve essere aggiunto alcun blocco autonomo sotto la scacchiera;
+la `EvalBar` resta accanto alla scacchiera come oggi.
+
+**Accettazione:**
+- con il motore acceso compare l'etichetta «Linea migliore» nel pannello laterale;
+- la linea è visualizzata in SAN, non come coordinate UCI (`e2e4`), partendo dalla posizione
+  corrente analizzata;
+- la linea viene aggiornata con l'ultima PV ricevuta dal motore, preferibilmente quella alla
+  profondità più recente;
+- durante l'avvio dell'analisi è possibile mostrare uno stato «Analisi in corso…» e, in
+  assenza di PV, non viene mostrata una linea obsoleta;
+- il testo va a capo nel pannello senza creare overflow orizzontale o spostare la scacchiera;
+- spegnendo il motore la linea scompare insieme ai dati di analisi;
+- la funzionalità resta limitata al dettaglio variante come aiuto allo studio e non entra nel
+  flusso di allenamento, nell'editor o nella pagina «Gioca contro il computer».
+
+**Preanalisi tecnica:** `parseInfoLine` oggi intercetta solo il primo token dopo `pv` e lo
+salva in `UciScore.pv`; occorre conservare l'intera sequenza UCI. La sequenza va convertita
+in SAN usando la FEN corrente e `chess.js`, quindi esposta dal `StockfishService` al pannello
+motore. Il backend e il database non sono coinvolti; non serve una nuova impostazione UCI.
+
+**Fuori perimetro:** Multi-PV e visualizzazione di più linee, blunder detection, frecce o
+highlight sulla scacchiera, click sulla linea per eseguirla, opening explorer, modifiche al
+training e modifica della pagina «Gioca contro il computer».
+
+**Relazioni:** ISSUE-014 può eventualmente configurare `MultiPV` in futuro, ma non è un
+prerequisito per questa prima linea singola. Riusa il supporto esistente di `StockfishService`,
+`parseInfoLine` ed `EvalBar`. Il perimetro iniziale è il dettaglio variante mostrato nella
+schermata di riferimento; l'editor e la pagina «Gioca contro il computer» restano esclusi.
 
 ## ISSUE-007 — "Nascondi barra" ridondante col motore attivo
 **OpenSpec:** no · **Effort:** basso · **Rischio:** basso.

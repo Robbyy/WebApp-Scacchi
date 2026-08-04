@@ -12,8 +12,8 @@ Terza tornata (infrastruttura) avviata: **schema gestito da Liquibase** (ISSUE-0
 OpenSpec è installato e lo scaffold `openspec/` è pronto per le change di maggiore impatto.
 ISSUE-003 (header home: titolo e pulsanti a capo) risolta e verificata a Full HD
 (commit `aa5048b`).
-Prossimi: ISSUE-004/005/006/020, scaffold di navigazione ISSUE-021, poi Supabase
-PostgreSQL, Supabase Auth, Docker e CI/CD.
+Prossimi: ISSUE-004/005/006/020, evolutive ISSUE-021/022, poi Supabase PostgreSQL,
+Supabase Auth, Docker e CI/CD.
 
 ## Stack
 

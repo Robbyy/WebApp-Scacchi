@@ -33,6 +33,7 @@
 | 006 | Badge "Misto": contrasto testo | bug | GitHub | [#6](https://github.com/Robbyy/WebApp-Scacchi/issues/6) · 🔴 aperta |
 | 020 | Sotto-varianti annidate non allenate | bug | GitHub | [#7](https://github.com/Robbyy/WebApp-Scacchi/issues/7) · 🔴 aperta |
 | 021 | Scaffold navigazione 3 sezioni ⭐ | manutenzione | diretto | da fare (primo) |
+| 022 | Visualizzazione linea migliore del motore | manutenzione | diretto | da fare |
 | 007 | "Nascondi barra" ridondante | manutenzione | diretto | da fare |
 | 008 | Rimuovere "Auto-play" | manutenzione | diretto | da fare |
 | 009 | Elenco studi su due colonne | manutenzione | diretto | da fare |
@@ -55,7 +56,7 @@
 
 1. ⭐ **ISSUE-021** (scaffold navigazione 3 sezioni) — da fare per primo: fissa la struttura a fasi a costo/rischio bassi.
 2. **Bug aperti**: batch layout/UX (006) e batch audio (004, 005); a sé il bug allenamento **020** (caso di test pronto). ISSUE-001, ISSUE-002 e ISSUE-003 sono completate.
-3. **Manutenzione evolutiva**: 007, 008, 009, 012, 015 (diretti); poi 010, 011, 013 (medi, con eventuale OpenSpec leggera).
+3. **Manutenzione evolutiva**: 007, 008, 009, 012, 015, 022 (diretti); poi 010, 011, 013 (medi, con eventuale OpenSpec leggera).
 4. **ISSUE-018 (security audit)** — anticipabile e parallelo: indipendente, basso costo, alto valore (skill `/security-review`). Le criticità che emergono diventano bug → ticket.
 
 **Fase 2 — sviluppi importanti** (solo dopo la Fase 1, con OpenSpec):
@@ -73,6 +74,7 @@
 - **ISSUE-013 → riusa →** `promoteToMainline` (`move-tree.ts`) + `confirm.service`.
 - **ISSUE-010 → riusa →** guard editor (`confirm.service` / `canLeaveEditor`).
 - **ISSUE-011 → sposta →** connessione Lichess in topbar; usa endpoint esistenti.
+- **ISSUE-022 → riusa →** `StockfishService`, `parseInfoLine`, `EvalBar` e il pannello motore del dettaglio variante; nessun impatto backend/database.
 - **Coppie da coordinare (stessa zona di codice):** 001↔002 · 004↔005 (`MoveSoundService`) · 002↔010 (dettaglio variante) · 003↔009↔011 (home/header) · 011↔012 (form studio) · 011↔015↔017↔021 (cluster/topbar).
 
 ---

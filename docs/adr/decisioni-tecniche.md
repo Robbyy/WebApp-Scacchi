@@ -428,8 +428,10 @@ computer" in una nuova tab) ed è **assente in allenamento**.
   reale (es. +0.8); barra mostra/nascondi e on/off ok; in `/play` l'utente gioca
   1.e4 e il motore risponde (1...d5); in allenamento nessun controllo motore.
 - Vincolo GPL da rispettare in caso di ridistribuzione dell'app (vedi attribution).
-- Fuori perimetro (per scelta): suggerimento "mossa migliore", blunder detection,
-  multi-PV, opening explorer — da valutare solo se emergeranno necessità reali.
+- Fuori perimetro dell'implementazione P16: suggerimento "mossa migliore", blunder detection,
+  multi-PV e opening explorer. La necessità di mostrare la singola linea principale è stata
+  successivamente raccolta in **ISSUE-022**; Multi-PV e le altre funzioni restano da valutare
+  separatamente.
 
 ---
 
