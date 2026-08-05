@@ -2,15 +2,23 @@
  * Parsing minimale dell'output UCI di Stockfish (Prototipo 16) e formattazione
  * della valutazione per la barra. Logica pura, testabile senza il Web Worker.
  */
+import { Chess } from 'chess.js';
+
 export interface UciScore {
   depth: number;
   /** Centipawn dal punto di vista del Bianco (null se è matto). */
   scoreCp: number | null;
   /** Matto in N dal punto di vista del Bianco (positivo = matta il Bianco). */
   mate: number | null;
-  /** Prima mossa della linea principale (bestmove provvisorio), se presente. */
-  pv: string | null;
+  /**
+   * Linea principale completa in coordinate UCI (ISSUE-022), es.
+   * `['e2e4', 'e7e5', 'g1f3']`. Vuota se la riga non porta una `pv`.
+   */
+  pv: string[];
 }
+
+/** Una mossa UCI: caselle di partenza/arrivo più l'eventuale promozione. */
+const UCI_MOVE = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
 
 /**
  * Interpreta una riga `info ... score ...`. Lo score di Stockfish è dal punto di
@@ -25,12 +33,11 @@ export function parseInfoLine(line: string, sideToMove: 'w' | 'b'): UciScore | n
   const depth = numberAfter(line, /\bdepth (\d+)/);
   const cp = numberAfter(line, /score cp (-?\d+)/);
   const mate = numberAfter(line, /score mate (-?\d+)/);
-  const pvMatch = line.match(/\bpv (\S+)/);
   return {
     depth: depth ?? 0,
     scoreCp: cp === null ? null : cp * sign,
     mate: mate === null ? null : mate * sign,
-    pv: pvMatch ? pvMatch[1] : null,
+    pv: parsePv(line),
   };
 }
 
@@ -41,6 +48,71 @@ export function parseBestMove(line: string): string | null {
     return null;
   }
   return match[1];
+}
+
+/**
+ * Converte la linea principale UCI in SAN partendo da {@code fen} (ISSUE-022).
+ * Si ferma alla prima mossa non applicabile invece di scartare l'intera linea:
+ * meglio una PV parziale che nessuna linea.
+ */
+export function pvToSan(fen: string, pv: string[]): string[] {
+  if (!fen || pv.length === 0) {
+    return [];
+  }
+  let chess: Chess;
+  try {
+    chess = new Chess(fen);
+  } catch {
+    return [];
+  }
+  const sans: string[] = [];
+  for (const uci of pv) {
+    if (!UCI_MOVE.test(uci)) {
+      break;
+    }
+    try {
+      sans.push(
+        chess.move({
+          from: uci.slice(0, 2),
+          to: uci.slice(2, 4),
+          promotion: uci.length > 4 ? uci[4] : undefined,
+        }).san,
+      );
+    } catch {
+      break;
+    }
+  }
+  return sans;
+}
+
+/**
+ * Numera una linea SAN a partire dalla posizione analizzata: `"12. Nf3 Nc6 13. Bb5"`,
+ * oppure `"12… Nc6 13. Bb5"` se nella FEN muove il Nero.
+ */
+export function numberedPv(fen: string, sans: string[]): string {
+  if (sans.length === 0) {
+    return '';
+  }
+  const fields = fen.split(' ');
+  let blackToMove = fields[1] === 'b';
+  const parsed = Number(fields[5]);
+  let moveNumber = Number.isFinite(parsed) && parsed >= 1 ? Math.trunc(parsed) : 1;
+
+  const out: string[] = [];
+  for (const san of sans) {
+    if (!blackToMove) {
+      out.push(`${moveNumber}.`);
+    } else if (out.length === 0) {
+      // La linea parte a metà mossa: si annota "12…" una sola volta.
+      out.push(`${moveNumber}…`);
+    }
+    out.push(san);
+    if (blackToMove) {
+      moveNumber++;
+    }
+    blackToMove = !blackToMove;
+  }
+  return out.join(' ');
 }
 
 /**
@@ -62,6 +134,25 @@ export function formatEval(score: UciScore): { text: string; whiteFraction: numb
   const raw = 1 / (1 + Math.pow(10, -score.scoreCp / 400));
   const whiteFraction = Math.min(0.98, Math.max(0.02, raw));
   return { text, whiteFraction };
+}
+
+/**
+ * Sequenza di mosse dopo il token `pv`. Si ferma al primo token che non è una
+ * mossa UCI, così eventuali campi emessi dopo la linea non finiscono nella PV.
+ */
+function parsePv(line: string): string[] {
+  const idx = line.indexOf(' pv ');
+  if (idx < 0) {
+    return [];
+  }
+  const moves: string[] = [];
+  for (const token of line.slice(idx + 4).trim().split(/\s+/)) {
+    if (!UCI_MOVE.test(token)) {
+      break;
+    }
+    moves.push(token);
+  }
+  return moves;
 }
 
 function numberAfter(line: string, re: RegExp): number | null {

@@ -4,7 +4,7 @@
   <div class="detail">
     <div class="board-col">
       <div class="board-with-eval">
-        @if (engineOn() && showEvalBar()) {
+        @if (engineOn()) {
           <app-eval-bar [score]="engineEval()" [thinking]="engineThinking()" />
         }
         <app-chessboard
@@ -43,17 +43,22 @@
               <span class="engine-depth">prof. {{ ev.depth }}</span>
             }
           </button>
-          @if (engineOn()) {
-            <button class="engine-sub" type="button" (click)="toggleEvalBar()">
-              {{ showEvalBar() ? 'Nascondi barra' : 'Mostra barra' }}
-            </button>
-          }
           <button class="engine-sub" type="button" (click)="playVsComputer()" [disabled]="!engineAvailable()">
             Gioca contro il computer
           </button>
         </div>
         @if (!engineAvailable()) {
           <p class="engine-note">Motore non disponibile in questo ambiente.</p>
+        }
+        @if (engineOn() && engineAvailable()) {
+          <section class="engine-line">
+            <h3 class="engine-line__title">Linea migliore</h3>
+            @if (engineLine(); as line) {
+              <p class="engine-line__moves">{{ line }}</p>
+            } @else {
+              <p class="engine-line__pending">Analisi in corso&#8230;</p>
+            }
+          </section>
         }
       </div>
 

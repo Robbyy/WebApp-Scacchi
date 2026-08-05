@@ -24,7 +24,11 @@ Il piano esclude volutamente bug, audit e infrastruttura.
 
 > ✅ **R20 — Fondazione di navigazione** — fatto (ISSUE-021, 2026-08-05): tab
 > Aperture/Mediogioco/Finale nella topbar e segnaposto riusabile per le due sezioni non
-> ancora sviluppate. Prossimo incremento: **R21** (ISSUE-022 + ISSUE-007).
+> ancora sviluppate.
+>
+> ✅ **R21 — Motore leggibile** — fatto (ISSUE-022 + ISSUE-007, 2026-08-05): linea
+> migliore di Stockfish in SAN nel pannello motore del dettaglio variante e toggle
+> «Nascondi barra» rimosso. Prossimo incremento: **R22** (ISSUE-011 + ISSUE-012 + ISSUE-009).
 
 In sintesi: navigazione → linea migliore del motore → gestione studi → flusso
 varianti/editor → Mediogioco e Finale a slice → impostazioni → parametri motore.

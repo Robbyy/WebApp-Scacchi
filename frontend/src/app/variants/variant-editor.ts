@@ -53,9 +53,12 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
 
-  /** Stato del motore Stockfish (Prototipo 16): aiuto allo studio, mai in allenamento. */
+  /**
+   * Stato del motore Stockfish (Prototipo 16): aiuto allo studio, mai in
+   * allenamento. Il toggle governa da solo anche la barra di valutazione
+   * (ISSUE-007).
+   */
   protected readonly engineOn = signal(false);
-  protected readonly showEvalBar = signal(true);
   protected readonly engineEval = this.stockfish.evaluation;
   protected readonly engineThinking = this.stockfish.thinking;
   protected readonly engineAvailable = this.stockfish.available;
@@ -135,10 +138,6 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
     if (!next) {
       this.stockfish.stop();
     }
-  }
-
-  protected toggleEvalBar(): void {
-    this.showEvalBar.update((v) => !v);
   }
 
   /** Apre "gioca contro il computer" in una nuova tab con la FEN corrente. */

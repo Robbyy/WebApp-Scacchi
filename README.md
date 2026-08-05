@@ -7,12 +7,12 @@ registrazione sessioni, statistiche e spaced repetition SM-2.
 ## Stato
 
 Parte 1 e Parte 2 (P0–P19) completate e verificate in locale.
-Backend: 83 test verdi. Frontend: 194 test verdi.
+Backend: 83 test verdi. Frontend: 228 test verdi.
 Terza tornata (infrastruttura) avviata: **schema gestito da Liquibase** (ISSUE-019, fatto).
 OpenSpec è installato e lo scaffold `openspec/` è pronto per le change di maggiore impatto.
 ISSUE-003 (header home: titolo e pulsanti a capo) risolta e verificata a Full HD
 (commit `aa5048b`).
-Prossimi: ISSUE-004/005/006/020, evolutive R21 (ISSUE-022 + ISSUE-007), poi Supabase PostgreSQL,
+Prossimi: ISSUE-004/005/006/020, evolutiva R22 (ISSUE-011 + ISSUE-012 + ISSUE-009), poi Supabase PostgreSQL,
 Supabase Auth, Docker e CI/CD.
 
 ## Stack

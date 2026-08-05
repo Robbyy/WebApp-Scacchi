@@ -1,9 +1,12 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { VariantEditor } from './variant-editor';
 import { VariantService } from '../core/variant.service';
+import { StockfishService } from '../core/stockfish.service';
 import { StudyService } from '../core/study.service';
+import { UciScore } from '../core/uci';
 import { CreateVariantRequest, Variant } from '../core/variant.model';
 import { MoveMade } from '../chessboard/chessboard';
 import { ConfirmService } from '../core/confirm.service';
@@ -13,6 +16,19 @@ const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 function move(san: string): MoveMade {
   return { san, from: '', to: '', fen: '' };
+}
+
+/** Doppio del motore: niente Web Worker nei test. */
+function fakeEngine() {
+  return {
+    available: signal(true),
+    evaluation: signal<UciScore | null>(null),
+    bestLine: signal<string[]>([]),
+    thinking: signal(false),
+    analyse() {},
+    stop() {},
+    dispose() {},
+  };
 }
 
 function setup(
@@ -26,6 +42,7 @@ function setup(
     providers: [
       provideRouter([]),
       { provide: VariantService, useValue: service },
+      { provide: StockfishService, useValue: fakeEngine() },
       { provide: StudyService, useValue: studyService },
       { provide: ConfirmService, useValue: { ask: () => Promise.resolve(true) } },
       { provide: ToastService, useValue: { success() {}, error() {}, info() {} } },
@@ -243,5 +260,27 @@ describe('VariantEditor', () => {
     cmp.name.set('Italiana mod');
     cmp.save();
     expect(updateId).toBe(5);
+  });
+
+  // ISSUE-007: un solo controllo, il toggle del motore, governa anche la barra.
+  it('has no separate show/hide button for the evaluation bar', () => {
+    const { fixture, cmp } = setup({});
+    cmp.toggleEngine();
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const labels = Array.from(el.querySelectorAll('.engine-bar button')).map((b) =>
+      b.textContent?.trim(),
+    );
+    expect(labels.some((t) => t?.includes('barra'))).toBe(false);
+    expect(cmp.showEvalBar).toBeUndefined();
+    expect(fixture.nativeElement.querySelector('app-eval-bar')).not.toBeNull();
+  });
+
+  // ISSUE-022 resta fuori dall'editor: la linea migliore è solo nel dettaglio.
+  it('does not show the engine best line', () => {
+    const { fixture, cmp } = setup({});
+    cmp.toggleEngine();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.engine-line')).toBeNull();
   });
 });

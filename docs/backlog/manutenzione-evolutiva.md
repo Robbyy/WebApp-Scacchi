@@ -9,8 +9,8 @@
 | ID | Titolo | Effort | Rischio | OpenSpec |
 |----|--------|:------:|:-------:|:--------:|
 | 021 | Scaffold navigazione 3 sezioni + segnaposto ✅ | basso | basso | no |
-| 022 | Visualizzazione linea migliore del motore nel pannello laterale | medio | medio-basso | no |
-| 007 | "Nascondi barra" ridondante col motore attivo | basso | basso | no |
+| 022 | Visualizzazione linea migliore del motore nel pannello laterale ✅ | medio | medio-basso | no |
+| 007 | "Nascondi barra" ridondante col motore attivo ✅ | basso | basso | no |
 | 008 | Rimuovere "Auto-play" dalla navigazione | basso | basso | no |
 | 009 | Elenco studi su due colonne | basso | basso | no |
 | 012 | Modifica nome/descrizione/colore studio | basso | basso | no |
@@ -73,8 +73,8 @@ sotto ~315px scorre orizzontalmente il solo gruppo tab (verificato a 280px), sen
 troncare le etichette né comprimere i controlli di servizio, e la topbar non genera mai
 overflow orizzontale di pagina. Frontend: 194 test verdi, build ok.
 
-## ISSUE-022 — Visualizzazione linea migliore del motore nel pannello laterale
-**OpenSpec:** no · **Effort:** medio · **Rischio:** medio-basso.
+## ISSUE-022 — Visualizzazione linea migliore del motore nel pannello laterale ✅
+**OpenSpec:** no · **Effort:** medio · **Rischio:** medio-basso · **Stato: ✅ completata (R21, 2026-08-05).**
 
 **Problema:** nel dettaglio variante, quando Stockfish è acceso, l'interfaccia mostra la
 barra di valutazione e la profondità, ma non mostra la linea principale calcolata dal motore
@@ -116,14 +116,58 @@ prerequisito per questa prima linea singola. Riusa il supporto esistente di `Sto
 `parseInfoLine` ed `EvalBar`. Il perimetro iniziale è il dettaglio variante mostrato nella
 schermata di riferimento; l'editor e la pagina «Gioca contro il computer» restano esclusi.
 
-## ISSUE-007 — "Nascondi barra" ridondante col motore attivo
-**OpenSpec:** no · **Effort:** basso · **Rischio:** basso.
+**Esito (R21, 2026-08-05):** `UciScore.pv` conserva ora l'intera sequenza UCI (`string[]`,
+vuota se assente) e si ferma al primo token non-mossa, così `multipv` o campi emessi dopo la
+linea non la inquinano. `pvToSan` la converte in SAN con `chess.js` a partire dalla FEN
+analizzata — fermandosi alla prima mossa non applicabile invece di scartare tutta la linea —
+e `numberedPv` la numera (`1. e4 e5 2. Nf3`, oppure `12… Nc6 13. Nf3` se muove il Nero).
+`StockfishService.bestLine` espone la linea e viene azzerata da `analyse()`, `stop()` e
+`dispose()`: solo le righe `info` con `pv` la aggiornano, quindi vince sempre la profondità
+più recente. Allo spegnimento `stop()`
+svuota valutazione e linea e chiude un gate interno (`acceptingInfo`), così le righe `info`
+che il worker emette *dopo* lo stop non ripopolano i segnali: alla riaccensione la UI riparte
+sempre da «Analisi in corso…» e mostra solo dati della nuova analisi. Nel template il blocco
+`.engine-line` vive dentro `.engine-panel` del pannello laterale, tra i controlli motore e
+«Allena questa variante»; mostra «Analisi in corso…» finché non arriva la prima PV. Verifica
+live: worker reale a prof. 14, PV completa in SAN (arrocco e promozione inclusi), pending per
+~840ms all'avvio a freddo, scacchiera ferma a `x=64 y=99 w=760` mentre la linea cresce, nessun
+overflow orizzontale a 1440/1280/1024/768/375/320 (a 320px la linea scorre in verticale entro
+`max-height`). Frontend: 228 test verdi, build ok.
+
+### Punti aperti — correlazione delle ricerche Stockfish
+
+**Race tra due FEN consecutivi (da valutare):** quando l'utente naviga rapidamente da una
+posizione A a una posizione B con il motore già acceso, l'app invia `stop`, `position fen B` e
+`go` senza aspettare una conferma del worker. Una riga `info ... pv` della ricerca A, già in
+coda, può quindi arrivare dopo l'aggiornamento di `currentFen` a B. La PV verrebbe convertita
+in SAN usando B e, se le prime mosse sono ancora legali, mostrata temporaneamente come linea di
+B. Il gate `acceptingInfo` introdotto in R21 risolve solo il caso **motore spento**: non può
+distinguere a quale delle due ricerche appartenga una riga `info` mentre l'analisi resta attiva.
+
+Non è classificata ora come bug né come evolutiva: va prima riprodotta con un test che simuli
+messaggi UCI in ritardo fra due chiamate consecutive ad `analyse()`, stimandone frequenza e
+impatto nell'uso reale. Se confermata e visibile, aprire una issue bug con priorità legata alla
+fuorvianza della linea; se richiederà un riassetto del ciclo di vita UCI per robustezza generale,
+valutarla come evolutiva tecnica. Una possibile direzione è serializzare la transizione,
+attendendo il `bestmove` di stop prima di accettare i dati della ricerca successiva; non basta un
+semplice contatore locale, perché le righe UCI `info` non trasportano l'identificatore della
+ricerca.
+
+## ISSUE-007 — "Nascondi barra" ridondante col motore attivo ✅
+**OpenSpec:** no · **Effort:** basso · **Rischio:** basso · **Stato: ✅ completata (R21, 2026-08-05).**
 **Scope:** quando il motore è acceso esiste un pulsante separato "Nascondi/Mostra barra"
 di valutazione, concettualmente ridondante (motore attivo ⇒ barra sempre utile).
 **Accettazione:** eliminato il pulsante separato; il toggle del motore controlla anche la
 barra (motore on → barra visibile, off → nascosta). Un unico controllo invece di due.
 **Note:** verificare se lo stato "barra nascosta" è persistito da qualche parte. Stessa
 sezione motore di ISSUE-002/ISSUE-014.
+
+**Esito (R21, 2026-08-05):** verificata l'assenza di persistenza — lo stato viveva solo nel
+signal `showEvalBar`, l'unica preferenza in `localStorage` è quella del suono mosse. Signal,
+`toggleEvalBar()` e pulsante rimossi da **dettaglio variante ed editor**, che condividevano lo
+stesso controllo duplicato: ora `@if (engineOn())` governa da solo la `EvalBar` e la barra
+motore espone due soli pulsanti («Motore» e «Gioca contro il computer»). Verifica live su
+entrambe le pagine: motore on → barra visibile, off → barra e linea spariscono insieme.
 
 ## ISSUE-008 — Rimuovere "Auto-play" dalla navigazione varianti
 **OpenSpec:** no · **Effort:** basso · **Rischio:** basso.

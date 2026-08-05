@@ -1,6 +1,6 @@
 # Piano progressivo dei rilasci evolutivi
 
-> **Aggiornato:** 2026-08-05 · **Stato:** in corso — **R20 rilasciato**, i rilasci
+> **Aggiornato:** 2026-08-05 · **Stato:** in corso — **R20 e R21 rilasciati**, i rilasci
 > successivi restano pianificazione.
 >
 > **Perimetro:** sole issue evolutive ancora aperte. I difetti registrati su GitHub,
@@ -48,8 +48,8 @@ Riferimenti: [backlog](backlog.md),
 | Issue | Stato e valore | Impatto principale | Dipendenza / nota di pianificazione |
 |---|---|---|---|
 | **021** ✅ | Navigazione Aperture/Mediogioco/Finale; fondazione a basso rischio | topbar, route, segnaposto | rilasciata con R20 (2026-08-05) |
-| **022** | Mostra la Principal Variation di Stockfish; valore immediato nello studio | parser UCI, servizio motore, pannello dettaglio | indipendente da ISSUE-014 e dal backend |
-| **007** | Elimina un controllo motore ridondante | pannello motore | da consegnare con ISSUE-022 |
+| **022** ✅ | Mostra la Principal Variation di Stockfish; valore immediato nello studio | parser UCI, servizio motore, pannello dettaglio | rilasciata con R21 (2026-08-05) |
+| **007** ✅ | Elimina un controllo motore ridondante | pannello motore | rilasciata con R21 (2026-08-05) |
 | **011** | Unifica il flusso per creare/importare uno studio | home, route, import Lichess, topbar | mini-spec consigliata; riusa API esistenti |
 | **012** | Rende modificabili i metadati dello studio | form e dettaglio studio | si integra naturalmente con 011 |
 | **009** | Usa meglio lo spazio dell'home su desktop | griglia card studi | stessa area di 011/012 |
@@ -84,7 +84,7 @@ backend e test di regressione, oltre all'editor visuale.
 | Rilascio | Issue / slice | Perché qui | Criterio di uscita essenziale |
 |---|---|---|---|
 | **R20 — Fondazione di navigazione** ✅ | **021** | È economica, rende visibile la direzione del prodotto e sblocca le sezioni future senza introdurre dati o logica di gioco. | ✅ Rilasciato il 2026-08-05: tab-link `/`, `/middlegame`, `/endgame`, segnaposto riusabile e stato attivo; una riga da 768px, due righe sotto con scorrimento del solo gruppo tab se necessario. |
-| **R21 — Motore leggibile** | **022**, **007** | È il miglior incremento immediato per lo studio e concentra nel medesimo pannello la rimozione del toggle ridondante. | PV completa convertita in SAN e aggiornata con l'analisi; spegnendo il motore spariscono valutazione e linea; nessun contenuto sotto la scacchiera. |
+| **R21 — Motore leggibile** ✅ | **022**, **007** | È il miglior incremento immediato per lo studio e concentra nel medesimo pannello la rimozione del toggle ridondante. | ✅ Rilasciato il 2026-08-05: `UciScore.pv` conserva l'intera sequenza UCI, `pvToSan`/`numberedPv` la rendono in SAN numerata dalla posizione analizzata e `StockfishService.bestLine` la azzera a ogni nuova analisi; il blocco «Linea migliore» sta in `.engine-panel` tra i controlli motore e «Allena questa variante», con «Analisi in corso…» finché manca la PV. Rimosso il toggle «Nascondi/Mostra barra» da dettaglio ed editor: spegnendo il motore spariscono barra e linea. Nessun contenuto aggiunto sotto la scacchiera. |
 | **R22 — Ciclo di vita dello studio** | **011**, **012**, **009** | Evita tre passaggi separati sulla home/form: un solo modello di form può creare, modificare e importare, mentre la griglia a due colonne viene verificata nello stesso contesto. | Mini-spec di 011 chiusa; pagina `Nuovo studio` conserva preview/upsert e `?studyId`; modifica metadati usa `PUT` esistente; griglia 2 colonne desktop / 1 colonna stretta. |
 | **R23 — Navigazione tra varianti** | **010**, **008** | Completa il flusso di consultazione della variante e affronta insieme i controlli della stessa schermata, dopo che R21 ne ha fissato il pannello motore. | Mini-spec layout; elenco laterale con variante attiva e guard sulle modifiche non salvate; nessuna regressione della PV; comportamento definito e verificato alle larghezze desktop/laptop. |
 | **R24 — Editor più espressivo** | **013**, `issue-016-move-comments` | Entrambi agiscono sul tree editor: una sola revisione dell'interazione sulle mosse riduce duplicazioni e rende l'editor utile anche prima delle nuove sezioni. | Menu accessibile con conferma per la distruzione; promozione mainline invariata; commento/testo e NAG persistono nel tree, senza alterare le righe storiche. |
@@ -127,9 +127,12 @@ esplicitamente `localStorage` oppure un modello già associabile a utente.
 
 ## Lavoro preparatorio che può procedere senza cambiare il prodotto
 
-- R20 è chiuso: si possono ora preparare in parallelo la mini-spec di R22 e R23, la
-  proposta OpenSpec di R25 e l'audit UCI di R30. Sono attività di analisi: non alterano
+- R20 e R21 sono chiusi: si possono ora preparare in parallelo la mini-spec di R22 e R23,
+  la proposta OpenSpec di R25 e l'audit UCI di R30. Sono attività di analisi: non alterano
   il codice e riducono l'attesa tra un rilascio e il successivo.
+- La mini-spec di R23 deve tenere conto della catena consegnata da R21
+  (`parseInfoLine` → `StockfishService.bestLine` → `.engine-line` in `.engine-panel`):
+  il riassetto a tre colonne può ridisporne il CSS, non sostituirne la logica.
 - Non avviare implementazioni sovrapposte su topbar (021/011/015/017), dettaglio
   variante (022/007/010/008) o tree editor (013/commenti): sono le tre aree con il
   maggior rischio di conflitto e di regressione UX.

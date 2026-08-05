@@ -1,6 +1,6 @@
 # Stato corrente — WebApp Scacchi
 
-> Aggiornato al: **2026-08-05** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi; + ISSUE-021 navigazione a tre sezioni).
+> Aggiornato al: **2026-08-05** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi; + ISSUE-021 navigazione a tre sezioni; + ISSUE-022/ISSUE-007 linea migliore del motore).
 > Non è un diario cronologico. La storia per-prototipo è in `docs/archive/stato-avanzamento-2026-06-28.md` e nel git log.
 
 ---
@@ -8,7 +8,7 @@
 ## Sintesi
 
 La webapp è funzionante in locale. **Parte 1 (P0–P6) e Parte 2 (P7–P19) completate e verificate.**
-Suite automatica verde: backend **83 test**, frontend **194 test**.
+Suite automatica verde: backend **83 test**, frontend **228 test**.
 La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE-019); restano Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
 In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre le Aperture: **ISSUE-016 (`issue-016-phase-domain-model`)** introduce `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), immutabile dopo la creazione — vedi [ADR 0014](adr/decisioni-tecniche.md).
 
@@ -20,7 +20,8 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Varianti e studi**: CRUD completo, albero mosse `MoveNode` (`children[0]` = mainline), editor mossa per mossa, promozione a mainline, import PGN con varianti annidate.
 - **Import e sync Lichess**: link studio/capitolo pubblico, OAuth PKCE per studi privati/unlisted, re-import come upsert (varianti sostituite, metadati locali preservati).
 - **Training loop**: allenamento su scacchiera con supporto rami multipli, validazione scacchistica backend (chesslib), registrazione sessione (mosse, errori, esito).
-- **Motore Stockfish client-side**: toggle nel dettaglio/editor, barra valutazione, «Gioca contro il computer» in nuova tab. Mai disponibile in allenamento.
+- **Motore Stockfish client-side**: toggle unico nel dettaglio/editor che governa anche la barra di valutazione (ISSUE-007, R21), «Gioca contro il computer» in nuova tab. Mai disponibile in allenamento.
+- **Linea migliore del motore (ISSUE-022, R21)**: nel **solo dettaglio variante**, il pannello motore laterale mostra la Principal Variation di Stockfish in SAN e numerata dalla posizione analizzata, aggiornata a ogni profondità; «Analisi in corso…» finché manca la PV, nessuna linea obsoleta al cambio di posizione. Spegnendo il motore `stop()` svuota valutazione e linea e ignora le righe `info` tardive del worker finché non parte una nuova analisi. Editor, allenamento e «Gioca contro il computer» restano esclusi.
 - **Statistiche**: aggregazioni per variante e studio (allenamenti, completati, precisione %, mosse più sbagliate).
 - **Spaced repetition SM-2**: scheduling dopo ogni allenamento, vista «Ripeti oggi», indicatore prossima ripetizione nel dettaglio variante.
 - **Navigazione a tre sezioni (ISSUE-021, R20)**: tab-link **Aperture** (`/`), **Mediogioco** (`/middlegame`) e **Finale** (`/endgame`) nella topbar, dentro una `<nav aria-label="Sezione di studio">` con `aria-current="page"` sulla sezione attiva (derivata dall'URL: le pagine di dettaglio delle Aperture mantengono acceso il tab Aperture). Mediogioco e Finale montano il segnaposto riusabile `sections/coming-soon` («In fase di implementazione»); i contenuti reali arrivano con le slice di ISSUE-016.
@@ -42,7 +43,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Stack**: Angular 22 · TypeScript · Vitest · componenti standalone · signals · OnPush · chess.js · Stockfish asm.js.
 - **Aree**: `chessboard`, `variants`, `studies`, `stats`, `reviews`, `play`, `sections`, `core`.
 - **Routing**: `/` → lista studi (Aperture), `/studies/:id` → dettaglio studio, `/variants/:id` → dettaglio variante, `/variants/:id/training`, `/variants/:id/stats`, `/studies/:id/stats`, `/reviews`, `/play`, `/middlegame` e `/endgame` → segnaposto di sezione (ISSUE-021).
-- **Test**: 194 verdi (`npm test -- --watch=false`, Vitest headless).
+- **Test**: 228 verdi (`npm test -- --watch=false`, Vitest headless).
 - **Avvio locale**: `npm start` (frontend su `http://localhost:4200`, con proxy verso `http://localhost:8080`).
 
 ---
@@ -51,7 +52,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 
 Verifiche browser superate senza errori console: training, editor, import PGN ramificato, import/sync Lichess (studio pubblico reale `OR3CU5Je`) + OAuth, Stockfish e gioca-vs-computer, sessioni, statistiche, spaced repetition.
 
-Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **37 flussi** (12 core + 25 Parte 2).
+Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **38 flussi** (12 core + 25 Parte 2 + 1 evolutivo R21).
 
 ---
 
@@ -69,7 +70,7 @@ Nessun bug bloccante attivo. **Policy DB**: finché non si migra a Supabase, il 
 | **LAZY loading** | `open-in-view: false` — tutte le letture che toccano collezioni LAZY richiedono `@Transactional(readOnly=true)` sul metodo di servizio. |
 | **Stockfish mai in allenamento** | Vincolo costruttivo: `variant-training` non importa `StockfishService` né `EvalBar`. Non indebolire questa separazione. |
 | **`userId` inattivo** | Predisposto nullable su `TrainingSession` e `ReviewSchedule`. Inattivo finché non arriva Supabase Auth. |
-| **Responsive scacchiera** | Board fissa a 720px tra ~800–1280px: il pannello scende sotto la piega su laptop. Proposta UX in archivio (planning §17), da validare prima di modificare. |
+| **Responsive scacchiera** | Board fissa a 720px tra ~800–1280px: il pannello scende sotto la piega su laptop. Proposta UX in archivio (planning §17), da validare prima di modificare. Nota R21: intorno ai ~750px la barra di valutazione affiancata fa sforare la pagina di pochi px, e dopo ISSUE-007 non è più nascondibile a mano; è la stessa larghezza fissa della board, non il pannello motore (la linea migliore va a capo e non sfora a nessuna larghezza). |
 | **`Study.phase` immutabile** | Scelta alla creazione, non modificabile (ISSUE-016): un update con una `phase` diversa da quella persistita viene rifiutato (400). `GET /api/stats/studies/{id}` e `GET /api/stats/variants/{id}` rispondono `404` per studi/varianti non `OPENING` (le statistiche di training non vanno presentate come statistiche di posizione). |
 
 ---
@@ -86,7 +87,7 @@ Nessun bug bloccante attivo. **Policy DB**: finché non si migra a Supabase, il 
 - Runner E2E browser (Playwright/Cypress) — rinviato alla terza tornata.
 - Editor manuale di posizione e input/UI per FEN custom (Mediogioco/Finale) — prossima change `issue-016-custom-starting-fen`.
 - Viste/sezioni complete Mediogioco e Finale (oggi solo il segnaposto di ISSUE-021), commenti alle mosse, gioco contro il motore da una posizione salvata, tag/categorie — change successive a ISSUE-016 (vedi `docs/roadmap.md`).
-- Visualizzazione della linea migliore di Stockfish nel pannello laterale — ISSUE-022, documentata ma non ancora implementata.
+- Multi-PV (più linee del motore), frecce/highlight della PV sulla scacchiera e click sulla linea per eseguirla — esplicitamente fuori dal perimetro di ISSUE-022.
 
 ---
 

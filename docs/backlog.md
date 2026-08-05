@@ -33,8 +33,8 @@
 | 006 | Badge "Misto": contrasto testo | bug | GitHub | [#6](https://github.com/Robbyy/WebApp-Scacchi/issues/6) · 🔴 aperta |
 | 020 | Sotto-varianti annidate non allenate | bug | GitHub | [#7](https://github.com/Robbyy/WebApp-Scacchi/issues/7) · 🔴 aperta |
 | 021 | Scaffold navigazione 3 sezioni | manutenzione | diretto | ✅ fatto (R20) |
-| 022 | Visualizzazione linea migliore del motore | manutenzione | diretto | da fare |
-| 007 | "Nascondi barra" ridondante | manutenzione | diretto | da fare |
+| 022 | Visualizzazione linea migliore del motore | manutenzione | diretto | ✅ fatto (R21) |
+| 007 | "Nascondi barra" ridondante | manutenzione | diretto | ✅ fatto (R21) |
 | 008 | Rimuovere "Auto-play" | manutenzione | diretto | da fare |
 | 009 | Elenco studi su due colonne | manutenzione | diretto | da fare |
 | 012 | Modifica nome/descrizione/colore studio | manutenzione | diretto | da fare |
@@ -56,7 +56,7 @@ La sequenza dettagliata dei soli incrementi evolutivi è nel
 [`piano-rilasci-evolutivi.md`](piano-rilasci-evolutivi.md). Ordine confermato:
 
 1. ~~**R20:** ISSUE-021 (scaffold navigazione tre sezioni).~~ ✅ fatto (2026-08-05).
-2. **R21:** ISSUE-022 + ISSUE-007 (linea migliore del motore e semplificazione pannello).
+2. ~~**R21:** ISSUE-022 + ISSUE-007 (linea migliore del motore e semplificazione pannello).~~ ✅ fatto (2026-08-05).
 3. **R22:** ISSUE-011 + ISSUE-012 + ISSUE-009 (ciclo di vita dello studio e home).
 4. **R23:** ISSUE-010 + ISSUE-008 (navigazione e controlli del dettaglio variante).
 5. **R24:** ISSUE-013 + `issue-016-move-comments` (editor).

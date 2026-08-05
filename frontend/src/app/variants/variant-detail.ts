@@ -16,6 +16,7 @@ import { MoveSoundService } from '../core/move-sound.service';
 import { StockfishService } from '../core/stockfish.service';
 import { ReviewService } from '../core/review.service';
 import { StudyService } from '../core/study.service';
+import { numberedPv } from '../core/uci';
 import { MoveNode, Variant } from '../core/variant.model';
 import { ReviewSchedule } from '../core/review.model';
 import { formatReviewDate, reviewLabel } from '../reviews/review-format';
@@ -43,12 +44,19 @@ export class VariantDetail implements OnDestroy {
   private readonly reviews = inject(ReviewService);
   private readonly studyService = inject(StudyService);
 
-  /** Stato del motore Stockfish (Prototipo 16): solo aiuto allo studio, mai in allenamento. */
+  /**
+   * Stato del motore Stockfish (Prototipo 16): solo aiuto allo studio, mai in
+   * allenamento. Il toggle governa da solo anche la barra di valutazione
+   * (ISSUE-007): motore acceso ⇒ barra e linea migliore visibili.
+   */
   protected readonly engineOn = signal(false);
-  protected readonly showEvalBar = signal(true);
   protected readonly engineEval = this.stockfish.evaluation;
   protected readonly engineThinking = this.stockfish.thinking;
   protected readonly engineAvailable = this.stockfish.available;
+  /** Linea migliore in SAN, numerata dalla posizione analizzata (ISSUE-022). */
+  protected readonly engineLine = computed(() =>
+    numberedPv(this.currentFen(), this.stockfish.bestLine()),
+  );
 
   protected readonly variant = signal<Variant | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -131,10 +139,6 @@ export class VariantDetail implements OnDestroy {
     if (!next) {
       this.stockfish.stop();
     }
-  }
-
-  protected toggleEvalBar(): void {
-    this.showEvalBar.update((v) => !v);
   }
 
   /** Apre "gioca contro il computer" in una nuova tab con la FEN corrente. */

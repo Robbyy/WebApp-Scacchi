@@ -430,8 +430,9 @@ computer" in una nuova tab) ed è **assente in allenamento**.
 - Vincolo GPL da rispettare in caso di ridistribuzione dell'app (vedi attribution).
 - Fuori perimetro dell'implementazione P16: suggerimento "mossa migliore", blunder detection,
   multi-PV e opening explorer. La necessità di mostrare la singola linea principale è stata
-  successivamente raccolta in **ISSUE-022**; Multi-PV e le altre funzioni restano da valutare
-  separatamente.
+  successivamente raccolta in **ISSUE-022**, implementata con R21 (2026-08-05) sopra la stessa
+  catena `parseInfoLine` → `StockfishService` → pannello motore, senza toccare il backend;
+  Multi-PV e le altre funzioni restano da valutare separatamente.
 
 ---
 

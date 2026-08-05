@@ -106,6 +106,41 @@
   color: var(--text-muted);
 }
 
+/* Linea migliore del motore (ISSUE-022): vive nel pannello laterale, sotto i
+   controlli. Il testo va a capo e, se la PV è lunga, scorre in verticale: la
+   colonna non si allarga e la scacchiera non si sposta. */
+.engine-line {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.6rem;
+  background: var(--panel-bg);
+}
+
+.engine-line__title {
+  margin: 0 0 0.3rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.engine-line__moves {
+  margin: 0;
+  max-height: 7.5rem;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.55;
+  color: var(--text-main);
+}
+
+.engine-line__pending {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 .controls {
   display: flex;
   gap: 0.4rem;
