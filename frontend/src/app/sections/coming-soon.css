@@ -1,0 +1,44 @@
+.soon {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.soon-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.soon-title {
+  margin: 0.2rem 0 0;
+  font-size: 1.8rem;
+  color: var(--text-main);
+}
+
+.soon-status {
+  display: inline-block;
+  margin: 1rem 0 0;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--panel-bg);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--wood-dark);
+}
+
+.soon-lead {
+  margin: 1rem auto 0;
+  max-width: 34rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.soon-lead a {
+  color: var(--wood-dark);
+  font-weight: 600;
+}

@@ -12,10 +12,16 @@ import { VariantStats } from './stats/variant-stats';
 import { StudyStats } from './stats/study-stats';
 import { ReviewDue } from './reviews/review-due';
 import { PlayVsComputer } from './play/play';
+import { ComingSoon } from './sections/coming-soon';
 import { canLeaveEditor } from './variants/can-deactivate.guard';
 
 export const routes: Routes = [
   { path: '', component: StudyList },
+  // Sezioni Mediogioco/Finale (ISSUE-021): per ora solo il segnaposto riusabile,
+  // che riceve `section` come input dalla route. Le sezioni reali arrivano con
+  // le slice `issue-016-middlegame-section` / `issue-016-endgame-section`.
+  { path: 'middlegame', component: ComingSoon, data: { section: 'Mediogioco' } },
+  { path: 'endgame', component: ComingSoon, data: { section: 'Finale' } },
   { path: 'reviews', component: ReviewDue },
   { path: 'play', component: PlayVsComputer },
   { path: 'lichess/callback', component: LichessCallback },

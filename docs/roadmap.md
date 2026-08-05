@@ -17,9 +17,17 @@
 
 ## Evolutive di prodotto pianificate
 
-- **ISSUE-022 — Linea migliore del motore:** visualizzazione della singola Principal
-  Variation nel pannello motore laterale, senza contenuti aggiuntivi sotto la scacchiera.
-  Preanalisi e criteri di accettazione: [`backlog/manutenzione-evolutiva.md`](backlog/manutenzione-evolutiva.md).
+La sequenza temporale e di priorità delle sole evolutive aperte è nel
+[`piano-rilasci-evolutivi.md`](piano-rilasci-evolutivi.md): undici incrementi
+proposti da **R20** (navigazione a tre sezioni) a **R30** (parametri UCI del motore).
+Il piano esclude volutamente bug, audit e infrastruttura.
+
+> ✅ **R20 — Fondazione di navigazione** — fatto (ISSUE-021, 2026-08-05): tab
+> Aperture/Mediogioco/Finale nella topbar e segnaposto riusabile per le due sezioni non
+> ancora sviluppate. Prossimo incremento: **R21** (ISSUE-022 + ISSUE-007).
+
+In sintesi: navigazione → linea migliore del motore → gestione studi → flusso
+varianti/editor → Mediogioco e Finale a slice → impostazioni → parametri motore.
 
 ---
 

@@ -32,7 +32,7 @@
 | 005 | Nessun suono mosse del computer | bug | GitHub | [#5](https://github.com/Robbyy/WebApp-Scacchi/issues/5) · 🔴 aperta |
 | 006 | Badge "Misto": contrasto testo | bug | GitHub | [#6](https://github.com/Robbyy/WebApp-Scacchi/issues/6) · 🔴 aperta |
 | 020 | Sotto-varianti annidate non allenate | bug | GitHub | [#7](https://github.com/Robbyy/WebApp-Scacchi/issues/7) · 🔴 aperta |
-| 021 | Scaffold navigazione 3 sezioni ⭐ | manutenzione | diretto | da fare (primo) |
+| 021 | Scaffold navigazione 3 sezioni | manutenzione | diretto | ✅ fatto (R20) |
 | 022 | Visualizzazione linea migliore del motore | manutenzione | diretto | da fare |
 | 007 | "Nascondi barra" ridondante | manutenzione | diretto | da fare |
 | 008 | Rimuovere "Auto-play" | manutenzione | diretto | da fare |
@@ -52,17 +52,19 @@
 
 ## Sequenza di lavoro
 
-**Fase 1 — bug + manutenzione evolutiva** (prima degli sviluppi importanti):
+La sequenza dettagliata dei soli incrementi evolutivi è nel
+[`piano-rilasci-evolutivi.md`](piano-rilasci-evolutivi.md). Ordine confermato:
 
-1. ⭐ **ISSUE-021** (scaffold navigazione 3 sezioni) — da fare per primo: fissa la struttura a fasi a costo/rischio bassi.
-2. **Bug aperti**: batch layout/UX (006) e batch audio (004, 005); a sé il bug allenamento **020** (caso di test pronto). ISSUE-001, ISSUE-002 e ISSUE-003 sono completate.
-3. **Manutenzione evolutiva**: 007, 008, 009, 012, 015, 022 (diretti); poi 010, 011, 013 (medi, con eventuale OpenSpec leggera).
-4. **ISSUE-018 (security audit)** — anticipabile e parallelo: indipendente, basso costo, alto valore (skill `/security-review`). Le criticità che emergono diventano bug → ticket.
+1. ~~**R20:** ISSUE-021 (scaffold navigazione tre sezioni).~~ ✅ fatto (2026-08-05).
+2. **R21:** ISSUE-022 + ISSUE-007 (linea migliore del motore e semplificazione pannello).
+3. **R22:** ISSUE-011 + ISSUE-012 + ISSUE-009 (ciclo di vita dello studio e home).
+4. **R23:** ISSUE-010 + ISSUE-008 (navigazione e controlli del dettaglio variante).
+5. **R24:** ISSUE-013 + `issue-016-move-comments` (editor).
+6. **R25–R28:** slice residue di ISSUE-016: posizione FEN → Mediogioco → Finale → gioco da posizione.
+7. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
 
-**Fase 2 — sviluppi importanti** (solo dopo la Fase 1, con OpenSpec):
-
-5. **ISSUE-017** (hub Impostazioni + SM-2) → poi **ISSUE-014** (parametri motore, sezione del medesimo hub).
-6. **ISSUE-016** (mediogioco/finale) — il più ampio: spezzato in change OpenSpec incrementali (`phase-domain-model`, editor manuale posizione/FEN tecnico, commenti mosse, sezione Mediogioco, sezione Finale, gioco vs motore). Mediogioco e Finale riusano l'organizzazione studi/capitoli delle aperture, ma senza import Lichess; ISSUE-021 ne prepara lo scaffold di navigazione.
+I bug GitHub e l'audit di sicurezza seguono le proprie priorità e **non** fanno parte
+di questa cadenza di rilasci evolutivi.
 
 ---
 
@@ -90,6 +92,12 @@
 ---
 
 ## Completati
+
+- **ISSUE-021 — Scaffold navigazione tre sezioni** ✅ (R20, 2026-08-05). Tab-link
+  Aperture/Mediogioco/Finale nella topbar (`nav` + `aria-current`), route `/middlegame` e
+  `/endgame` sul segnaposto riusabile `sections/coming-soon`, topbar a una riga da 768px e
+  a due righe sotto. Scheda: [`backlog/manutenzione-evolutiva.md`](backlog/manutenzione-evolutiva.md).
+  Frontend: 194 test verdi. ISSUE-016 sostituirà i segnaposto con le sezioni reali.
 
 - **ISSUE-019 — Introduzione Liquibase** ✅ (2026-06-29, commit `85b4a54`). Schema gestito da
   Liquibase (`spring-boot-liquibase`), baseline con precondizione `MARK_RAN`, `ddl-auto: none`;

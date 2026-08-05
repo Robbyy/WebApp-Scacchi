@@ -7,12 +7,12 @@ registrazione sessioni, statistiche e spaced repetition SM-2.
 ## Stato
 
 Parte 1 e Parte 2 (P0–P19) completate e verificate in locale.
-Backend: 83 test verdi. Frontend: 175 test verdi.
+Backend: 83 test verdi. Frontend: 194 test verdi.
 Terza tornata (infrastruttura) avviata: **schema gestito da Liquibase** (ISSUE-019, fatto).
 OpenSpec è installato e lo scaffold `openspec/` è pronto per le change di maggiore impatto.
 ISSUE-003 (header home: titolo e pulsanti a capo) risolta e verificata a Full HD
 (commit `aa5048b`).
-Prossimi: ISSUE-004/005/006/020, evolutive ISSUE-021/022, poi Supabase PostgreSQL,
+Prossimi: ISSUE-004/005/006/020, evolutive R21 (ISSUE-022 + ISSUE-007), poi Supabase PostgreSQL,
 Supabase Auth, Docker e CI/CD.
 
 ## Stack
@@ -49,6 +49,6 @@ Ordine consigliato di lettura:
    - checklist manuale → [`docs/checklist-e2e.md`](docs/checklist-e2e.md)
    - change/spec → [`openspec/`](openspec/) (CLI `openspec`, comandi Claude `/opsx:*`)
 4. [`docs/adr/decisioni-tecniche.md`](docs/adr/decisioni-tecniche.md) — decisioni architetturali (ADR 0001–0013)
-5. [`docs/roadmap.md`](docs/roadmap.md) — cosa viene dopo · [`docs/backlog.md`](docs/backlog.md) — backlog (indice; classi in [`docs/backlog/`](docs/backlog/): bug, manutenzione evolutiva, sviluppi importanti)
+5. [`docs/roadmap.md`](docs/roadmap.md) — cosa viene dopo · [`docs/backlog.md`](docs/backlog.md) — backlog (indice; classi in [`docs/backlog/`](docs/backlog/): bug, manutenzione evolutiva, sviluppi importanti) · [`docs/piano-rilasci-evolutivi.md`](docs/piano-rilasci-evolutivi.md) — sequenza prioritaria dei prossimi rilasci evolutivi
 
 Storico: [`docs/archive/`](docs/archive/) · git log

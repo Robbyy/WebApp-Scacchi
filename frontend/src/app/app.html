@@ -1,5 +1,15 @@
 <header class="topbar">
   <a class="brand" routerLink="/">{{ title() }}</a>
+  <nav class="section-nav" aria-label="Sezione di studio">
+    @for (tab of sections; track tab.id) {
+      <a
+        class="section-tab"
+        [class.section-tab--active]="activeSection() === tab.id"
+        [routerLink]="tab.link"
+        [attr.aria-current]="activeSection() === tab.id ? 'page' : null"
+      >{{ tab.label }}</a>
+    }
+  </nav>
   <div class="topbar-right">
     <button
       class="sound-toggle"

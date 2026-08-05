@@ -1,7 +1,8 @@
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.25rem;
   padding: 0.9rem 1.5rem;
   border-bottom: 1px solid var(--panel-border);
   background: oklch(0.96 0.02 80 / 0.7);
@@ -12,16 +13,65 @@
   font-size: 1.4rem;
   font-weight: 700;
   text-decoration: none;
+  white-space: nowrap;
   background: linear-gradient(135deg, var(--brass), var(--wood-light));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
+/* Navigazione delle tre sezioni di studio (ISSUE-021).
+   Da 768px in su resta sulla riga del brand; sotto passa a una seconda riga
+   a tutta larghezza. È l'unico gruppo autorizzato a scorrere in orizzontale
+   quando le etichette non entrano, per non comprimere i controlli di servizio. */
+.section-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.section-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.3rem;
+  padding: 0.35rem 1rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  color: var(--text-muted);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.section-tab:hover {
+  background: var(--wood-light);
+  color: var(--wood-dark);
+}
+
+/* Outline interno: il gruppo tab è un contenitore con `overflow-x`, che
+   ritaglierebbe un anello di focus disegnato all'esterno del pulsante. */
+.section-tab:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: -2px;
+}
+
+.section-tab--active {
+  background: var(--wood-medium);
+  color: #fff;
+}
+
 .topbar-right {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  margin-left: auto;
 }
 
 .sound-toggle {
@@ -76,4 +126,47 @@
 
 .content {
   padding: 0;
+}
+
+/* Sotto 768px la topbar va a due righe: brand + controlli di servizio sopra,
+   gruppo tab a tutta larghezza sotto, con target cliccabili da 44px. */
+@media (max-width: 767px) {
+  .topbar {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem 0.75rem;
+  }
+
+  /* Brand più compatto: lascia entrare i controlli di servizio nella stessa
+     riga alle larghezze mobile, senza comprimerli né mandarli a capo. */
+  .brand {
+    font-size: 1.15rem;
+  }
+
+  .topbar-right {
+    order: 2;
+  }
+
+  .section-nav {
+    order: 3;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .section-tab {
+    flex: 1 1 0;
+    min-width: max-content;
+    min-height: 44px;
+  }
+}
+
+/* Sui telefoni più stretti (fino a ~320px) il brand si riduce ancora, così la
+   prima riga resta brand + controlli e a scorrere è solo il gruppo tab. */
+@media (max-width: 400px) {
+  .topbar {
+    padding: 0.75rem;
+  }
+
+  .brand {
+    font-size: 1.05rem;
+  }
 }

@@ -1,6 +1,6 @@
 # Stato corrente — WebApp Scacchi
 
-> Aggiornato al: **2026-08-05** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi).
+> Aggiornato al: **2026-08-05** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi; + ISSUE-021 navigazione a tre sezioni).
 > Non è un diario cronologico. La storia per-prototipo è in `docs/archive/stato-avanzamento-2026-06-28.md` e nel git log.
 
 ---
@@ -8,7 +8,7 @@
 ## Sintesi
 
 La webapp è funzionante in locale. **Parte 1 (P0–P6) e Parte 2 (P7–P19) completate e verificate.**
-Suite automatica verde: backend **83 test**, frontend **175 test**.
+Suite automatica verde: backend **83 test**, frontend **194 test**.
 La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE-019); restano Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
 In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre le Aperture: **ISSUE-016 (`issue-016-phase-domain-model`)** introduce `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), immutabile dopo la creazione — vedi [ADR 0014](adr/decisioni-tecniche.md).
 
@@ -23,6 +23,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Motore Stockfish client-side**: toggle nel dettaglio/editor, barra valutazione, «Gioca contro il computer» in nuova tab. Mai disponibile in allenamento.
 - **Statistiche**: aggregazioni per variante e studio (allenamenti, completati, precisione %, mosse più sbagliate).
 - **Spaced repetition SM-2**: scheduling dopo ogni allenamento, vista «Ripeti oggi», indicatore prossima ripetizione nel dettaglio variante.
+- **Navigazione a tre sezioni (ISSUE-021, R20)**: tab-link **Aperture** (`/`), **Mediogioco** (`/middlegame`) e **Finale** (`/endgame`) nella topbar, dentro una `<nav aria-label="Sezione di studio">` con `aria-current="page"` sulla sezione attiva (derivata dall'URL: le pagine di dettaglio delle Aperture mantengono acceso il tab Aperture). Mediogioco e Finale montano il segnaposto riusabile `sections/coming-soon` («In fase di implementazione»); i contenuti reali arrivano con le slice di ISSUE-016.
 - **Modello a fasi di gioco (ISSUE-016)**: ogni studio ha una `phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), scelta alla creazione e immutabile. `Variant` resta l'elemento figlio comune (variante/capitolo in `OPENING`, posizione creata manualmente in `MIDDLEGAME`/`ENDGAME`). Import/sync Lichess, training, review SM-2 e statistiche restano applicati solo alle Aperture; per le altre fasi il backend rifiuta la richiesta (non solo nascondimento in UI).
 
 ---
@@ -39,9 +40,9 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 ## Frontend attuale
 
 - **Stack**: Angular 22 · TypeScript · Vitest · componenti standalone · signals · OnPush · chess.js · Stockfish asm.js.
-- **Aree**: `chessboard`, `variants`, `studies`, `stats`, `reviews`, `play`, `core`.
-- **Routing**: `/` → lista studi, `/studies/:id` → dettaglio studio, `/variants/:id` → dettaglio variante, `/variants/:id/training`, `/variants/:id/stats`, `/studies/:id/stats`, `/reviews`, `/play`.
-- **Test**: 175 verdi (`npm test -- --watch=false`, Vitest headless).
+- **Aree**: `chessboard`, `variants`, `studies`, `stats`, `reviews`, `play`, `sections`, `core`.
+- **Routing**: `/` → lista studi (Aperture), `/studies/:id` → dettaglio studio, `/variants/:id` → dettaglio variante, `/variants/:id/training`, `/variants/:id/stats`, `/studies/:id/stats`, `/reviews`, `/play`, `/middlegame` e `/endgame` → segnaposto di sezione (ISSUE-021).
+- **Test**: 194 verdi (`npm test -- --watch=false`, Vitest headless).
 - **Avvio locale**: `npm start` (frontend su `http://localhost:4200`, con proxy verso `http://localhost:8080`).
 
 ---
@@ -84,7 +85,7 @@ Nessun bug bloccante attivo. **Policy DB**: finché non si migra a Supabase, il 
 - Sync Lichess periodica.
 - Runner E2E browser (Playwright/Cypress) — rinviato alla terza tornata.
 - Editor manuale di posizione e input/UI per FEN custom (Mediogioco/Finale) — prossima change `issue-016-custom-starting-fen`.
-- Viste/sezioni complete Mediogioco e Finale, commenti alle mosse, gioco contro il motore da una posizione salvata, tag/categorie — change successive a ISSUE-016 (vedi `docs/roadmap.md`).
+- Viste/sezioni complete Mediogioco e Finale (oggi solo il segnaposto di ISSUE-021), commenti alle mosse, gioco contro il motore da una posizione salvata, tag/categorie — change successive a ISSUE-016 (vedi `docs/roadmap.md`).
 - Visualizzazione della linea migliore di Stockfish nel pannello laterale — ISSUE-022, documentata ma non ancora implementata.
 
 ---

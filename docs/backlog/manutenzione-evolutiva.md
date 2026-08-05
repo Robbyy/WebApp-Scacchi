@@ -8,7 +8,7 @@
 
 | ID | Titolo | Effort | Rischio | OpenSpec |
 |----|--------|:------:|:-------:|:--------:|
-| 021 | Scaffold navigazione 3 sezioni + segnaposto ⭐ | basso | basso | no |
+| 021 | Scaffold navigazione 3 sezioni + segnaposto ✅ | basso | basso | no |
 | 022 | Visualizzazione linea migliore del motore nel pannello laterale | medio | medio-basso | no |
 | 007 | "Nascondi barra" ridondante col motore attivo | basso | basso | no |
 | 008 | Rimuovere "Auto-play" dalla navigazione | basso | basso | no |
@@ -24,25 +24,54 @@
 
 ---
 
-## ISSUE-021 — Scaffold navigazione tre sezioni (Aperture/Mediogioco/Finale) ⭐
-**OpenSpec:** no · **Effort:** basso · **Rischio:** basso · **Priorità: da fare tra i primi.**
-**Scope:** tre controlli nella topbar vicino al brand "WebApp Scacchi": **Aperture**,
-**Mediogioco**, **Finale**. Predispone subito la struttura a tre fasi del gioco anche se
-due sezioni non sono ancora implementate.
-**Comportamento:** Aperture → home studi (`/`); Mediogioco e Finale → pagina segnaposto
-«In fase di implementazione».
-**Proposta realizzativa:** un unico componente segnaposto riusabile (es. `coming-soon`)
-col nome della sezione, montato su due route dedicate (es. `/mediogioco`, `/finale`); la
-sezione attiva è evidenziata; stile coerente con la topbar.
-**Accettazione:** i tre controlli sono presenti e funzionanti; Aperture apre gli studi; le
-altre due aprono il segnaposto; sezione attiva evidenziata.
+## ISSUE-021 — Scaffold navigazione tre sezioni (Aperture/Mediogioco/Finale) ✅
+**OpenSpec:** no · **Effort:** basso · **Rischio:** basso · **Stato: ✅ completata (R20, 2026-08-05).**
+**Scope:** tre tab di navigazione nella topbar, subito dopo il brand "WebApp Scacchi":
+**Aperture**, **Mediogioco**, **Finale**. Predispone subito la struttura a tre fasi del
+gioco anche se due sezioni non sono ancora implementate.
+
+**Decisioni UI e routing confermate (2026-08-05):**
+- i controlli sono **tab visivi**, implementati semanticamente come link dentro una
+  `<nav aria-label="Sezione di studio">`: cambiano route/pagina, quindi non usano il
+  ruolo ARIA `tab` riservato ai pannelli nella stessa pagina. La sezione corrente espone
+  `aria-current="page"` oltre allo stato visivo attivo;
+- Aperture → home studi (`/`); Mediogioco → `/middlegame`; Finale → `/endgame`.
+  I nomi inglesi e minuscoli seguono le route tecniche già esistenti (`/studies`,
+  `/variants`, `/reviews`, `/play`) e i valori di dominio `MIDDLEGAME`/`ENDGAME`;
+- Mediogioco e Finale montano un unico componente segnaposto riusabile (es.
+  `coming-soon`) che riceve il nome della sezione e mostra «In fase di implementazione».
+
+**Responsive definito:**
+- da **768px** in su, brand, tab e controlli di servizio restano su una sola riga;
+- sotto **768px**, la topbar va a due righe: prima riga con brand e controlli di servizio,
+  seconda riga con il gruppo tab a tutta larghezza. I tre tab hanno altezza cliccabile
+  minima di 44px e larghezza flessibile/equa;
+- se la larghezza disponibile non consente di mantenere etichette leggibili e target da
+  44px (compresi viewport molto stretti o zoom elevato), il solo gruppo tab scorre
+  orizzontalmente senza tagliare testo né comprimere i controlli della prima riga.
+
+**Accettazione:** i tre tab sono presenti e funzionanti; Aperture apre gli studi; le
+altre due route aprono il segnaposto; la sezione attiva è evidenziata e annunciata da
+`aria-current`; la topbar non genera overflow orizzontale né sovrapposizioni a desktop,
+tablet o mobile.
 **Relazione:** è il **primo slice navigazionale di ISSUE-016** (sviluppi importanti), ma
 indipendente e a basso costo; ISSUE-016 in seguito sostituisce i segnaposto con le sezioni
-vere. **Fuori perimetro:** studi/capitoli reali di Mediogioco/Finale, editor manuale
-posizione/FEN tecnico, commenti, gioco vs motore e import Lichess per sezioni non Aperture
-(restano in 016).
-**Ambiguità:** route esatte; testo del segnaposto; pulsanti vs tab; posizione nel cluster
-topbar (suono/«?»/ingranaggio).
+vere.
+**Fuori scope:** contenuti reali di Mediogioco/Finale, filtri dati per fase, editor
+posizione/FEN, commenti, gioco contro il motore e import Lichess per le sezioni non
+Aperture (restano in ISSUE-016); ridisegno dei controlli di servizio della topbar, che
+sarà gestito dalle issue dedicate 011/015/017.
+
+**Esito (R20, 2026-08-05):** tab-link in `app.html` dentro `<nav aria-label="Sezione di
+studio">`, con `aria-current="page"` e stato attivo derivato dall'URL
+(`core/study-sections.ts`): le pagine di dettaglio delle Aperture (`/studies/:id`,
+`/variants/:id`, `/reviews`, `/play`) mantengono evidenziato il tab Aperture. Route
+`/middlegame` e `/endgame` montano il segnaposto riusabile `sections/coming-soon`, che
+riceve il nome della sezione dalla `data` della route (`withComponentInputBinding`).
+Responsive verificato a 1440/1024/768 (una riga) e 767/375/320 (due righe, target 44px);
+sotto ~315px scorre orizzontalmente il solo gruppo tab (verificato a 280px), senza
+troncare le etichette né comprimere i controlli di servizio, e la topbar non genera mai
+overflow orizzontale di pagina. Frontend: 194 test verdi, build ok.
 
 ## ISSUE-022 — Visualizzazione linea migliore del motore nel pannello laterale
 **OpenSpec:** no · **Effort:** medio · **Rischio:** medio-basso.
