@@ -13,6 +13,11 @@ identificativi di pianificazione, non tag Git né promesse di deploy pubblico: u
 rilascio si considera chiuso solo con criteri di accettazione verificati, test verdi
 e documentazione aggiornata.
 
+> Nota di tracciabilità: l'archivio storico dei prototipi contiene anche un precedente
+> riferimento **R20** associato al Prototipo 14. Qui **R20** indica invece il primo
+> rilascio evolutivo post-P19 (ISSUE-021); i due riferimenti appartengono a sequenze
+> documentali diverse.
+
 Riferimenti: [backlog](backlog.md),
 [manutenzione evolutiva](backlog/manutenzione-evolutiva.md),
 [sviluppi importanti](backlog/sviluppi-importanti.md),

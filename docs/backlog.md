@@ -71,7 +71,7 @@ di questa cadenza di rilasci evolutivi.
 ## Dipendenze trasversali
 
 - **ISSUE-019 (Liquibase, ✅)** ha sbloccato la catena dati: ISSUE-016, ISSUE-017 (`app_settings`), ISSUE-014 (se persistenza su DB).
-- **ISSUE-021 → anticipa →** ISSUE-016 (scaffold di navigazione + segnaposto; 016 poi li sostituisce).
+- **ISSUE-021 ✅ → abilita →** ISSUE-016 (scaffold di navigazione + segnaposto; 016 poi li sostituisce con le sezioni reali).
 - **ISSUE-017 → ospita →** ISSUE-014 (sezione "Motore"); **→ affianca →** ISSUE-015 (cluster topbar); **→ tocca →** `ReviewScheduler`.
 - **ISSUE-013 → riusa →** `promoteToMainline` (`move-tree.ts`) + `confirm.service`.
 - **ISSUE-010 → riusa →** guard editor (`confirm.service` / `canLeaveEditor`).
