@@ -45,8 +45,8 @@ computer") spingono il layout oltre l'altezza visibile e attivano la scrollbar v
 variante", "Torna allo studio" e i controlli replay); board e pannello entrambi visibili
 senza scrollbar verticale.
 **Attuale:** scrollbar verticale dovuta ai pulsanti sotto la board.
-**Note tecniche:** coordinare con ISSUE-010 (stessa pagina, layout a 3 colonne) e con il
-pattern 2-col di ISSUE-001.
+**Note tecniche:** coordinare con ISSUE-010 (stessa pagina: rail a tre colonne solo su
+schermi larghi, drawer alle altre larghezze) e con il pattern 2-col di ISSUE-001.
 
 ## ISSUE-003 — Header home: titolo e pulsanti vanno a capo
 **Label:** `bug` · `frontend` · `severità:bassa`

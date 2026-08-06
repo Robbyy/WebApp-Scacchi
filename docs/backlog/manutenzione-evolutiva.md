@@ -11,16 +11,17 @@
 | 021 | Scaffold navigazione 3 sezioni + segnaposto ✅ | basso | basso | no |
 | 022 | Visualizzazione linea migliore del motore nel pannello laterale ✅ | medio | medio-basso | no |
 | 007 | "Nascondi barra" ridondante col motore attivo ✅ | basso | basso | no |
-| 008 | Rimuovere "Auto-play" dalla navigazione | basso | basso | no |
+| 008 | Rimuovere "Auto-play" dalla navigazione | basso | basso | no — mini-spec R23 |
 | 009 | Elenco studi su due colonne ✅ | basso | basso | no |
 | 012 | Modifica nome/descrizione/colore studio ✅ | basso | basso | no |
 | 015 | Pagina info applicazione + versioni | basso | basso-medio | no |
-| 010 | Pannello sinistro varianti nel dettaglio (3 col) | medio | medio | **da decidere** |
+| 010 | Pannello varianti adattivo nel dettaglio | medio | medio | no — mini-spec R23 |
 | 011 | Unificare creazione studio + import Lichess ✅ | medio | medio | no — mini-spec R22 |
 | 013 | Menu contestuale editor (cancella / promuovi) | medio | medio | **da decidere** |
 
-> Le tre voci "da decidere" sono le più corpose: candidate a una **OpenSpec leggera**
-> (mini-spec) se in fase di pianificazione si valuta che il rischio lo giustifichi.
+> La sola voce ancora "da decidere" è ISSUE-013: resta candidata a una **OpenSpec leggera**
+> (mini-spec) se in fase di pianificazione si valuta che il rischio lo giustifichi. Le
+> decisioni di R23 sono invece formalizzate nella mini-specifica associata a ISSUE-010/008.
 
 ---
 
@@ -170,12 +171,13 @@ motore espone due soli pulsanti («Motore» e «Gioca contro il computer»). Ver
 entrambe le pagine: motore on → barra visibile, off → barra e linea spariscono insieme.
 
 ## ISSUE-008 — Rimuovere "Auto-play" dalla navigazione varianti
-**OpenSpec:** no · **Effort:** basso · **Rischio:** basso.
+**OpenSpec:** no — mini-spec R23 formalizzata il 2026-08-07 · **Effort:** basso · **Rischio:** basso.
 **Scope:** il pulsante "Auto-play" (avanzamento automatico delle mosse) è ritenuto inutile:
 la navigazione con frecce ←/→ e i pulsanti inizio/indietro/avanti/fine è sufficiente.
 **Accettazione:** pulsante e logica di avanzamento automatico rimossi; restano inizio,
 ←, →, fine; suite test verde.
-**Note:** aggiornare eventuali test che referenziano l'auto-play.
+**Note:** aggiornare eventuali test e la checklist che referenziano l'auto-play. La decisione
+di dettaglio è nella [mini-specifica R23](#mini-specifica-r23--issue-010--issue-008).
 
 ## ISSUE-009 — Elenco studi su due colonne ✅
 **OpenSpec:** no · **Effort:** basso · **Rischio:** basso · **Stato: ✅ completata (R22, 2026-08-06).**
@@ -225,18 +227,85 @@ dialog con: nome completo, autore, versione frontend (da `package.json`), versio
 minimale `GET /api/info` — da decidere (vincolo "no nuove librerie senza decisione").
 Cluster topbar condiviso con ISSUE-011/017.
 
-## ISSUE-010 — Pannello sinistro varianti nel dettaglio (3 colonne)
-**OpenSpec:** **da decidere** (mini-spec se il rischio lo giustifica) · **Effort:** medio · **Rischio:** medio.
+## ISSUE-010 — Pannello varianti adattivo nel dettaglio
+**OpenSpec:** no — mini-spec R23 formalizzata il 2026-08-07 · **Effort:** medio · **Rischio:** medio.
 **Scope:** nel dettaglio variante non è visibile l'elenco delle altre varianti dello stesso
 studio; per cambiarle si deve tornare al dettaglio studio.
-**Accettazione:** colonna sinistra con l'elenco delle varianti dello studio corrente (solo
-se la variante vi appartiene); variante attiva evidenziata; click su un'altra → naviga al
-suo dettaglio. Se in editor con **modifiche non salvate**, click su un'altra variante →
-**dialog di conferma** prima di navigare (riusa il guard esistente). Layout risultante a
-tre colonne: elenco | scacchiera | mosse/controlli; stile coerente (no estetica Lichess).
+**Accettazione:** su schermi larghi, colonna sinistra con l'elenco delle varianti dello
+studio corrente (solo se la variante vi appartiene); variante attiva evidenziata; click su
+un'altra → naviga al suo dettaglio. Alle larghezze inferiori l'elenco è un drawer, senza
+creare un nuovo blocco sotto la scacchiera. Dall'editor, con **modifiche non salvate**, il
+cambio variante richiede il **dialog di conferma** esistente. Stile coerente (no estetica
+Lichess).
 **Note:** dati già esposti da `GET /api/studies/{id}`; riusa `confirm.service`/`canLeaveEditor`.
-Coordinare con ISSUE-002 (stessa pagina). Verificare tenuta del 3-col su laptop
-(cfr. area delicata "responsive scacchiera"). **Solo elenco + navigazione**, nient'altro.
+Coordinare con ISSUE-002 (stessa pagina). **Solo elenco + navigazione**, nient'altro:
+non cambia API, database, training o logica UCI. La decisione di dettaglio è nella
+[mini-specifica R23](#mini-specifica-r23--issue-010--issue-008).
+
+### Mini-specifica R23 — ISSUE-010 + ISSUE-008
+
+**Obiettivo.** R23 completa la consultazione di uno studio: si passa a un'altra variante
+senza tornare al dettaglio studio e si semplificano i controlli di replay. Non introduce
+nuove capacità scacchistiche né modifica il modello dati.
+
+**Dati e perimetro.** `GET /api/studies/{id}` espone già le varianti necessarie. La
+navigazione funziona per studi `OPENING`, `MIDDLEGAME` ed `ENDGAME`; training, statistiche,
+import e altri controlli restano regolati dalle rispettive regole di fase. Il pannello non
+compare per una variante legacy senza `studyId`, se la risposta dello studio non contiene la
+variante corrente o se nello studio non esiste alcuna alternativa (meno di due varianti).
+In questi casi il dettaglio/editor resta utilizzabile come oggi.
+
+**Componente e contenuto.** Un componente frontend riusabile, ad esempio
+`study-variant-nav`, riceve la lista nell'ordine fornito dall'API, l'ID attivo e notifica la
+selezione al componente padre; non esegue direttamente la navigazione. Ogni voce mostra nome,
+colore e numero di mosse; la voce corrente usa lo stile attivo e `aria-current="page"`.
+Il componente è un `<nav aria-label="Varianti dello studio">`; nel drawer il focus iniziale
+va al titolo/controllo di chiusura, `Esc` e il pulsante esplicito lo chiudono, e una
+navigazione riuscita lo richiude.
+
+**Layout.**
+
+- Da **1500px** in su il dettaglio usa tre colonne: rail varianti a larghezza fissa di circa
+  220px | scacchiera con EvalBar | pannello laterale esistente. Il rail può scorrere solo
+  verticalmente se l'elenco è lungo.
+- Sotto **1500px** il dettaglio conserva le due colonne esistenti. Un pulsante «Varianti»
+  apre lo stesso elenco in un drawer laterale a sovrapposizione: non ridimensiona la
+  scacchiera, non aggiunge un blocco permanente sotto di essa e non produce overflow
+  orizzontale.
+- L'editor non assume mai il layout permanente a tre colonne: espone il pulsante
+  «Varianti» e riusa il drawer. Così il perimetro visuale dell'editor resta contenuto pur
+  soddisfacendo il requisito di passare tra varianti con modifiche non salvate.
+
+**Navigazione e modifiche pendenti.** Nel dettaglio una selezione naviga subito a
+`/variants/{id}`. Nell'editor la selezione passa da un metodo esplicito, per esempio
+`requestVariantChange(id)`, che invoca `canDeactivate()` e naviga solo se la Promise/risposta
+è positiva. Non è sufficiente affidarsi al solo `CanDeactivate` dichiarato nella route:
+Angular può riusare lo stesso componente quando cambia solo `:id`. Per lo stesso motivo,
+dettaglio ed editor devono reagire in modo osservabile ai cambi di `paramMap`, ricaricare i
+dati e azzerare il loro stato transitorio (percorso mosse, errori, review e drawer) invece di
+leggere l'ID una sola volta dal route snapshot.
+
+**Motore.** Se l'utente cambia variante con il motore acceso, il toggle resta acceso ma
+valutazione e PV vengono svuotate subito; l'analisi riparte dalla FEN iniziale della variante
+selezionata e la UI torna a «Analisi in corso…» finché arriva una nuova PV. R23 non risolve la
+race già documentata tra due FEN consecutivi: deve soltanto preservare la catena R21
+`parseInfoLine` → `StockfishService.bestLine` → `.engine-line` e non renderla meno robusta.
+
+**Rimozione Auto-play (ISSUE-008).** Dal dettaglio vengono rimossi pulsante Auto-play/Pausa,
+signal `playing`, timer, `togglePlay()` e gli stili dedicati. Restano esattamente quattro
+controlli omogenei: inizio, precedente, successiva, fine; le frecce ←/→ da tastiera restano
+inalterate. La checklist aggiornerà il flusso replay dopo l'implementazione.
+
+**Fuori scope.** Nessuna API o migration; nessun ridimensionamento strutturale della
+scacchiera; nessuna modifica a `variant-training`; nessuna correzione della race UCI, MultiPV,
+frecce sulla scacchiera o esecuzione della PV.
+
+**Criteri di uscita R23.** Test per elenco/variante attiva, assenza di alternativa e variante
+legacy, cambio rapido nel dettaglio, cambio dall'editor pulito e sporco (conferma/annulla),
+reazione al cambio di parametro, reset della PV con motore acceso e assenza di Auto-play.
+Verifica live a **1600, 1440, 1024, 768, 375 e 320px**, senza overflow orizzontale e senza
+nuovo contenuto permanente sotto la scacchiera. Build e suite frontend verdi; documentazione e
+checklist E2E aggiornate a rilascio concluso.
 
 ## ISSUE-011 — Unificare creazione studio + import Lichess ✅
 **OpenSpec:** no — mini-spec R22 formalizzata il 2026-08-06 · **Effort:** medio · **Rischio:** medio · **Stato: ✅ completata (R22, 2026-08-06).**

@@ -1,6 +1,6 @@
 # Stato corrente — WebApp Scacchi
 
-> Aggiornato al: **2026-08-07** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi; + ISSUE-021 navigazione a tre sezioni; + ISSUE-022/ISSUE-007 linea migliore del motore; + R22 ISSUE-011/012/009 ciclo di vita dello studio; OAuth R22 operativo).
+> Aggiornato al: **2026-08-07** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi; + ISSUE-021 navigazione a tre sezioni; + ISSUE-022/ISSUE-007 linea migliore del motore; + R22 ISSUE-011/012/009 ciclo di vita dello studio; OAuth R22 operativo; mini-specifica R23 formalizzata).
 > Non è un diario cronologico. La storia per-prototipo è in `docs/archive/stato-avanzamento-2026-06-28.md` e nel git log.
 
 ---
@@ -94,7 +94,13 @@ Nessun bug bloccante attivo. **Policy DB**: finché non si migra a Supabase, il 
 
 ## Prossima fase
 
-Terza tornata — infrastruttura. Ordine consigliato:
+Il prossimo incremento di prodotto è **R23** (ISSUE-010 + ISSUE-008). La
+[mini-specifica R23](backlog/manutenzione-evolutiva.md#mini-specifica-r23--issue-010--issue-008)
+è formalizzata: pannello varianti adattivo (rail solo da 1500px, drawer alle altre
+larghezze e nell'editor), guard esplicito al cambio variante, reazione al cambio di route,
+preservazione del pannello motore e rimozione di Auto-play. Non richiede backend o database.
+
+La terza tornata infrastrutturale prosegue poi in quest'ordine:
 
 1. ~~**Liquibase** — migrazioni versionate~~ ✓ fatto (ISSUE-019): schema gestito da Liquibase, baseline in `db/changelog/`.
 2. **Supabase PostgreSQL** — migrazione da H2 (il changelog Liquibase usa tipi astratti, portabili).

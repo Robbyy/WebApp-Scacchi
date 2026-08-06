@@ -14,8 +14,9 @@ ISSUE-003 (header home: titolo e pulsanti a capo) risolta e verificata a Full HD
 (commit `aa5048b`). Evolutiva **R22 completata** (2026-08-06): pagina unica
 creazione/import studio, modifica inline dei metadati e griglia home a due colonne
 (ISSUE-011 + ISSUE-012 + ISSUE-009).
-Prossimi: bug ISSUE-004/005/006/020, evolutiva R23 (ISSUE-010 + ISSUE-008), poi Supabase
-PostgreSQL, Supabase Auth, Docker e CI/CD.
+Prossimi: bug ISSUE-004/005/006/020, evolutiva R23 (ISSUE-010 + ISSUE-008; mini-specifica
+formalizzata per pannello varianti adattivo, guard editor e rimozione Auto-play), poi
+Supabase PostgreSQL, Supabase Auth, Docker e CI/CD.
 
 ## Stack
 
