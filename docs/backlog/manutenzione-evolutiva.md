@@ -363,10 +363,10 @@ Implementata come da mini-spec, solo frontend (nessuna nuova API, parser invaria
   non è stato toccato): creazione, anteprima con suggerimenti, import nuovo studio, import
   con `studyId` (una POST per capitolo), errori dedicati, redirect storico, bozza
   ripristinata dopo unload pieno e pulita su navigazione in-app; payload verificati senza
-  `phase`. Layout senza overflow a 1440/1024/768/320/280. Nota: dalla rete di sviluppo
-  l'API pubblica Lichess ha risposto **401** (restrizione lato Lichess/rete, codice di
-  fetch invariato da P14/P15): l'OAuth end-to-end con account reale resta da riverificare
-  alla prima occasione, come già fatto in P15.
+  `phase`. Layout senza overflow a 1440/1024/768/320/280. L'OAuth end-to-end con account
+  Lichess reale è considerato operativo nella verifica corrente; la precedente risposta
+  **401** era legata alla rete di sviluppo e non ha richiesto modifiche al codice di fetch
+  invariato da P14/P15.
 
 ## ISSUE-013 — Menu contestuale editor (cancella sottoalbero / promuovi a mainline)
 **OpenSpec:** **da decidere** (mini-spec se si formalizza l'infrastruttura menu) · **Effort:** medio · **Rischio:** medio.

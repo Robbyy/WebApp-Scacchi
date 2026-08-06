@@ -1,6 +1,6 @@
 # Piano progressivo dei rilasci evolutivi
 
-> **Aggiornato:** 2026-08-06 · **Stato:** in corso — **R20, R21 e R22 rilasciati**, i
+> **Aggiornato:** 2026-08-07 · **Stato:** in corso — **R20, R21 e R22 rilasciati**, i
 > rilasci successivi restano pianificazione.
 >
 > **Perimetro:** sole issue evolutive ancora aperte. I difetti registrati su GitHub,
@@ -118,7 +118,7 @@ esplicitamente `localStorage` oppure un modello già associabile a utente.
 
 | Prima di | Gate obbligatorio | Verifica dopo l'implementazione |
 |---|---|---|
-| R22 | ✅ [Mini-spec di ISSUE-011](backlog/manutenzione-evolutiva.md#mini-specifica-r22--issue-011) formalizzata: pagina unica, semantica del link Lichess e comportamento dell'upsert. | ✅ Eseguita (2026-08-06): test form/create/import, `studyId` valido/inesistente/non-Aperture, redirect storico e modifica inline (frontend 249 verdi); verifica live di flussi, bozza ripristinata dopo unload pieno, topbar e griglia a 1440/1024/768/320/280px. Residuo: OAuth end-to-end con account Lichess reale da riverificare (l'API Lichess ha risposto 401 dalla rete di sviluppo). |
+| R22 | ✅ [Mini-spec di ISSUE-011](backlog/manutenzione-evolutiva.md#mini-specifica-r22--issue-011) formalizzata: pagina unica, semantica del link Lichess e comportamento dell'upsert. | ✅ Eseguita (2026-08-06): test form/create/import, `studyId` valido/inesistente/non-Aperture, redirect storico e modifica inline (frontend 249 verdi); verifica live di flussi, bozza ripristinata dopo unload pieno, OAuth end-to-end con account Lichess reale, topbar e griglia a 1440/1024/768/320/280px. La precedente risposta 401 era legata alla rete di sviluppo. |
 | R23 | Mini-spec di ISSUE-010: breakpoint e comportamento dell'elenco varianti alle larghezze ridotte. | Test navigazione/guard; ispezione a 1440px e a una larghezza laptop concordata. |
 | R24 | Specifica del formato commento/NAG e compatibilità JSON dei `MoveNode` preesistenti. | Test tree TypeScript e serializzazione/deserializzazione backend; nessuna perdita di mosse esistenti. |
 | R25–R28 | OpenSpec completa per ogni slice di ISSUE-016, senza ridecidere il modello a fasi già approvato. | Test API/validazione, frontend e checklist manuale della fase interessata. |

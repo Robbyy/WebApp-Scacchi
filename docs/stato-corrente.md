@@ -1,6 +1,6 @@
 # Stato corrente — WebApp Scacchi
 
-> Aggiornato al: **2026-08-06** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi; + ISSUE-021 navigazione a tre sezioni; + ISSUE-022/ISSUE-007 linea migliore del motore; + R22 ISSUE-011/012/009 ciclo di vita dello studio).
+> Aggiornato al: **2026-08-07** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi; + ISSUE-021 navigazione a tre sezioni; + ISSUE-022/ISSUE-007 linea migliore del motore; + R22 ISSUE-011/012/009 ciclo di vita dello studio; OAuth R22 operativo).
 > Non è un diario cronologico. La storia per-prototipo è in `docs/archive/stato-avanzamento-2026-06-28.md` e nel git log.
 
 ---
@@ -34,7 +34,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 
 - **Stack**: Java 21 · Spring Boot 4.1.0 · Maven · JPA/Hibernate · H2 file (`backend/data/scacchi`) · chesslib (JitPack).
 - **Package**: `ping`, `variant`, `study`, `training`, `stats`, `review`.
-- **Test**: 83 verdi (`mvnw.cmd test`). Copertura: CRUD varianti/studi, validazione legalità, round-trip albero, import bulk/upsert Lichess, sessioni, statistiche, SM-2, fasi di gioco (ISSUE-016).
+- **Test**: 84 verdi (`mvnw.cmd test`). Copertura: CRUD varianti/studi, validazione legalità, round-trip albero, import bulk/upsert Lichess, sessioni, statistiche, SM-2, fasi di gioco (ISSUE-016).
 - **Avvio locale**: `mvnw.cmd spring-boot:run` (PowerShell; impostare `MAVEN_OPTS=-Djavax.net.ssl.trustStoreType=Windows-ROOT`).
 
 ---
@@ -51,7 +51,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 
 ## Verifiche live e checklist manuale
 
-Verifiche browser superate senza errori console: training, editor, import PGN ramificato, import/sync Lichess (studio pubblico reale `OR3CU5Je`) + OAuth, Stockfish e gioca-vs-computer, sessioni, statistiche, spaced repetition. Per R22: pagina `/studies/new` (creazione, anteprima, import, `?studyId`, errori dedicati, bozza OAuth), modifica inline e griglia verificate live su mock backend a 1440/1024/768/320/280px; l'OAuth end-to-end con account Lichess reale resta da riverificare (API Lichess in 401 dalla rete di sviluppo).
+Verifiche browser superate senza errori console: training, editor, import PGN ramificato, import/sync Lichess (studio pubblico reale `OR3CU5Je`) + OAuth, Stockfish e gioca-vs-computer, sessioni, statistiche, spaced repetition. Per R22: pagina `/studies/new` (creazione, anteprima, import, `?studyId`, errori dedicati, bozza OAuth), modifica inline e griglia verificate live su mock backend a 1440/1024/768/320/280px. Il flusso OAuth end-to-end con account Lichess reale è considerato operativo nella verifica corrente; la precedente risposta 401 era legata alla rete di sviluppo.
 
 Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **41 flussi** (12 core + 25 Parte 2 + 1 evolutivo R21 + 3 evolutivi R22).
 
