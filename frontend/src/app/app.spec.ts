@@ -6,6 +6,7 @@ import {
 } from '@angular/common/http/testing';
 import { Router, Routes, provideRouter, withComponentInputBinding } from '@angular/router';
 import { App } from './app';
+import { LichessAuthService } from './core/lichess-auth.service';
 import { ComingSoon } from './sections/coming-soon';
 
 /**
@@ -19,16 +20,36 @@ const testRoutes: Routes = [
   { path: 'endgame', component: ComingSoon, data: { section: 'Finale' } },
 ];
 
+/** Doppio del servizio OAuth Lichess: stato mutabile e chiamate registrate. */
+class LichessAuthMock {
+  state = false;
+  connectedWith: string | null = null;
+  disconnected = false;
+  readonly connected = () => this.state;
+  readonly token = () => (this.state ? 'tok' : null);
+  connect(returnTo: string): Promise<void> {
+    this.connectedWith = returnTo;
+    return Promise.resolve();
+  }
+  disconnect(): void {
+    this.disconnected = true;
+    this.state = false;
+  }
+}
+
 describe('App', () => {
   let httpMock: HttpTestingController;
+  let lichess: LichessAuthMock;
 
   beforeEach(async () => {
+    lichess = new LichessAuthMock();
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter(testRoutes, withComponentInputBinding()),
+        { provide: LichessAuthService, useValue: lichess },
       ],
     }).compileComponents();
     httpMock = TestBed.inject(HttpTestingController);
@@ -137,5 +158,39 @@ describe('App', () => {
     expect(aperture.getAttribute('aria-current')).toBe('page');
     expect(middlegame.getAttribute('aria-current')).toBeNull();
     expect(endgame.getAttribute('aria-current')).toBeNull();
+  });
+
+  // — Comando Connetti/Disconnetti Lichess in topbar (ISSUE-011, R22) —
+
+  it('shows the compact Lichess command in the topbar service cluster', () => {
+    const compiled = createApp().nativeElement as HTMLElement;
+    const btn = compiled.querySelector<HTMLButtonElement>('.topbar-right .lichess-toggle');
+    expect(btn).not.toBeNull();
+    expect(btn?.getAttribute('aria-pressed')).toBe('false');
+    expect(btn?.getAttribute('aria-label')).toContain('connetti');
+    expect(btn?.textContent).toContain('Lichess');
+  });
+
+  it('starts the Lichess connection returning to the current page', async () => {
+    const fixture = createApp();
+    await TestBed.inject(Router).navigateByUrl('/studies/7');
+    fixture.detectChanges();
+
+    const btn = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.lichess-toggle');
+    btn?.click();
+    expect(lichess.connectedWith).toBe('/studies/7');
+    expect(lichess.disconnected).toBe(false);
+  });
+
+  it('shows the connected state and disconnects on click', () => {
+    lichess.state = true;
+    const fixture = createApp();
+    const btn = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.lichess-toggle');
+    expect(btn?.getAttribute('aria-pressed')).toBe('true');
+    expect(btn?.classList).toContain('lichess-toggle--on');
+
+    btn?.click();
+    expect(lichess.disconnected).toBe(true);
+    expect(lichess.connectedWith).toBeNull();
   });
 });

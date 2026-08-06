@@ -69,8 +69,8 @@ describe('LichessAuthService', () => {
   });
 
   it('consumeReturnTo returns and clears the stored path', () => {
-    sessionStorage.setItem('was.lichess.returnTo', '/studies/import-lichess?studyId=3');
-    expect(service.consumeReturnTo()).toBe('/studies/import-lichess?studyId=3');
-    expect(service.consumeReturnTo()).toBe('/studies/import-lichess'); // default dopo il consumo
+    sessionStorage.setItem('was.lichess.returnTo', '/studies/new?studyId=3');
+    expect(service.consumeReturnTo()).toBe('/studies/new?studyId=3');
+    expect(service.consumeReturnTo()).toBe('/studies/new'); // default dopo il consumo (ISSUE-011)
   });
 });

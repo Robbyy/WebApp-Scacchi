@@ -28,7 +28,13 @@ Il piano esclude volutamente bug, audit e infrastruttura.
 >
 > ✅ **R21 — Motore leggibile** — fatto (ISSUE-022 + ISSUE-007, 2026-08-05): linea
 > migliore di Stockfish in SAN nel pannello motore del dettaglio variante e toggle
-> «Nascondi barra» rimosso. Prossimo incremento: **R22** (ISSUE-011 + ISSUE-012 + ISSUE-009).
+> «Nascondi barra» rimosso.
+>
+> ✅ **R22 — Ciclo di vita dello studio** — fatto (ISSUE-011 + ISSUE-012 + ISSUE-009,
+> 2026-08-06): pagina unica `/studies/new` per creare/importare uno studio (Lichess
+> incluso, con comando Connetti/Disconnetti in topbar e bozza ripristinata dopo l'OAuth),
+> modifica inline dei metadati nel dettaglio studio e griglia home a due colonne.
+> Prossimo incremento: **R23** (ISSUE-010 + ISSUE-008).
 
 In sintesi: navigazione → linea migliore del motore → gestione studi → flusso
 varianti/editor → Mediogioco e Finale a slice → impostazioni → parametri motore.

@@ -79,7 +79,7 @@ export class LichessAuthService {
 
   /** Percorso a cui tornare dopo il callback (consuma il valore memorizzato). */
   consumeReturnTo(): string {
-    const value = this.readStored(RETURN_KEY) ?? '/studies/import-lichess';
+    const value = this.readStored(RETURN_KEY) ?? '/studies/new';
     this.remove(RETURN_KEY);
     return value;
   }

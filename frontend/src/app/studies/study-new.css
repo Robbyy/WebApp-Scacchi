@@ -1,4 +1,4 @@
-.import {
+.new-study {
   max-width: 720px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
@@ -27,11 +27,11 @@
   color: var(--text-muted);
 }
 
-.import-head {
+.page-head {
   margin-bottom: 1.25rem;
 }
 
-.import-kicker {
+.page-kicker {
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.22em;
@@ -39,72 +39,62 @@
   color: var(--text-muted);
 }
 
-.import-title {
+.page-title {
   margin: 0.2rem 0 0;
   font-size: 1.8rem;
   color: var(--text-main);
 }
 
-.import-sub {
+.page-sub {
   margin: 0.5rem 0 0;
   color: var(--text-muted);
   font-size: 0.9rem;
 }
 
-.import-sub code {
+.page-sub code {
   font-family: 'Consolas', 'Courier New', monospace;
   font-size: 0.85rem;
   background: var(--wood-light);
   padding: 0.1rem 0.35rem;
   border-radius: 0.3rem;
+  overflow-wrap: anywhere;
 }
 
-.connect-row {
+.study-form {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.9rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.55rem;
-  background: oklch(0.96 0.02 80);
-  border: 1px solid var(--panel-border);
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.connect-badge {
-  color: oklch(0.4 0.1 145);
-  font-weight: 600;
-}
-
-.connect-link {
-  margin-left: auto;
-  padding: 0.3rem 0.7rem;
-  border: 1px solid var(--panel-border);
-  border-radius: 0.45rem;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem;
   background: var(--panel-bg);
-  color: var(--wood-dark);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.85rem;
+  box-shadow: 0 4px 14px oklch(0.4 0.05 50 / 0.08);
 }
 
-.connect-link:hover {
-  background: var(--wood-light);
+.lichess-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
 }
 
 .url-row {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 
 .url-input {
   flex: 1;
-  padding: 0.6rem 0.75rem;
+  min-width: min(14rem, 100%);
+  padding: 0.5rem 0.65rem;
   border: 1px solid var(--panel-border);
-  border-radius: 0.55rem;
+  border-radius: 0.5rem;
   background: oklch(0.99 0.005 90);
   font: inherit;
   color: var(--text-main);
@@ -115,11 +105,17 @@
   outline-offset: 1px;
 }
 
+.lichess-hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.6rem 1rem;
+  padding: 0.5rem 1rem;
   border: 1px solid var(--panel-border);
   border-radius: 0.55rem;
   background: oklch(0.965 0.018 80);
@@ -141,14 +137,18 @@
   cursor: default;
 }
 
+.btn--ghost {
+  background: transparent;
+}
+
 .btn--primary {
   color: var(--board-light);
   border-color: transparent;
   background: linear-gradient(135deg, var(--wood-medium), var(--wood-dark));
 }
 
-.import-error {
-  margin: 0 0 1rem;
+.page-error {
+  margin: 0;
   padding: 0.6rem 0.8rem;
   border-radius: 0.55rem;
   background: oklch(0.92 0.06 25);
@@ -156,33 +156,20 @@
   font-size: 0.9rem;
 }
 
-.preview {
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 0.85rem;
-  padding: 1.1rem 1.2rem;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  margin-bottom: 0.9rem;
-}
-
-.field-label {
-  font-size: 0.78rem;
+.page-error a {
+  color: inherit;
   font-weight: 700;
-  color: var(--text-muted);
 }
 
-.field-input {
-  padding: 0.5rem 0.65rem;
+.page-error--target {
+  margin-bottom: 1rem;
+}
+
+.preview {
+  background: oklch(0.99 0.005 90 / 0.5);
   border: 1px solid var(--panel-border);
-  border-radius: 0.5rem;
-  background: oklch(0.99 0.005 90);
-  font: inherit;
-  color: var(--text-main);
+  border-radius: 0.7rem;
+  padding: 0.9rem 1rem;
 }
 
 .preview-summary {
@@ -209,7 +196,7 @@
 
 .chapter-list {
   list-style: none;
-  margin: 0 0 1rem;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -218,11 +205,16 @@
   overflow-y: auto;
 }
 
+.chapter-list + .failed {
+  margin-top: 1rem;
+}
+
 .chapter {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--panel-border);
   border-radius: 0.55rem;
@@ -263,7 +255,6 @@
 }
 
 .failed {
-  margin-bottom: 1rem;
   padding: 0.6rem 0.8rem;
   border-radius: 0.55rem;
   background: oklch(0.95 0.04 75);
@@ -281,8 +272,16 @@
   padding-left: 1.1rem;
 }
 
-.actions {
+.form-actions {
   display: flex;
-  gap: 0.5rem;
   align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.submit-hint {
+  margin-right: auto;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }

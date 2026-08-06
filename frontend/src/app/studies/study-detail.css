@@ -34,6 +34,9 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  /* Sui viewport stretti i pulsanti Modifica/Elimina scendono sotto il titolo
+     invece di sforare (verifica R22 a 320/280px). */
+  flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1.25rem;
 }
@@ -61,6 +64,15 @@
   color: var(--text-muted);
 }
 
+.study-head-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.study-edit,
 .study-delete {
   display: inline-flex;
   align-items: center;
@@ -72,15 +84,28 @@
   font: inherit;
   font-weight: 600;
   white-space: nowrap;
-  color: oklch(0.45 0.16 25);
   cursor: pointer;
   transition: background 0.12s ease;
 }
 
+.study-edit {
+  color: var(--wood-dark);
+}
+
+.study-delete {
+  color: oklch(0.45 0.16 25);
+}
+
+.study-edit svg,
 .study-delete svg {
   width: 16px;
   height: 16px;
   fill: currentColor;
+}
+
+.study-edit:hover,
+.study-edit[aria-expanded='true'] {
+  background: var(--wood-light);
 }
 
 .study-delete:hover {
@@ -90,6 +115,47 @@
 .study-delete:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* Form inline di modifica dei metadati (ISSUE-012). */
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.85rem;
+  box-shadow: 0 4px 14px oklch(0.4 0.05 50 / 0.08);
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.55rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--board-light);
+  background: linear-gradient(135deg, var(--wood-medium), var(--wood-dark));
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn--ghost {
+  color: var(--wood-dark);
+  background: oklch(0.965 0.018 80);
+  border: 1px solid var(--panel-border);
 }
 
 .study-subnav {
@@ -212,7 +278,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  /* Sotto ~300px nome e meta non stanno sulla stessa riga: meglio andare a
+     capo dentro la card che sforare la pagina (verifica R22 a 280px). */
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
   padding: 1rem 0 1rem 1.25rem;
   text-decoration: none;
   color: var(--text-main);

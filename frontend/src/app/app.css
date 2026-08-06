@@ -74,6 +74,49 @@
   margin-left: auto;
 }
 
+/* Comando compatto Connetti/Disconnetti Lichess (ISSUE-011): verde quando
+   connesso (stessa palette del badge backend), neutro quando non connesso. */
+.lichess-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2.1rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.lichess-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.lichess-toggle:hover {
+  background: var(--wood-light);
+  color: var(--wood-dark);
+}
+
+.lichess-toggle--on {
+  background: oklch(0.85 0.12 145);
+  border-color: transparent;
+  color: oklch(0.30 0.10 145);
+}
+
+.lichess-toggle--on:hover {
+  background: oklch(0.80 0.12 145);
+  color: oklch(0.30 0.10 145);
+}
+
 .sound-toggle {
   display: inline-flex;
   align-items: center;
@@ -159,6 +202,22 @@
   }
 }
 
+/* Sotto ~1040px il comando Lichess diventa icona sola (rotondo come il toggle
+   suono): con l'etichetta estesa brand + tab + controlli non starebbero più su
+   una sola riga tra 768px e ~1040px (vincolo di ISSUE-021). */
+@media (max-width: 1040px) {
+  .lichess-label {
+    display: none;
+  }
+
+  .lichess-toggle {
+    width: 2.1rem;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+}
+
 /* Sui telefoni più stretti (fino a ~320px) il brand si riduce ancora, così la
    prima riga resta brand + controlli e a scorrere è solo il gruppo tab. */
 @media (max-width: 400px) {
@@ -168,5 +227,21 @@
 
   .brand {
     font-size: 1.05rem;
+  }
+
+  .topbar-right {
+    gap: 0.4rem;
+  }
+
+  /* Con il comando Lichess accanto (ISSUE-011) il testo dello stato backend non
+     entra più nella prima riga: resta il solo pallino colorato (il testo rimane
+     nel DOM per gli screen reader). */
+  .conn {
+    display: inline-block;
+    font-size: 0;
+    width: 0.8rem;
+    height: 0.8rem;
+    padding: 0;
+    border-radius: 50%;
   }
 }

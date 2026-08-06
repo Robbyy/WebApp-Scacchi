@@ -5,7 +5,9 @@ import { filter, map } from 'rxjs';
 import { ApiService } from './core/api.service';
 import { ToastHost } from './core/toast-host';
 import { ConfirmDialog } from './core/confirm-dialog';
+import { LichessAuthService } from './core/lichess-auth.service';
 import { MoveSoundService } from './core/move-sound.service';
+import { ToastService } from './core/toast.service';
 import { STUDY_SECTION_TABS, sectionFromUrl } from './core/study-sections';
 
 @Component({
@@ -17,6 +19,8 @@ import { STUDY_SECTION_TABS, sectionFromUrl } from './core/study-sections';
 export class App implements OnInit {
   private readonly api = inject(ApiService);
   private readonly moveSound = inject(MoveSoundService);
+  private readonly lichessAuth = inject(LichessAuthService);
+  private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
   protected readonly title = signal('WebApp Scacchi');
@@ -38,6 +42,9 @@ export class App implements OnInit {
   /** Preferenza locale del suono di mossa (toggle nell'header). */
   protected readonly soundEnabled = this.moveSound.enabled;
 
+  /** Stato della connessione OAuth a Lichess (comando in topbar, ISSUE-011). */
+  protected readonly lichessConnected = this.lichessAuth.connected;
+
   ngOnInit(): void {
     this.api.ping().subscribe({
       next: () => this.online.set(true),
@@ -47,5 +54,19 @@ export class App implements OnInit {
 
   protected toggleSound(): void {
     this.moveSound.toggle();
+  }
+
+  /**
+   * Connette o disconnette Lichess dalla topbar (ISSUE-011). La connessione
+   * torna alla pagina corrente dopo il callback OAuth: l'URL completo preserva
+   * anche gli eventuali query param (es. `?studyId=…` su `/studies/new`).
+   */
+  protected toggleLichess(): void {
+    if (this.lichessConnected()) {
+      this.lichessAuth.disconnect();
+      this.toast.info('Disconnesso da Lichess.');
+    } else {
+      void this.lichessAuth.connect(this.router.url);
+    }
   }
 }

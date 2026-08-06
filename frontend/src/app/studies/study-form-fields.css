@@ -1,0 +1,50 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: min(12rem, 100%);
+}
+
+.field--color {
+  flex: 0 0 9rem;
+  min-width: 9rem;
+}
+
+.field-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.field-input {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.5rem;
+  background: oklch(0.99 0.005 90);
+  font: inherit;
+  color: var(--text-main);
+}
+
+.field-input:focus {
+  outline: 2px solid var(--wood-medium);
+  outline-offset: 1px;
+}
+
+.field-input:disabled {
+  opacity: 0.65;
+  background: oklch(0.96 0.01 90);
+  cursor: not-allowed;
+}

@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { StudyList } from './studies/study-list';
 import { StudyDetail } from './studies/study-detail';
-import { LichessImport } from './studies/lichess-import';
+import { StudyNew } from './studies/study-new';
 import { LichessCallback } from './studies/lichess-callback';
 import { VariantList } from './variants/variant-list';
 import { VariantEditor } from './variants/variant-editor';
@@ -25,7 +25,12 @@ export const routes: Routes = [
   { path: 'reviews', component: ReviewDue },
   { path: 'play', component: PlayVsComputer },
   { path: 'lichess/callback', component: LichessCallback },
-  { path: 'studies/import-lichess', component: LichessImport },
+  // Pagina unica di creazione/import studio (ISSUE-011): dichiarata prima della
+  // route dinamica `studies/:id`, così `new` non viene catturato come id.
+  { path: 'studies/new', component: StudyNew },
+  // Route storica dell'import Lichess, confluita nella pagina unificata. Il
+  // redirect relativo preserva i query param (es. `?studyId=…`).
+  { path: 'studies/import-lichess', redirectTo: 'studies/new' },
   { path: 'studies/:id/stats', component: StudyStats },
   { path: 'studies/:id', component: StudyDetail },
   { path: 'variants', component: VariantList },

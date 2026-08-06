@@ -34,38 +34,18 @@ describe('StudyList', () => {
     expect(cmp.loading()).toBe(false);
   });
 
-  it('creates a study and appends it to the list', () => {
-    let captured: unknown = null;
-    const created: Study = { id: 9, name: 'Nuovo', color: 'WHITE', phase: 'OPENING', variantCount: 0 };
-    const { cmp } = setup({
-      getStudies: () => of([s1]),
-      createStudy: (req: unknown) => {
-        captured = req;
-        return of(created);
-      },
-    });
-    cmp.openForm();
-    cmp.newName.set('Nuovo');
-    cmp.newColor.set('WHITE');
-    cmp.createStudy();
-    expect(captured).toEqual({ name: 'Nuovo', description: null, color: 'WHITE' });
-    expect(cmp.studies().length).toBe(2);
-    expect(cmp.creating()).toBe(false);
+  it('links the "Nuovo studio" CTA to the unified creation page (ISSUE-011)', () => {
+    const { fixture } = setup({ getStudies: () => of([s1]) });
+    const cta = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('a.new-cta:not(.new-cta--ghost)');
+    expect(cta?.textContent).toContain('Nuovo studio');
+    expect(cta?.getAttribute('href')).toBe('/studies/new');
   });
 
-  it('does not create a study with a blank name', () => {
-    let called = false;
-    const { cmp } = setup({
-      getStudies: () => of([]),
-      createStudy: () => {
-        called = true;
-        return of(s1);
-      },
-    });
-    cmp.openForm();
-    cmp.newName.set('   ');
-    cmp.createStudy();
-    expect(called).toBe(false);
+  it('no longer hosts the inline creation form nor the Lichess CTA (ISSUE-011)', () => {
+    const { fixture } = setup({ getStudies: () => of([s1]) });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('form')).toBeNull();
+    expect(el.textContent).not.toContain('Importa da Lichess');
   });
 
   it('removes a study after confirmation', async () => {

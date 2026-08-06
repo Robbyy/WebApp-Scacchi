@@ -14,7 +14,7 @@ import { ToastService } from '../core/toast.service';
     <section class="callback">
       @if (error()) {
         <p class="callback-error">{{ error() }}</p>
-        <a routerLink="/studies/import-lichess">Torna all'import</a>
+        <a routerLink="/studies/new">Torna a &laquo;Nuovo studio&raquo;</a>
       } @else {
         <p class="callback-msg">Connessione a Lichess in corso&#8230;</p>
       }

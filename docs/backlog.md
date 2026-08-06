@@ -36,11 +36,11 @@
 | 022 | Visualizzazione linea migliore del motore | manutenzione | diretto | ✅ fatto (R21) |
 | 007 | "Nascondi barra" ridondante | manutenzione | diretto | ✅ fatto (R21) |
 | 008 | Rimuovere "Auto-play" | manutenzione | diretto | da fare |
-| 009 | Elenco studi su due colonne | manutenzione | diretto | da fare |
-| 012 | Modifica nome/descrizione/colore studio | manutenzione | diretto | da fare |
+| 009 | Elenco studi su due colonne | manutenzione | diretto | ✅ fatto (R22) |
+| 012 | Modifica nome/descrizione/colore studio | manutenzione | diretto | ✅ fatto (R22) |
 | 015 | Pagina info + versioni | manutenzione | diretto | da fare |
 | 010 | Pannello varianti nel dettaglio (3 col) | manutenzione | OpenSpec? da decidere | da fare |
-| 011 | Unifica creazione studio + import Lichess | manutenzione | OpenSpec? da decidere | da fare |
+| 011 | Unifica creazione studio + import Lichess | manutenzione | mini-spec R22 | ✅ fatto (R22) |
 | 013 | Menu contestuale editor | manutenzione | OpenSpec? da decidere | da fare |
 | 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | spezzata in change incrementali |
 | 017 | Menu "Impostazioni" + SM-2 | sviluppo | OpenSpec | da fare |
@@ -57,7 +57,7 @@ La sequenza dettagliata dei soli incrementi evolutivi è nel
 
 1. ~~**R20:** ISSUE-021 (scaffold navigazione tre sezioni).~~ ✅ fatto (2026-08-05).
 2. ~~**R21:** ISSUE-022 + ISSUE-007 (linea migliore del motore e semplificazione pannello).~~ ✅ fatto (2026-08-05).
-3. **R22:** ISSUE-011 + ISSUE-012 + ISSUE-009 (ciclo di vita dello studio e home).
+3. ~~**R22:** ISSUE-011 + ISSUE-012 + ISSUE-009 (ciclo di vita dello studio e home).~~ ✅ fatto (2026-08-06).
 4. **R23:** ISSUE-010 + ISSUE-008 (navigazione e controlli del dettaglio variante).
 5. **R24:** ISSUE-013 + `issue-016-move-comments` (editor).
 6. **R25–R28:** slice residue di ISSUE-016: posizione FEN → Mediogioco → Finale → gioco da posizione.
@@ -85,13 +85,21 @@ di questa cadenza di rilasci evolutivi.
 
 1. **ISSUE-016** — scope ampio, modello dati nuovo; senza OpenSpec rischio di sovra-ingegnerizzazione. Mitigazione: partire da `issue-016-phase-domain-model`, poi procedere con slice piccoli.
 2. **ISSUE-014** — incertezza sulle opzioni UCI realmente esposte dalla build asm.js. Mitigazione: audit prima della UI.
-3. **ISSUE-017** — refactor di `ReviewScheduler` da statico a parametrizzato tocca logica testata (83 test BE): rischio regressione SM-2.
+3. **ISSUE-017** — refactor di `ReviewScheduler` da statico a parametrizzato tocca logica testata (84 test BE): rischio regressione SM-2.
 4. **ISSUE-004** — `AudioContext` browser-dipendente, difficile da coprire in headless.
 5. **Cluster topbar affollato** (suono · "?" · ⚙ · Lichess · 3 sezioni) — rischio UX e di conflitti di merge tra ISSUE-011/015/017/021.
 
 ---
 
 ## Completati
+
+- **ISSUE-011 + ISSUE-012 + ISSUE-009 — Ciclo di vita dello studio** ✅ (R22, 2026-08-06).
+  Pagina unica `/studies/new` per creazione e import Lichess (route storica reindirizzata
+  con query param preservati), comando Connetti/Disconnetti Lichess in topbar con bozza
+  ripristinata dopo l'OAuth, modifica inline dei metadati nel dettaglio (campi condivisi
+  `study-form-fields`, `PUT` esistente, `phase` mai inviata), griglia home adattiva a
+  massimo due colonne. Frontend: 249 test verdi. Schede ed esiti:
+  [`backlog/manutenzione-evolutiva.md`](backlog/manutenzione-evolutiva.md).
 
 - **ISSUE-021 — Scaffold navigazione tre sezioni** ✅ (R20, 2026-08-05). Tab-link
   Aperture/Mediogioco/Finale nella topbar (`nav` + `aria-current`), route `/middlegame` e

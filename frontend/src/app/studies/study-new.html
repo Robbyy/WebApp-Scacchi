@@ -1,0 +1,143 @@
+<section class="new-study">
+  <nav class="crumbs">
+    @if (targetStudyId(); as sid) {
+      <a [routerLink]="['/studies', sid]">Studio</a>
+    } @else {
+      <a routerLink="/">Studi</a>
+    }
+    <span class="crumb-sep">/</span>
+    <span class="crumb-current">{{ targetStudyId() !== null ? 'Importa da Lichess' : 'Nuovo studio' }}</span>
+  </nav>
+
+  <header class="page-head">
+    <p class="page-kicker">{{ targetStudyId() !== null ? 'Import' : 'Repertorio' }}</p>
+    <h2 class="page-title">{{ targetStudyId() !== null ? 'Importa da Lichess' : 'Nuovo studio' }}</h2>
+    @if (targetStudyId() === null) {
+      <p class="page-sub">
+        Crea uno studio vuoto oppure incolla il link di uno <strong>studio Lichess</strong>
+        (o di un suo capitolo) per importarne i contenuti.
+        Esempio: <code>https://lichess.org/study/OR3CU5Je</code>
+      </p>
+    } @else if (targetStudy(); as t) {
+      <p class="page-sub">
+        Ogni capitolo diventerà una nuova variante dello studio &laquo;{{ t.name }}&raquo;.
+      </p>
+    }
+  </header>
+
+  @if (targetError()) {
+    <p class="page-error page-error--target">
+      {{ targetError() }} — <a routerLink="/">torna agli studi</a>
+    </p>
+  } @else {
+    <form class="study-form" (ngSubmit)="submit()">
+      @if (targetStudyId() === null) {
+        <app-study-form-fields
+          [(name)]="name"
+          [(description)]="description"
+          [(color)]="color"
+          [disabled]="willUpdate() || saving()"
+        />
+      }
+
+      <div class="lichess-block">
+        <span class="field-label">{{ targetStudyId() !== null ? 'Link Lichess' : 'Link Lichess (facoltativo)' }}</span>
+        <div class="url-row">
+          <input
+            class="url-input"
+            type="text"
+            name="url"
+            [ngModel]="url()"
+            (ngModelChange)="onUrlChange($event)"
+            (keydown.enter)="$event.preventDefault(); loadPreview()"
+            placeholder="https://lichess.org/study/XXXXXXXX"
+            autocomplete="off"
+          />
+          <button class="btn" type="button" (click)="loadPreview()" [disabled]="loading() || !url().trim()">
+            {{ loading() ? 'Recupero…' : 'Anteprima' }}
+          </button>
+        </div>
+        @if (!connected()) {
+          <p class="lichess-hint">
+            Per gli studi <strong>privati o unlisted</strong> connetti Lichess dal comando
+            nella barra in alto: i dati inseriti qui vengono ripristinati al ritorno.
+          </p>
+        }
+      </div>
+
+      @if (error()) {
+        <p class="page-error">{{ error() }}</p>
+      }
+
+      @if (preview()) {
+        <div class="preview">
+          <p class="preview-summary">
+            {{ chapters().length }} capitol{{ chapters().length === 1 ? 'o' : 'i' }} importabil{{ chapters().length === 1 ? 'e' : 'i' }}
+          </p>
+
+          @if (targetStudyId() !== null) {
+            <p class="upsert-notice upsert-notice--new">
+              I capitoli saranno <strong>aggiunti</strong> come nuove varianti: le varianti
+              esistenti e i metadati dello studio restano invariati, e lo studio non viene
+              associato alla sorgente Lichess.
+            </p>
+          } @else if (willUpdate()) {
+            <p class="upsert-notice">
+              Questo studio Lichess è già importato come &laquo;{{ existingStudy()?.name }}&raquo;:
+              verrà <strong>aggiornato</strong>. Le varianti attuali saranno
+              <strong>sostituite</strong> con quelle importate; nome, descrizione e colore dello
+              studio locale restano invariati.
+            </p>
+          } @else {
+            <p class="upsert-notice upsert-notice--new">Verrà creato un nuovo studio locale.</p>
+          }
+
+          @if (chapters().length > 0) {
+            <ul class="chapter-list">
+              @for (c of chapters(); track $index) {
+                <li class="chapter">
+                  <span class="chapter-name">{{ c.name }}</span>
+                  <span class="chapter-meta">
+                    <span
+                      class="badge"
+                      [class.badge--white]="c.color === 'WHITE'"
+                      [class.badge--black]="c.color === 'BLACK'"
+                      >{{ c.color === 'WHITE' ? 'Bianco' : 'Nero' }}</span
+                    >
+                    <span class="chapter-count">
+                      {{ c.nodeCount }} mosse
+                      @if (c.variationCount > 0) {
+                        · {{ c.variationCount }} variant{{ c.variationCount === 1 ? 'e' : 'i' }}
+                      }
+                    </span>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (failed().length > 0) {
+            <div class="failed">
+              <p class="failed-title">{{ failed().length }} capitol{{ failed().length === 1 ? 'o' : 'i' }} non importabil{{ failed().length === 1 ? 'e' : 'i' }} (saltat{{ failed().length === 1 ? 'o' : 'i' }}):</p>
+              <ul>
+                @for (f of failed(); track $index) {
+                  <li><strong>{{ f.name }}</strong>: {{ f.error }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="form-actions">
+        @if (needsPreview()) {
+          <span class="submit-hint">Usa &laquo;Anteprima&raquo; per caricare i capitoli prima dell'import.</span>
+        }
+        <a class="btn btn--ghost" [routerLink]="targetStudyId() !== null ? ['/studies', targetStudyId()] : ['/']">Annulla</a>
+        <button class="btn btn--primary" type="submit" [disabled]="!canSubmit()">
+          {{ submitLabel() }}
+        </button>
+      </div>
+    </form>
+  }
+</section>

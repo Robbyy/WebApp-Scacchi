@@ -29,18 +29,48 @@
           >
         </div>
       </div>
-      <button
-        class="study-delete"
-        type="button"
-        (click)="removeStudy()"
-        [disabled]="deletingStudy()"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M9 3v1H4v2h16V4h-5V3H9zM6 8l1 12h10l1-12H6z" />
-        </svg>
-        Elimina studio
-      </button>
+      <div class="study-head-actions">
+        <button
+          class="study-edit"
+          type="button"
+          (click)="editing() ? cancelEdit() : openEdit()"
+          [attr.aria-expanded]="editing()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+          </svg>
+          Modifica
+        </button>
+        <button
+          class="study-delete"
+          type="button"
+          (click)="removeStudy()"
+          [disabled]="deletingStudy()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 3v1H4v2h16V4h-5V3H9zM6 8l1 12h10l1-12H6z" />
+          </svg>
+          Elimina studio
+        </button>
+      </div>
     </header>
+
+    @if (editing()) {
+      <form class="edit-form" (ngSubmit)="saveEdit()">
+        <app-study-form-fields
+          [(name)]="editName"
+          [(description)]="editDescription"
+          [(color)]="editColor"
+          [disabled]="savingEdit()"
+        />
+        <div class="edit-actions">
+          <button class="btn btn--ghost" type="button" (click)="cancelEdit()">Annulla</button>
+          <button class="btn" type="submit" [disabled]="!editName().trim() || savingEdit()">
+            {{ savingEdit() ? 'Salvataggio…' : 'Salva modifiche' }}
+          </button>
+        </div>
+      </form>
+    }
 
     @if (s.phase === 'OPENING') {
       <nav class="study-subnav">
@@ -69,7 +99,7 @@
       @if (s.phase === 'OPENING') {
         <a
           class="new-cta new-cta--ghost"
-          routerLink="/studies/import-lichess"
+          routerLink="/studies/new"
           [queryParams]="{ studyId: s.id }"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">

@@ -46,9 +46,15 @@ describe('StudyDetail', () => {
 
   it('shows the Lichess import and stats links for an opening study', () => {
     const { fixture } = setup({ getStudy: () => of(study) });
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    const el = fixture.nativeElement as HTMLElement;
+    const text = el.textContent ?? '';
     expect(text).toContain('Importa da Lichess');
     expect(text).toContain('Statistiche dello studio');
+    // ISSUE-011: l'import punta alla pagina unificata, preservando lo studyId.
+    const lichessLink = Array.from(el.querySelectorAll<HTMLAnchorElement>('a')).find((a) =>
+      a.textContent?.includes('Importa da Lichess'),
+    );
+    expect(lichessLink?.getAttribute('href')).toBe('/studies/new?studyId=1');
   });
 
   it('hides the Lichess import and stats links for a non-opening study (ISSUE-016)', () => {
@@ -60,6 +66,68 @@ describe('StudyDetail', () => {
     // Le posizioni restano creabili manualmente (P16-016): "Nuova variante"/"Importa PGN" restano visibili.
     expect(text).toContain('Nuova variante');
     expect(text).toContain('Importa PGN');
+  });
+
+  it('opens the inline edit form prefilled with the study metadata (ISSUE-012)', () => {
+    const withMeta: Study = { ...study, description: 'Vecchia nota', color: 'WHITE' };
+    const { fixture, cmp } = setup({ getStudy: () => of(withMeta) });
+    cmp.openEdit();
+    fixture.detectChanges();
+
+    expect(cmp.editing()).toBe(true);
+    expect(cmp.editName()).toBe('Repertorio');
+    expect(cmp.editDescription()).toBe('Vecchia nota');
+    expect(cmp.editColor()).toBe('WHITE');
+    expect((fixture.nativeElement as HTMLElement).querySelector('form.edit-form')).not.toBeNull();
+  });
+
+  it('saves the edited metadata with the existing PUT and without sending the phase', () => {
+    let capturedId: number | null = null;
+    let captured: any = null;
+    const { cmp } = setup({
+      getStudy: () => of(structuredClone(study)),
+      updateStudy: (id: number, req: unknown) => {
+        capturedId = id;
+        captured = req;
+        return of({ ...study, name: 'Rinominato', description: 'Nota', color: 'MIXED', variants: null });
+      },
+    });
+    cmp.openEdit();
+    cmp.editName.set('  Rinominato ');
+    cmp.editDescription.set('Nota');
+    cmp.editColor.set('MIXED');
+    cmp.saveEdit();
+
+    expect(capturedId).toBe(1);
+    // La fase non è mai inviata: resta quella scelta alla creazione (ISSUE-016).
+    expect(captured).toEqual({ name: 'Rinominato', description: 'Nota', color: 'MIXED' });
+    expect(cmp.editing()).toBe(false);
+    expect(cmp.study()?.name).toBe('Rinominato');
+    expect(cmp.study()?.color).toBe('MIXED');
+    // L'elenco varianti già caricato non viene perso dall'aggiornamento dei metadati.
+    expect(cmp.variants().length).toBe(2);
+  });
+
+  it('does not save the edit without a name', () => {
+    let called = false;
+    const { cmp } = setup({
+      getStudy: () => of(structuredClone(study)),
+      updateStudy: () => { called = true; return of(structuredClone(study)); },
+    });
+    cmp.openEdit();
+    cmp.editName.set('   ');
+    cmp.saveEdit();
+    expect(called).toBe(false);
+    expect(cmp.editing()).toBe(true);
+  });
+
+  it('cancels the edit leaving the study untouched', () => {
+    const { cmp } = setup({ getStudy: () => of(structuredClone(study)) });
+    cmp.openEdit();
+    cmp.editName.set('Altro nome');
+    cmp.cancelEdit();
+    expect(cmp.editing()).toBe(false);
+    expect(cmp.study()?.name).toBe('Repertorio');
   });
 
   it('removes a variant after confirmation and updates the count', async () => {

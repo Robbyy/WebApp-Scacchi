@@ -1,0 +1,44 @@
+<div class="form-row">
+  <label class="field">
+    <span class="field-label">Nome</span>
+    <input
+      class="field-input"
+      type="text"
+      [ngModel]="name()"
+      (ngModelChange)="name.set($event)"
+      name="name"
+      placeholder="Es. Repertorio col Bianco"
+      autocomplete="off"
+      autofocus
+      [disabled]="disabled()"
+    />
+  </label>
+  <label class="field field--color">
+    <span class="field-label">Colore</span>
+    <select
+      class="field-input"
+      [ngModel]="color()"
+      (ngModelChange)="color.set($event)"
+      name="color"
+      [disabled]="disabled()"
+    >
+      <option value="">&#8212;</option>
+      <option value="WHITE">Bianco</option>
+      <option value="BLACK">Nero</option>
+      <option value="MIXED">Misto</option>
+    </select>
+  </label>
+</div>
+<label class="field">
+  <span class="field-label">Descrizione (facoltativa)</span>
+  <input
+    class="field-input"
+    type="text"
+    [ngModel]="description()"
+    (ngModelChange)="description.set($event)"
+    name="description"
+    placeholder="Una nota sullo studio"
+    autocomplete="off"
+    [disabled]="disabled()"
+  />
+</label>

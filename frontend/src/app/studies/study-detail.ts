@@ -5,22 +5,26 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { StudyService } from '../core/study.service';
 import { VariantService } from '../core/variant.service';
 import { Study, StudyColor } from '../core/study.model';
-import { Variant } from '../core/variant.model';
+import { Variant, validationMessage } from '../core/variant.model';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
+import { StudyFormFields } from './study-form-fields';
 
 /**
  * Dettaglio di uno studio (Prototipo 12): intestazione, elenco delle varianti
  * ("capitoli") con creazione/import e cancellazione, ed eliminazione dell'intero
- * studio (a cascata). Sul modello degli *studies* di Lichess.
+ * studio (a cascata). Sul modello degli *studies* di Lichess. Da R22 i metadati
+ * (nome/descrizione/colore) sono modificabili con un form inline espandibile
+ * (ISSUE-012) che riusa i campi condivisi con la pagina di creazione.
  */
 @Component({
   selector: 'app-study-detail',
-  imports: [RouterLink],
+  imports: [FormsModule, RouterLink, StudyFormFields],
   templateUrl: './study-detail.html',
   styleUrl: './study-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,12 +44,68 @@ export class StudyDetail {
 
   protected readonly variants = computed<Variant[]>(() => this.study()?.variants ?? []);
 
+  /** Form inline di modifica dei metadati (ISSUE-012). */
+  protected readonly editing = signal(false);
+  protected readonly savingEdit = signal(false);
+  protected readonly editName = signal('');
+  protected readonly editDescription = signal('');
+  protected readonly editColor = signal<StudyColor | ''>('');
+
   constructor() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.service.getStudy(id).subscribe({
       next: (s) => this.study.set(s),
       error: () => this.error.set('Studio non trovato.'),
     });
+  }
+
+  /** Apre il form inline precompilato con i metadati correnti. */
+  protected openEdit(): void {
+    const s = this.study();
+    if (!s) {
+      return;
+    }
+    this.editName.set(s.name);
+    this.editDescription.set(s.description ?? '');
+    this.editColor.set(s.color ?? '');
+    this.editing.set(true);
+  }
+
+  protected cancelEdit(): void {
+    this.editing.set(false);
+  }
+
+  protected saveEdit(): void {
+    const s = this.study();
+    const name = this.editName().trim();
+    if (!s || !name || this.savingEdit()) {
+      return;
+    }
+    this.savingEdit.set(true);
+    // `phase` omessa di proposito: è scelta alla creazione e mai modificabile
+    // (ISSUE-016); il backend la mantiene quando assente dalla richiesta.
+    this.service
+      .updateStudy(s.id, {
+        name,
+        description: this.editDescription().trim() || null,
+        color: this.editColor() || null,
+      })
+      .subscribe({
+        next: (updated) => {
+          this.study.update((cur) =>
+            cur
+              ? { ...cur, name: updated.name, description: updated.description, color: updated.color }
+              : cur,
+          );
+          this.savingEdit.set(false);
+          this.editing.set(false);
+          this.toast.success('Studio aggiornato.');
+        },
+        error: (err) => {
+          this.savingEdit.set(false);
+          this.toast.error(validationMessage(err) ?? 'Salvataggio non riuscito.');
+        },
+      });
   }
 
   protected async removeVariant(variant: Variant): Promise<void> {

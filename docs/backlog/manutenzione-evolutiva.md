@@ -12,11 +12,11 @@
 | 022 | Visualizzazione linea migliore del motore nel pannello laterale ✅ | medio | medio-basso | no |
 | 007 | "Nascondi barra" ridondante col motore attivo ✅ | basso | basso | no |
 | 008 | Rimuovere "Auto-play" dalla navigazione | basso | basso | no |
-| 009 | Elenco studi su due colonne | basso | basso | no |
-| 012 | Modifica nome/descrizione/colore studio | basso | basso | no |
+| 009 | Elenco studi su due colonne ✅ | basso | basso | no |
+| 012 | Modifica nome/descrizione/colore studio ✅ | basso | basso | no |
 | 015 | Pagina info applicazione + versioni | basso | basso-medio | no |
 | 010 | Pannello sinistro varianti nel dettaglio (3 col) | medio | medio | **da decidere** |
-| 011 | Unificare creazione studio + import Lichess | medio | medio | **da decidere** |
+| 011 | Unificare creazione studio + import Lichess ✅ | medio | medio | no — mini-spec R22 |
 | 013 | Menu contestuale editor (cancella / promuovi) | medio | medio | **da decidere** |
 
 > Le tre voci "da decidere" sono le più corpose: candidate a una **OpenSpec leggera**
@@ -177,22 +177,42 @@ la navigazione con frecce ←/→ e i pulsanti inizio/indietro/avanti/fine è su
 ←, →, fine; suite test verde.
 **Note:** aggiornare eventuali test che referenziano l'auto-play.
 
-## ISSUE-009 — Elenco studi su due colonne
-**OpenSpec:** no · **Effort:** basso · **Rischio:** basso.
+## ISSUE-009 — Elenco studi su due colonne ✅
+**OpenSpec:** no · **Effort:** basso · **Rischio:** basso · **Stato: ✅ completata (R22, 2026-08-06).**
 **Scope:** le card degli studi sono su una colonna singola; su Full HD lo spazio
 orizzontale è sottoutilizzato.
 **Accettazione:** griglia a due colonne su Full HD; ricaduta a colonna singola su viewport
 stretta (tablet/mobile); stile delle card invariato.
 **Note:** stessa home di ISSUE-003/ISSUE-011 (coordinare). Definire il breakpoint.
 
-## ISSUE-012 — Modifica nome/descrizione/colore studio
-**OpenSpec:** no · **Effort:** basso · **Rischio:** basso (backend pronto).
+**Esito (R22, 2026-08-06):** contenitore `.list` allargato da 720px a **960px** e
+`.study-cards` passata da colonna flex a griglia
+`repeat(auto-fit, minmax(min(320px, 100%), 1fr))`, come da mini-spec R22: due colonne
+quando entrano card da almeno 320px, una colonna altrimenti — nessun breakpoint fisso.
+Il tetto a 960px impedisce la terza colonna (tre card da 320px non entrano mai); il
+`min(320px, 100%)` evita l'overflow quando lo spazio utile scende sotto i 320px.
+Card, azioni e stile invariati. Verificato live: due colonne da 450px a 1440/1024,
+da 354px a 768; colonna singola a 320/280, mai overflow orizzontale.
+
+## ISSUE-012 — Modifica nome/descrizione/colore studio ✅
+**OpenSpec:** no · **Effort:** basso · **Rischio:** basso (backend pronto) · **Stato: ✅ completata (R22, 2026-08-06).**
 **Scope:** non è possibile modificare nome/descrizione/colore di uno studio dopo la
 creazione (unica azione disponibile: eliminazione).
 **Accettazione:** pulsante "Modifica" (o icona matita) nel dettaglio studio che apre un
 form (inline o dialog) precompilato; alla conferma salva e aggiorna la vista.
 **Note:** l'endpoint `PUT /api/studies/{id}` esiste già; manca solo l'UI. Riusa il pattern
-form di ISSUE-011 (coordinare). Da decidere: inline vs dialog.
+form di ISSUE-011 (coordinare). Da decidere: inline vs dialog → deciso **inline
+espandibile** nella mini-spec R22.
+
+**Esito (R22, 2026-08-06):** pulsante «Modifica» (icona matita, `aria-expanded`) accanto a
+«Elimina studio» nel dettaglio: espande un form inline precompilato che riusa i campi
+condivisi `studies/study-form-fields` (stesso modello e controlli della pagina di
+creazione/import, come da mini-spec). Il salvataggio usa il `PUT /api/studies/{id}`
+esistente **senza inviare `phase`** (scelta alla creazione e mai modificabile, ISSUE-016:
+il backend la mantiene quando assente); la vista si aggiorna in place senza perdere
+l'elenco varianti già caricato, con toast di esito. «Annulla» richiude senza salvare.
+Ai viewport stretti l'intestazione va a capo (pulsanti sotto il titolo) e la riga
+nome+meta delle card variante può andare a capo: niente overflow a 320/280px.
 
 ## ISSUE-015 — Pagina info applicazione + versioni
 **OpenSpec:** no · **Effort:** basso · **Rischio:** basso-medio.
@@ -218,8 +238,8 @@ tre colonne: elenco | scacchiera | mosse/controlli; stile coerente (no estetica 
 Coordinare con ISSUE-002 (stessa pagina). Verificare tenuta del 3-col su laptop
 (cfr. area delicata "responsive scacchiera"). **Solo elenco + navigazione**, nient'altro.
 
-## ISSUE-011 — Unificare creazione studio + import Lichess
-**OpenSpec:** **da decidere** (mini-spec consigliata) · **Effort:** medio · **Rischio:** medio.
+## ISSUE-011 — Unificare creazione studio + import Lichess ✅
+**OpenSpec:** no — mini-spec R22 formalizzata il 2026-08-06 · **Effort:** medio · **Rischio:** medio · **Stato: ✅ completata (R22, 2026-08-06).**
 **Scope:** la creazione studio è un form inline nella home, non allineato con la pagina
 dedicata di import Lichess; le due operazioni sono concettualmente la stessa cosa
 ("voglio un nuovo studio locale").
@@ -232,6 +252,121 @@ home (integrato). Il blocco **Connetti/Disconnetti Lichess** si sposta nella **t
 **Note:** usa endpoint esistenti (`createStudy`, `importLichess`); preserva il flusso
 `?studyId=…` (import dentro uno studio esistente); anteprima capitoli e upsert notice
 invariati. Coordinare con ISSUE-003/009 (home) e ISSUE-015/017 (cluster topbar).
+
+### Mini-specifica R22 — ISSUE-011
+
+**Obiettivo.** Riunire in una sola pagina la creazione di uno studio locale e l'import da
+Lichess, eliminando i due percorsi concorrenti oggi presenti nella home. ISSUE-012 riuserà
+lo stesso modello di form in modalità modifica, ma non cambia il significato della pagina di
+creazione/import.
+
+**Route e navigazione.**
+
+- La route canonica è `/studies/new`; deve essere dichiarata prima della route dinamica
+  `/studies/:id`.
+- Il CTA «Nuovo studio» della home porta a `/studies/new`; il CTA «Importa da Lichess» è
+  rimosso dalla home perché confluisce nella stessa pagina.
+- La route storica `/studies/import-lichess` viene migrata/reindirizzata a `/studies/new`
+  senza perdere gli eventuali query parameter.
+- `/studies/new?studyId={id}` conserva il significato attuale: importa una variante per ogni
+  capitolo nello studio locale `{id}`. Non aggiorna i metadati, non sostituisce le varianti
+  esistenti e non associa automaticamente lo studio alla sorgente Lichess. La pagina verifica
+  prima che `{id}` esista e mostra un errore dedicato se non è valido.
+- A esito positivo il flusso porta al dettaglio dello studio creato, aggiornato o destinatario.
+
+**Fase e campi del form.** In R22 la pagina crea/importa esclusivamente studi `OPENING`:
+la fase non è esposta come scelta e resta il default del contratto. I campi locali sono nome
+(obbligatorio), descrizione facoltativa e colore; il link Lichess è facoltativo.
+
+**Flussi utente.**
+
+1. Senza link Lichess il submit usa `createStudy` e crea uno studio vuoto.
+2. Con link Lichess valido, «Anteprima» recupera e mostra capitoli e fallimenti prima del
+   submit di importazione. Al primo import nome e colore suggeriti da Lichess precompilano il
+   form ma restano modificabili; la descrizione resta un metadato locale facoltativo.
+3. Se lo stesso `sourceStudyId` è già presente localmente, l'operazione è un upsert: nome,
+   descrizione e colore locali restano invariati, mentre le varianti vengono sostituite con
+   quelle importate. L'avviso deve renderlo esplicito prima della conferma.
+4. Con `studyId` il flusso segue la semantica della route sopra descritta e non applica
+   l'upsert per sorgente remota.
+
+**Lichess e OAuth.** Il controllo Connetti/Disconnetti si sposta nella topbar come comando
+compatto, con etichetta accessibile e stato leggibile; non introduce una riga o un testo che
+rompa la topbar a viewport stretti. Quando l'OAuth parte dalla pagina `/studies/new`, URL
+Lichess e bozza dei campi locali sono salvati temporaneamente in `sessionStorage` e ripristinati
+al ritorno dal callback; il `returnTo` preserva anche `studyId` quando presente.
+
+**Riutilizzo per ISSUE-012.** Creazione/import e modifica condividono il modello e i controlli
+dei metadati, ma non la route: la modifica parte dal dettaglio di `/studies/:id` tramite un
+form **inline espandibile** e usa il `PUT` esistente. Non rende modificabile la fase dello
+studio.
+
+**Griglia home (ISSUE-009).** La lista studi allarga il proprio contenitore e usa una griglia
+guidata dalla larghezza utile delle card (`repeat(auto-fit, minmax(320px, 1fr))` o soluzione
+equivalente), non un breakpoint fisso arbitrario: due colonne quando entrano card da almeno
+320px, una colonna altrimenti. Card, azioni e stile restano invariati.
+
+**Limite noto dell'import in uno studio esistente.** Il percorso con `studyId` conserva il
+contratto attuale: una richiesta di creazione per capitolo, senza nuova API transazionale. In
+caso di errore di rete o backend dopo alcune richieste, i capitoli già creati restano nello
+studio e l'interfaccia comunica l'errore; la transazionalità dell'intero import è fuori scope di
+R22 e potrà diventare un'attività tecnica separata.
+
+**Fuori perimetro.** Nessuna nuova API backend, nessun cambio del parser o del formato PGN,
+nessun import Lichess per Mediogioco/Finale, nessuna nuova funzionalità Lichess oltre OAuth,
+preview e upsert già disponibili.
+
+**Accettazione e verifica.** Testare creazione locale, URL invalido, anteprima, primo import,
+upsert con conservazione dei metadati, `studyId` esistente e inesistente, import con `studyId`,
+redirect e ritorno OAuth con bozza ripristinata. Verifica manuale: home senza form/CTA duplicati,
+dettaglio dopo ogni esito, form inline di modifica e topbar utilizzabile a 1440px, 1024px,
+768px, 320px e 280px. ISSUE-009 completa nello stesso rilascio la griglia a due colonne quando
+la larghezza delle card lo consente e a una colonna altrimenti; ISSUE-012 verifica il riuso del
+form in modifica. Il caso di fallimento parziale dell'import con `studyId` è coperto come limite
+noto, senza promettere rollback.
+
+### Esito R22 — ISSUE-011 (2026-08-06)
+
+Implementata come da mini-spec, solo frontend (nessuna nuova API, parser invariato):
+
+- **Pagina** `studies/study-new` su route `/studies/new`, dichiarata prima di
+  `studies/:id`; la route storica `/studies/import-lichess` è un **redirect relativo** che
+  preserva i query param (verificato: `?studyId=7` sopravvive al redirect). La vecchia
+  pagina `lichess-import` è stata rimossa. Home: «Nuovo studio» è ora un link alla pagina,
+  form inline e CTA «Importa da Lichess» eliminati.
+- **Campi condivisi** `studies/study-form-fields` (nome/colore/descrizione con `model()`
+  two-way): stessi controlli per creazione/import e per la modifica inline di ISSUE-012.
+  La fase non è esposta: `createStudy`/`importLichess` non la inviano (default `OPENING`).
+- **Flussi**: senza link → `createStudy` e navigazione al dettaglio; con link, «Anteprima»
+  obbligatoria prima del submit (pulsante disabilitato + hint se l'URL è compilato senza
+  anteprima; un URL diverso invalida l'anteprima precedente). Al primo import nome e colore
+  suggeriti precompilano i campi **senza sovrascrivere valori digitati dall'utente**;
+  nell'upsert i campi si disabilitano e mostrano i metadati locali che resteranno invariati,
+  con l'avviso esplicito prima della conferma. Con `?studyId` la pagina verifica che lo
+  studio esista **e sia `OPENING`** (errore dedicato altrimenti), nasconde i campi locali,
+  avvisa della semantica additiva e invia una `addVariant` per capitolo; in caso di errore a
+  metà il messaggio segnala che alcuni capitoli potrebbero essere già stati aggiunti
+  (limite noto, nessun rollback).
+- **Topbar**: comando compatto Connetti/Disconnetti Lichess vicino al toggle suono
+  (`aria-pressed` + etichetta accessibile; verde quando connesso, palette del badge
+  backend). Sotto ~1040px resta la sola icona rotonda (con testo, brand+tab+controlli non
+  starebbero su una riga tra 768 e ~1040px); ≤400px lo stato backend diventa un pallino
+  colorato per tenere la prima riga intatta a 320/280px. Il `returnTo` è l'URL corrente,
+  quindi preserva anche `?studyId`.
+- **Bozza OAuth**: `sessionStorage['was.studyNew.draft']` autosalvata a ogni modifica
+  (effect), eliminata da `ngOnDestroy`: sopravvive solo agli unload pieni (redirect OAuth,
+  refresh) e viene ripristinata al ritorno, solo per lo stesso contesto `studyId`. Default
+  di `consumeReturnTo` aggiornato a `/studies/new`.
+- **Verifiche**: frontend **249 test verdi** (30 file; sostituita la spec di
+  `lichess-import` con `study-new`, aggiornate `study-list`/`study-detail`/`app`/
+  `app.routes`/`lichess-auth`), build ok. Live su mock backend locale (il DB H2 condiviso
+  non è stato toccato): creazione, anteprima con suggerimenti, import nuovo studio, import
+  con `studyId` (una POST per capitolo), errori dedicati, redirect storico, bozza
+  ripristinata dopo unload pieno e pulita su navigazione in-app; payload verificati senza
+  `phase`. Layout senza overflow a 1440/1024/768/320/280. Nota: dalla rete di sviluppo
+  l'API pubblica Lichess ha risposto **401** (restrizione lato Lichess/rete, codice di
+  fetch invariato da P14/P15): l'OAuth end-to-end con account reale resta da riverificare
+  alla prima occasione, come già fatto in P15.
 
 ## ISSUE-013 — Menu contestuale editor (cancella sottoalbero / promuovi a mainline)
 **OpenSpec:** **da decidere** (mini-spec se si formalizza l'infrastruttura menu) · **Effort:** medio · **Rischio:** medio.
