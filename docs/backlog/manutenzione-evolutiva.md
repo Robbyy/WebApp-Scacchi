@@ -11,17 +11,18 @@
 | 021 | Scaffold navigazione 3 sezioni + segnaposto ✅ | basso | basso | no |
 | 022 | Visualizzazione linea migliore del motore nel pannello laterale ✅ | medio | medio-basso | no |
 | 007 | "Nascondi barra" ridondante col motore attivo ✅ | basso | basso | no |
-| 008 | Rimuovere "Auto-play" dalla navigazione | basso | basso | no — mini-spec R23 |
+| 008 | Rimuovere "Auto-play" dalla navigazione 🟡 | basso | basso | no — mini-spec R23 |
 | 009 | Elenco studi su due colonne ✅ | basso | basso | no |
 | 012 | Modifica nome/descrizione/colore studio ✅ | basso | basso | no |
 | 015 | Pagina info applicazione + versioni | basso | basso-medio | no |
-| 010 | Pannello varianti adattivo nel dettaglio | medio | medio | no — mini-spec R23 |
+| 010 | Pannello varianti adattivo nel dettaglio 🟡 | medio | medio | no — mini-spec R23 |
 | 011 | Unificare creazione studio + import Lichess ✅ | medio | medio | no — mini-spec R22 |
 | 013 | Menu contestuale editor (cancella / promuovi) | medio | medio | **da decidere** |
 
 > La sola voce ancora "da decidere" è ISSUE-013: resta candidata a una **OpenSpec leggera**
 > (mini-spec) se in fase di pianificazione si valuta che il rischio lo giustifichi. Le
-> decisioni di R23 sono invece formalizzate nella mini-specifica associata a ISSUE-010/008.
+> decisioni di R23 sono formalizzate nella mini-specifica associata a ISSUE-010/008 e sono
+> in validazione con il relativo [esito](#esito-r23--issue-010--issue-008-2026-08-07).
 
 ---
 
@@ -170,14 +171,22 @@ stesso controllo duplicato: ora `@if (engineOn())` governa da solo la `EvalBar` 
 motore espone due soli pulsanti («Motore» e «Gioca contro il computer»). Verifica live su
 entrambe le pagine: motore on → barra visibile, off → barra e linea spariscono insieme.
 
-## ISSUE-008 — Rimuovere "Auto-play" dalla navigazione varianti
-**OpenSpec:** no — mini-spec R23 formalizzata il 2026-08-07 · **Effort:** basso · **Rischio:** basso.
+## ISSUE-008 — Rimuovere "Auto-play" dalla navigazione varianti 🟡
+**OpenSpec:** no — mini-spec R23 formalizzata il 2026-08-07 · **Effort:** basso · **Rischio:** basso · **Stato: 🟡 implementazione candidata (R23; due P1 aperti).**
 **Scope:** il pulsante "Auto-play" (avanzamento automatico delle mosse) è ritenuto inutile:
 la navigazione con frecce ←/→ e i pulsanti inizio/indietro/avanti/fine è sufficiente.
 **Accettazione:** pulsante e logica di avanzamento automatico rimossi; restano inizio,
 ←, →, fine; suite test verde.
 **Note:** aggiornare eventuali test e la checklist che referenziano l'auto-play. La decisione
 di dettaglio è nella [mini-specifica R23](#mini-specifica-r23--issue-010--issue-008).
+
+**Esito (R23, 2026-08-07):** rimossi dal dettaglio variante il pulsante Auto-play/Pausa, il
+signal `playing`, il timer `setInterval`, `togglePlay()`, il metodo privato `stop()` (e le sue
+chiamate in `goTo`/`first`/`prev`/`last`) e gli stili `.ctrl--play`/`.ctrl--reset`. La barra
+`.controls` espone ora esattamente quattro pulsanti omogenei — inizio, precedente, successiva,
+fine — e le frecce ←/→ da tastiera restano inalterate. `ngOnDestroy` conserva il solo
+`stockfish.dispose()`. Verificato in test e live; il flusso 4 della checklist E2E non cita più
+l'auto-play.
 
 ## ISSUE-009 — Elenco studi su due colonne ✅
 **OpenSpec:** no · **Effort:** basso · **Rischio:** basso · **Stato: ✅ completata (R22, 2026-08-06).**
@@ -227,8 +236,8 @@ dialog con: nome completo, autore, versione frontend (da `package.json`), versio
 minimale `GET /api/info` — da decidere (vincolo "no nuove librerie senza decisione").
 Cluster topbar condiviso con ISSUE-011/017.
 
-## ISSUE-010 — Pannello varianti adattivo nel dettaglio
-**OpenSpec:** no — mini-spec R23 formalizzata il 2026-08-07 · **Effort:** medio · **Rischio:** medio.
+## ISSUE-010 — Pannello varianti adattivo nel dettaglio 🟡
+**OpenSpec:** no — mini-spec R23 formalizzata il 2026-08-07 · **Effort:** medio · **Rischio:** medio · **Stato: 🟡 implementazione candidata (R23; due P1 aperti).**
 **Scope:** nel dettaglio variante non è visibile l'elenco delle altre varianti dello stesso
 studio; per cambiarle si deve tornare al dettaglio studio.
 **Accettazione:** su schermi larghi, colonna sinistra con l'elenco delle varianti dello
@@ -306,6 +315,83 @@ reazione al cambio di parametro, reset della PV con motore acceso e assenza di A
 Verifica live a **1600, 1440, 1024, 768, 375 e 320px**, senza overflow orizzontale e senza
 nuovo contenuto permanente sotto la scacchiera. Build e suite frontend verdi; documentazione e
 checklist E2E aggiornate a rilascio concluso.
+
+### Esito R23 — ISSUE-010 + ISSUE-008 (2026-08-07)
+
+**Stato:** 🟡 implementazione candidata, **non ancora rilasciata né committata**. La prima
+verifica ha confermato suite, build e layout, ma la revisione ha individuato due correzioni P1
+nel ciclo di caricamento/nell'analisi dell'editor; vanno risolte e riverificate prima di
+contrassegnare R23 come completata.
+
+Implementata come da mini-spec, **solo frontend**: nessuna API, migration o modifica a
+`variant-training`; la catena R21 `parseInfoLine` → `StockfishService.bestLine` →
+`.engine-line` è invariata.
+
+- **Componente riusabile** `variants/study-variant-nav`: `<nav aria-label="Varianti dello
+  studio">` con `variants`/`activeId` in input, `variantSelected`/`dismiss` in output. Ogni voce
+  mostra nome, badge colore e numero di mosse; la corrente ha lo stile attivo e
+  `aria-current="page"`. Non naviga mai da sé. In modalità `drawer` aggiunge il pulsante di
+  chiusura, gli dà il focus iniziale (`ngAfterViewInit`) e chiude con `Esc`; fuori dal drawer
+  `Esc` è ignorato.
+- **Dati**: `GET /api/studies/{id}` già in uso per la fase (ISSUE-016) fornisce anche le
+  varianti sorelle — nessuna chiamata aggiuntiva. Il pannello compare solo con `studyId`
+  valorizzato, variante presente nella risposta dello studio e almeno due varianti; negli altri
+  casi (variante legacy, studio con una sola variante, risposta senza `variants`) dettaglio ed
+  editor restano identici a prima.
+- **Layout**: nel dettaglio il rail è la prima colonna di `.detail`, `display:none` sotto i
+  1500px e `flex: 0 0 220px` sopra (con `position: sticky` e scorrimento **solo verticale**);
+  `max-width` di `.detail` alzata a 1520px con la classe `detail--rail`. Sotto soglia compare il
+  pulsante «Varianti» nel pannello laterale e l'elenco vive in un drawer `position: fixed`
+  (`min(320px, 86vw)`) con scrim: non entra nel flusso, quindi la scacchiera non si sposta né si
+  ridimensiona. L'**editor** non ha mai il rail: espone solo il pulsante e riusa lo stesso drawer.
+- **Navigazione e modifiche pendenti**: il dettaglio naviga subito a `/variants/{id}`; l'editor
+  passa da `requestVariantChange(id)`, che invoca `canDeactivate()` e naviga a
+  `/variants/{id}/edit` solo a esito positivo. Dopo la conferma `dirty` torna false, così il
+  guard della route non ripropone lo stesso dialog durante la navigazione (verificato live: un
+  solo dialog). Selezionare la variante già aperta non naviga e non chiede nulla, chiude solo il
+  drawer.
+- **Reazione al cambio di `:id`**: entrambe le pagine leggono `route.paramMap` (con
+  `takeUntilDestroyed`) invece dello snapshot, e a ogni emissione ricaricano azzerando lo stato
+  transitorio (percorso mosse, errore, review, elenco varianti, drawer; nell'editor anche albero,
+  `dirty` e conferma di cancellazione).
+- **Motore**: l'effetto di analisi del dettaglio dipende ora anche dalla variante caricata, così
+  al cambio l'analisi riparte dalla FEN iniziale della nuova variante — svuotando valutazione e
+  PV — anche quando la FEN coincide. Il toggle resta acceso. Mentre la variante è in
+  caricamento il pannello non è montato, quindi non può comparire una linea obsoleta.
+- **Verifiche**: frontend **279 test verdi** (31 file; nuova spec `study-variant-nav`,
+  `variant-detail`/`variant-editor` estese), build production ok (restano i soli warning di
+  budget preesistenti). Live su mock backend locale in sola lettura — il DB H2 condiviso non è
+  stato aperto: a 1600px tre colonne (rail x=88/220px | board x=340/760px | pannello x=1132/380px)
+  e nessun overflow; a 1440/1024/768/375/320px rail assente, drawer a sovrapposizione con la
+  board invariata prima e dopo l'apertura (es. 1024px: board x=142 w=760 in entrambi i casi),
+  `document.scrollWidth == innerWidth` a tutte le larghezze e `.board-col` sempre con il solo
+  `board-with-eval`. Cambio variante col motore acceso: profondità che riparte da 6 con PV nuova,
+  toggle ancora acceso. Editor: dialog «Modifiche non salvate» su selezione con modifiche
+  pendenti — «Annulla» resta sulla variante corrente conservando la modifica, «Esci senza
+  salvare» carica la variante scelta senza un secondo dialog. Nessun errore in console.
+
+### Punti aperti R23 — bloccanti per il rilascio
+
+1. **P1 — Risposte HTTP fuori ordine al cambio rapido di variante.** In dettaglio ed editor
+   `route.paramMap` chiama `load()` e ogni load apre nuove subscribe a `getVariant`,
+   `getStudy` e (nel dettaglio) `getForVariant`; `takeUntilDestroyed` le interrompe solo alla
+   distruzione del componente. Una risposta della variante precedente, arrivata dopo quella
+   corrente, può quindi sovrascrivere dettaglio, albero, review o elenco sorelle. Correggere
+   con una pipeline cancellabile (`switchMap`) o un token/generazione di richiesta applicato
+   anche alle letture dipendenti. Aggiungere test con risposte ritardate emesse in ordine
+   inverso, per entrambi i componenti.
+2. **P1 — Riavvio Stockfish nell'editor con FEN invariata.** L'effetto dell'editor dipende
+   dalla sola FEN: passando a un'altra variante con la stessa posizione, la PV/valutazione
+   precedente può non essere azzerata e l'analisi può non ripartire. Introdurre un segnale
+   della variante **effettivamente caricata**, azzerato durante il load e impostato solo dalla
+   risposta corrente; renderlo dipendenza dell'effetto motore. Aggiungere il test con due ID
+   diversi e identica FEN.
+
+**Migliorie non bloccanti:** chiudere il drawer dopo l'esito positivo di `router.navigate()` e
+restituire il focus al pulsante «Varianti» quando il drawer è chiuso con Esc, × o scrim.
+
+**Limite noto:** resta aperta la race UCI tra due FEN consecutivi documentata sotto ISSUE-022,
+esplicitamente fuori dal perimetro di R23.
 
 ## ISSUE-011 — Unificare creazione studio + import Lichess ✅
 **OpenSpec:** no — mini-spec R22 formalizzata il 2026-08-06 · **Effort:** medio · **Rischio:** medio · **Stato: ✅ completata (R22, 2026-08-06).**

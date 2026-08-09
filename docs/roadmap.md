@@ -34,9 +34,13 @@ Il piano esclude volutamente bug, audit e infrastruttura.
 > 2026-08-06): pagina unica `/studies/new` per creare/importare uno studio (Lichess
 > incluso, con comando Connetti/Disconnetti in topbar e bozza ripristinata dopo l'OAuth),
 > modifica inline dei metadati nel dettaglio studio e griglia home a due colonne.
-> Prossimo incremento: **R23** (ISSUE-010 + ISSUE-008). Mini-specifica formalizzata:
-> rail varianti solo su schermi larghi, drawer alle altre larghezze e nell'editor,
-> protezione delle modifiche non salvate e rimozione di Auto-play.
+>
+> 🟡 **R23 — Navigazione tra varianti** — implementazione candidata (ISSUE-010 + ISSUE-008,
+> 2026-08-07): elenco varianti, rail/drawer, guard editor e rimozione Auto-play completati;
+> prima del commit restano due P1 sul cambio rapido di variante (ordine risposte HTTP) e sul
+> riavvio del motore nell'editor con FEN invariata.
+> Prossimo incremento dopo la chiusura di R23: **R24** (ISSUE-013 +
+> `issue-016-move-comments`), previo gate sul formato commento/NAG dei `MoveNode`.
 
 In sintesi: navigazione → linea migliore del motore → gestione studi → flusso
 varianti/editor → Mediogioco e Finale a slice → impostazioni → parametri motore.
@@ -45,9 +49,9 @@ varianti/editor → Mediogioco e Finale a slice → impostazioni → parametri m
 
 ## Più avanti
 
-- Responsive/UX scacchiera: dopo R23, valutare un layout a griglia per condividere la riga
-  board+pannello tra ~800 e ~1280px. R23 non ridimensiona strutturalmente la scacchiera:
-  usa il drawer per la sola navigazione varianti sotto 1500px.
+- Responsive/UX scacchiera: dopo la chiusura di R23, valutare un layout a griglia per condividere
+  la riga board+pannello tra ~800 e ~1280px. R23 non ridimensiona strutturalmente la
+  scacchiera: usa il drawer per la sola navigazione varianti sotto 1500px.
 - Export PGN di una variante o di un intero studio (generazione frontend `tree` → PGN con varianti tra parentesi).
 - Import file `.pgn` locale (multi-partita non proveniente da Lichess).
 - Spostamento di varianti tra studi (endpoint `PUT /api/variants/{id}/study` + UI).

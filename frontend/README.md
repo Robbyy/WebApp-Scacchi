@@ -26,13 +26,16 @@ cornice legno, pezzi Staunton SVG, layout a pannelli). Libreria regole/PGN:
 ## Stato
 
 Scaffold Angular presente e operativo (componenti **standalone**, signals,
-`OnPush`). Parte 1 (Prototipi 0-6) e **Parte 2 (P7-P19)** implementate. Suite:
-**175 test** (Vitest) verdi.
+`OnPush`). Parte 1 (Prototipi 0-6) e **Parte 2 (P7-P19)** implementate, più le
+evolutive R20-R22 e implementazione candidata R23. Suite: **279 test** (Vitest) verdi;
+prima del commit R23 restano due P1 documentati nel backlog (risposte fuori ordine al cambio
+variante e riavvio del motore nell'editor con FEN invariata).
 
 Aree principali (sotto `src/app`):
 
 - `chessboard` — scacchiera custom (click/drag/promozione) + barra valutazione;
-- `variants` — lista/dettaglio/editor/training/import PGN;
+- `variants` — lista/dettaglio/editor/training/import PGN e pannello varianti
+  dello studio (`study-variant-nav`: rail da 1500px, drawer altrove);
 - `studies` — home a studi, dettaglio, import e OAuth Lichess;
 - `stats` — viste statistiche variante/studio;
 - `reviews` — vista «Ripeti oggi» (spaced repetition);

@@ -1,6 +1,7 @@
 # Checklist E2E manuale - WebApp Scacchi
 
-> Checklist ripetibile per la validazione manuale end-to-end (aggiornata fino al rilascio evolutivo R22).
+> Checklist ripetibile per la validazione manuale end-to-end (aggiornata fino alla candidata
+> evolutiva R23, ancora da chiudere dopo la correzione dei P1 documentati nel backlog).
 > Eseguibile in pochi minuti dopo ogni rilascio significativo, prima di dichiararlo completato.
 > Complementare ai test automatici (vedi sezione "Copertura automatica" in fondo).
 
@@ -20,7 +21,7 @@
 - [ ] **1. Creare uno studio** — dalla home `Nuovo studio` (si apre la pagina `/studies/new`, R22) → nome «Studio E2E», colore a scelta → `Crea studio`. Compare un **toast** di conferma e si apre il **dettaglio** dello studio creato; tornando alla home lo studio è presente.
 - [ ] **2. Creare una variante lineare nello studio** — aprire «Studio E2E» → `Nuova variante` → giocare `1.e4 e5 2.Cf3`, nome «Test E2E», lato Bianco → `Salva variante`. Compare un **toast** di conferma e si apre il dettaglio.
 - [ ] **3. Verificarla nello studio** — tornare allo studio: la variante è presente tra i capitoli con badge colore e numero mosse corretti.
-- [ ] **4. Replay** — usare i controlli inizio/indietro/avanti/fine e **Auto-play**; scorrere anche con le frecce `←/→` da tastiera.
+- [ ] **4. Replay (R23)** — la barra ha **quattro** controlli: inizio, precedente, successiva, fine (nessun Auto-play/Pausa, ISSUE-008). Usarli tutti e scorrere anche con le frecce `←/→` da tastiera; il contatore «Semimossa n / N» segue la navigazione.
 - [ ] **5. Allenarla fino al completamento** — `Allena questa variante` → giocare la linea corretta fino allo stato **«completata»**.
 - [ ] **6. Mossa errata in allenamento** — riavviare e giocare una mossa sbagliata: compare il **feedback di errore** e il contatore errori aumenta; la posizione non avanza.
 - [ ] **7. Modificarla e salvare** — dal dettaglio `Modifica variante` → cambiare nome/mosse → `Salva modifiche`. Toast di conferma; le modifiche persistono dopo riapertura.
@@ -71,6 +72,15 @@
 
 ---
 
+## Flussi aggiunti (evolutive R23)
+
+- [ ] **41. Pannello varianti nel dettaglio (ISSUE-010, R23)** — aprire una variante di uno studio con **almeno due** varianti. A **≥1500px** compare la colonna «Varianti» a sinistra della scacchiera (rail ~220px), con nome, badge colore e numero mosse di ogni variante e quella aperta evidenziata; il pulsante «Varianti» **non** compare. Cliccando un'altra voce si apre il suo dettaglio (titolo, badge, mosse e contatore aggiornati) senza passare dal dettaglio studio; la scacchiera **non** cambia dimensione né si sposta e non compare nulla sotto di essa. Aprire poi una variante **senza studio** (legacy) e una in uno studio con **una sola** variante: né rail né pulsante.
+- [ ] **42. Drawer varianti sotto i 1500px (ISSUE-010, R23)** — a 1440px o meno il rail sparisce e nel pannello laterale compare il pulsante **«Varianti»** (`aria-expanded`). Premendolo si apre un drawer a sovrapposizione da sinistra: il focus va al pulsante di chiusura, `Esc` e il pulsante «×» lo chiudono, e scegliere una variante naviga **e** richiude il drawer. Con il drawer aperto la scacchiera resta nella stessa posizione e dimensione. Ripetere a 1024/768/375/320px: nessuno scorrimento orizzontale della pagina, il drawer non taglia i nomi.
+- [ ] **43. Cambio variante dall'editor (ISSUE-010, R23)** — in `/variants/{id}/edit` c'è il solo pulsante «Varianti» (mai il rail, a nessuna larghezza). **Senza** modifiche, scegliere un'altra variante la carica subito (nome, lato e mosse aggiornati, nessun dialog). **Con** modifiche non salvate, la scelta apre il dialog «Modifiche non salvate»: `Annulla` resta sulla variante corrente **conservando** la modifica e lascia il drawer aperto; `Esci senza salvare` carica la variante scelta — il dialog **non** deve ricomparire una seconda volta.
+- [ ] **44. Motore al cambio variante (ISSUE-010/022, R23)** — nel dettaglio, con il **motore acceso** e la «Linea migliore» visibile, passare a un'altra variante: il toggle resta acceso, valutazione e linea si svuotano, compare «Analisi in corso…» e la profondità **riparte dal basso** con una linea nuova. Non deve mai restare visibile la linea della variante precedente.
+
+---
+
 ## Pulizia
 
 - [ ] Eliminare studi e varianti di test creati durante la checklist, lasciando i seed di default.
@@ -82,7 +92,7 @@
 Questi flussi sono coperti anche da test automatici (da eseguire prima della checklist manuale):
 
 - **Backend** (`mvnw.cmd test` — **84 test**): CRUD varianti, validazione legalità (mainline e albero, `400` strutturato), round-trip albero `tree → DB → DTO`, `MoveNode`/mainline, CRUD studi (creazione variante nello studio, cancellazione a cascata, import bulk e upsert Lichess), sessioni di allenamento (`TrainingSessionControllerTest`), statistiche (`StatsControllerTest`), spaced repetition (`ReviewSchedulerTest` SM-2 puro + `ReviewControllerTest`).
-- **Frontend** (`npm test -- --watch=false` — **249 test**): scacchiera (click, drag, promozione, hide-on-drag, audio), editor (mosse, varianti, promuovi a mainline, conferma cancellazione, guard, creazione in studio), training (mosse corrette/errate, rami, completamento, audio, submit sessione), studi (lista/dettaglio/eliminazione, CTA e modifica inline R22), pagina unica creazione/import R22 (`study-new` — creazione locale, anteprima e suggerimenti, upsert con metadati locali, `?studyId` valido/inesistente/non-Aperture, errore di import parziale, bozza `sessionStorage`; redirect della route storica in `app.routes`), import PGN (anche in studio) e parser `pgn`, import/auth Lichess (`lichess`, `lichess-auth`), comando Lichess in topbar (`app`), motore (`uci` — parsing PV completa, `pvToSan`, `numberedPv` —, `play`, `stockfish.service` — ciclo spegnimento/riaccensione con worker finto e righe `info` tardive), linea migliore e toggle unico del pannello motore R21 (`variant-detail`, `variant-editor`), statistiche (`stats-format`, `stats.service`, `variant-stats`, `study-stats`), ripetizione (`review-format`, `review.service`, `review-due`), navigazione R20 (`app`, `app.routes`, `study-sections`, `coming-soon`), più i servizi `StudyService`/`MoveSoundService` e le utilità `move-tree`.
+- **Frontend** (`npm test -- --watch=false` — **279 test**): scacchiera (click, drag, promozione, hide-on-drag, audio), editor (mosse, varianti, promuovi a mainline, conferma cancellazione, guard, creazione in studio), training (mosse corrette/errate, rami, completamento, audio, submit sessione), studi (lista/dettaglio/eliminazione, CTA e modifica inline R22), pagina unica creazione/import R22 (`study-new` — creazione locale, anteprima e suggerimenti, upsert con metadati locali, `?studyId` valido/inesistente/non-Aperture, errore di import parziale, bozza `sessionStorage`; redirect della route storica in `app.routes`), import PGN (anche in studio) e parser `pgn`, import/auth Lichess (`lichess`, `lichess-auth`), comando Lichess in topbar (`app`), motore (`uci` — parsing PV completa, `pvToSan`, `numberedPv` —, `play`, `stockfish.service` — ciclo spegnimento/riaccensione con worker finto e righe `info` tardive), linea migliore e toggle unico del pannello motore R21 (`variant-detail`, `variant-editor`), pannello varianti R23 (`study-variant-nav` — elenco, variante attiva, sola notifica della selezione, focus/Esc del drawer — più i casi senza pannello, il cambio dal dettaglio, il cambio dall'editor pulito/sporco, la reazione al cambio di `:id`, il riavvio dell'analisi e l'assenza di Auto-play in `variant-detail`/`variant-editor`), statistiche (`stats-format`, `stats.service`, `variant-stats`, `study-stats`), ripetizione (`review-format`, `review.service`, `review-due`), navigazione R20 (`app`, `app.routes`, `study-sections`, `coming-soon`), più i servizi `StudyService`/`MoveSoundService` e le utilità `move-tree`.
 
 ### Runner E2E browser (rinviato)
 Un runner E2E completo (Playwright/Cypress) è **rinviato**: richiede tooling e download aggiuntivi non prioritari in questa fase. La combinazione *test unit/integrazione + questa checklist + verifica live nel preview* copre i percorsi critici. Da rivalutare quando l'app si avvicina all'uso reale o all'integrazione CI/CD (terza tornata).

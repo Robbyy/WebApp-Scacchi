@@ -48,7 +48,7 @@ Aree principali sotto `src/app`:
 | Area | Responsabilità |
 |------|----------------|
 | `chessboard` | Scacchiera custom (click, drag, promozione) + barra valutazione |
-| `variants` | Lista, dettaglio, editor, training, import PGN |
+| `variants` | Lista, dettaglio, editor, training, import PGN, pannello varianti dello studio (`study-variant-nav`, rail/drawer) |
 | `studies` | Home a studi, dettaglio, import e OAuth Lichess |
 | `stats` | Viste statistiche per variante e studio |
 | `reviews` | Vista «Ripeti oggi» (spaced repetition) |
