@@ -464,14 +464,17 @@ approvati dai rispettivi gate Terra. Si applicano quindi le fasi di implementazi
 semantica, review, circuit breaker e Git del [workflow GitHub](github-issue-ai-workflow.md),
 anche quando la change e' nata direttamente dal backlog.
 
-Per `ISSUE-016`, la change `issue-016-phase-domain-model` non dovrebbe implementare tutto
-Mediogioco/Finale. Deve invece fissare il modello che abilita le change successive:
+Per `ISSUE-016`, la change `issue-016-phase-domain-model` non doveva implementare tutto
+Mediogioco/Finale. Ha fissato invece il modello che abilita le evolutive successive:
 
 - `issue-016-custom-starting-fen`;
-- `issue-016-move-comments`;
 - `issue-016-middlegame-section`;
 - `issue-016-endgame-section`;
 - `issue-016-play-position-vs-engine`.
+
+`issue-016-move-comments` è stata poi riclassificata come estensione limitata del tree e
+inclusa in R24 con mini-specifica insieme a ISSUE-013; non richiede una change OpenSpec
+individuale. Le quattro voci sopra restano change OpenSpec distinte.
 
 ## 10. Archiviare una change completata
 

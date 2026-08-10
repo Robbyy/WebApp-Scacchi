@@ -55,8 +55,8 @@ Riferimenti: [backlog](backlog.md),
 | **009** ✅ | Usa meglio lo spazio dell'home su desktop | griglia card studi | rilasciata con R22 (2026-08-06) |
 | **010** ✅ | Permette di passare tra varianti senza tornare allo studio | dettaglio variante, editor, layout responsivo | rilasciata con R23 (2026-08-10) |
 | **008** ✅ | Rimuove l'auto-play non necessario | controlli del dettaglio variante | rilasciata con R23 (2026-08-10) |
-| **013** | Operazioni rapide sull'albero di mosse | editor, menu contestuale, conferma | può condividere il lavoro UI con i commenti |
-| **016** | Estende l'app a Mediogioco e Finale | modello, editor, API, sezioni UI | `phase-domain-model` già implementata; restano cinque slice |
+| **013** | Operazioni rapide sull'albero di mosse | editor, menu contestuale, conferma | mini-spec R24 formalizzata; condivide il lavoro UI con i commenti |
+| **016** | Estende l'app a Mediogioco e Finale | modello, editor, API, sezioni UI | `phase-domain-model` già implementata; commenti in R24, restano quattro slice OpenSpec |
 | **015** | Espone identità e versioni dell'app | topbar, contratto versione FE/BE | da consolidare con l'hub Impostazioni |
 | **017** | Centralizza le impostazioni e parametrizza SM-2 | topbar, persistenza, `ReviewScheduler` | richiede OpenSpec e scelta DB/localStorage |
 | **014** | Configura i parametri UCI del motore | worker Stockfish, Impostazioni | richiede audit UCI e ISSUE-017 |
@@ -67,9 +67,10 @@ La slice `issue-016-phase-domain-model` è già completata: `Study.phase` distin
 `OPENING`, `MIDDLEGAME` ed `ENDGAME`; import Lichess, training, statistiche e SM-2
 rimangono intenzionalmente limitati alle Aperture.
 
-Restano, in ordine di dipendenza, `issue-016-custom-starting-fen`,
-`issue-016-move-comments`, `issue-016-middlegame-section`,
-`issue-016-endgame-section` e `issue-016-play-position-vs-engine`.
+Restano da realizzare `issue-016-move-comments` (già inclusa in R24 con mini-spec) e, in
+ordine di dipendenza OpenSpec, `issue-016-custom-starting-fen`,
+`issue-016-middlegame-section`, `issue-016-endgame-section` e
+`issue-016-play-position-vs-engine`.
 
 La prima di queste è una vera slice di dominio, non una semplice UI: il DTO di
 creazione non espone ancora `startingFen`, `VariantService` imposta sempre la FEN
@@ -87,7 +88,7 @@ backend e test di regressione, oltre all'editor visuale.
 | **R21 — Motore leggibile** ✅ | **022**, **007** | È il miglior incremento immediato per lo studio e concentra nel medesimo pannello la rimozione del toggle ridondante. | ✅ Rilasciato il 2026-08-05: `UciScore.pv` conserva l'intera sequenza UCI, `pvToSan`/`numberedPv` la rendono in SAN numerata dalla posizione analizzata e `StockfishService.bestLine` la azzera a ogni nuova analisi; il blocco «Linea migliore» sta in `.engine-panel` tra i controlli motore e «Allena questa variante», con «Analisi in corso…» finché manca la PV. Rimosso il toggle «Nascondi/Mostra barra» da dettaglio ed editor: spegnendo il motore spariscono barra e linea. Nessun contenuto aggiunto sotto la scacchiera. |
 | **R22 — Ciclo di vita dello studio** ✅ | **011**, **012**, **009** | Evita tre passaggi separati sulla home/form: un solo modello di form può creare, modificare e importare, mentre la griglia viene verificata nello stesso contesto. | ✅ Rilasciato il 2026-08-06: pagina unica `/studies/new` (creazione, anteprima/upsert Lichess, `?studyId` verificato con semantica additiva preservata, redirect dalla route storica con query param), campi metadati condivisi `study-form-fields` riusati dalla modifica **inline** del dettaglio (`PUT` esistente, `phase` mai inviata), comando Lichess compatto in topbar con bozza in `sessionStorage` ripristinata al ritorno OAuth, griglia home `auto-fit/minmax(320px)` a massimo due colonne. Dettagli nell'[esito R22](backlog/manutenzione-evolutiva.md#esito-r22--issue-011-2026-08-06). |
 | **R23 — Navigazione tra varianti** ✅ | **010**, **008** | Completa il flusso di consultazione della variante e affronta insieme i controlli della stessa schermata, dopo che R21 ne ha fissato il pannello motore. | ✅ Rilasciato il 2026-08-10: rail/drawer, guard editor e rimozione Auto-play; corretti i P1 su risposte HTTP fuori ordine e riavvio motore a FEN invariata. 288 test, build e checklist live a 1600/1440/1024/768/375/320px verdi. Dettagli nell'[esito R23](backlog/manutenzione-evolutiva.md#esito-r23--issue-010--issue-008-2026-08-10). |
-| **R24 — Editor più espressivo** | **013**, `issue-016-move-comments` | Entrambi agiscono sul tree editor: una sola revisione dell'interazione sulle mosse riduce duplicazioni e rende l'editor utile anche prima delle nuove sezioni. | Menu accessibile con conferma per la distruzione; promozione mainline invariata; commento/testo e NAG persistono nel tree, senza alterare le righe storiche. |
+| **R24 — Editor più espressivo** | **013**, `issue-016-move-comments` | Entrambi agiscono sul tree editor: una sola revisione dell'interazione sulle mosse riduce duplicazioni e rende l'editor utile anche prima delle nuove sezioni. | Menu accessibile per annotare, promuovere o eliminare la mossa selezionata con il suo sottoalbero; commento/testo e un NAG persistono nel tree JSON retrocompatibile, senza alterare righe storiche né import PGN. |
 | **R25 — Posizioni manuali** | `issue-016-custom-starting-fen` | È il vero sblocco funzionale di Mediogioco/Finale e merita un rilascio isolato per il rischio scacchistico e di persistenza. | OpenSpec completa; editor con palette, validità legale, FEN tecnica e salvataggio solo se valido; backend valida FEN e albero dalla FEN scelta. |
 | **R26 — Mediogioco reale** | `issue-016-middlegame-section` | Trasforma il segnaposto di R20 nella prima sezione posizionale utilizzabile; riusa modello e editor stabilizzati in R25. | Lista, studio, posizioni e dettaglio di Mediogioco; assenza esplicita di import Lichess, training, statistiche e SM-2. |
 | **R27 — Finale reale** | `issue-016-endgame-section` | Replica il paradigma del Mediogioco solo dopo averne validato il riuso, evitando di sviluppare due sezioni divergenti in parallelo. | Lista, studio, posizioni e dettaglio Finale riusano i componenti comuni; regressione Aperture/Mediogioco verde. |
@@ -120,7 +121,7 @@ esplicitamente `localStorage` oppure un modello già associabile a utente.
 |---|---|---|
 | R22 | ✅ [Mini-spec di ISSUE-011](backlog/manutenzione-evolutiva.md#mini-specifica-r22--issue-011) formalizzata: pagina unica, semantica del link Lichess e comportamento dell'upsert. | ✅ Eseguita (2026-08-06): test form/create/import, `studyId` valido/inesistente/non-Aperture, redirect storico e modifica inline (frontend 249 verdi); verifica live di flussi, bozza ripristinata dopo unload pieno, OAuth end-to-end con account Lichess reale, topbar e griglia a 1440/1024/768/320/280px. La precedente risposta 401 era legata alla rete di sviluppo. |
 | R23 | ✅ [Mini-spec R23 — ISSUE-010 + ISSUE-008](backlog/manutenzione-evolutiva.md#mini-specifica-r23--issue-010--issue-008) formalizzata: rail da 1500px, drawer sotto soglia, navigazione esplicita nell'editor e rimozione Auto-play. | ✅ Eseguita (2026-08-10): P1 corretti con pipeline cancellabile e identità della variante caricata; frontend 288 verdi, build ok e checklist live 41–44 su app reale a 1600/1440/1024/768/375/320px. |
-| R24 | Specifica del formato commento/NAG e compatibilità JSON dei `MoveNode` preesistenti. | Test tree TypeScript e serializzazione/deserializzazione backend; nessuna perdita di mosse esistenti. |
+| R24 | ✅ [Mini-specifica R24](backlog/manutenzione-evolutiva.md#mini-specifica-r24--issue-013--issue-016-move-comments) formalizzata il 2026-08-10: NAG singolo, commento testuale limitato, JSON retrocompatibile, menu azioni accessibile; «Elimina continuazioni» resta fuori scope e tra i punti aperti. | Test tree TypeScript e serializzazione/deserializzazione backend, menu/dialog e lettura editor/dettaglio; nessuna perdita di mosse o annotazioni esistenti. |
 | R25–R28 | OpenSpec completa per ogni slice di ISSUE-016, senza ridecidere il modello a fasi già approvato. | Test API/validazione, frontend e checklist manuale della fase interessata. |
 | R29 | Decisione di persistenza delle preferenze e contratto versione backend. | Test di `ReviewScheduler` con parametri e verifica che le schedule esistenti non vengano ricalcolate. |
 | R30 | Audit reale delle opzioni UCI emesse dal worker Stockfish asm.js. | Test del mapping opzioni/comandi UCI e verifica live del motore. |

@@ -99,8 +99,10 @@ Nella versione rilasciata non risultano bug bloccanti attivi. R23 ha chiuso i du
 
 **R23** (ISSUE-010 + ISSUE-008) è rilasciata — vedi
 [esito R23](backlog/manutenzione-evolutiva.md#esito-r23--issue-010--issue-008-2026-08-10).
-Il prossimo incremento è **R24** (ISSUE-013 + `issue-016-move-comments`), che richiede il
-gate sul formato commento/NAG dei `MoveNode`.
+Il prossimo incremento è **R24** (ISSUE-013 + `issue-016-move-comments`): la sua
+[mini-specifica](backlog/manutenzione-evolutiva.md#mini-specifica-r24--issue-013--issue-016-move-comments)
+ha fissato formato commento/NAG, compatibilità JSON e interazioni del menu. Resta aperta,
+fuori dal rilascio, la possibile azione «Elimina continuazioni».
 
 La terza tornata infrastrutturale prosegue poi in quest'ordine:
 

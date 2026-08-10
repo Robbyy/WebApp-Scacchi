@@ -41,7 +41,7 @@
 | 015 | Pagina info + versioni | manutenzione | diretto | da fare |
 | 010 | Pannello varianti adattivo nel dettaglio | manutenzione | mini-spec R23 | ✅ fatto (R23) |
 | 011 | Unifica creazione studio + import Lichess | manutenzione | mini-spec R22 | ✅ fatto (R22) |
-| 013 | Menu contestuale editor | manutenzione | OpenSpec? da decidere | da fare |
+| 013 | Menu contestuale editor | manutenzione | diretto — mini-spec R24 | da fare |
 | 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | spezzata in change incrementali |
 | 017 | Menu "Impostazioni" + SM-2 | sviluppo | OpenSpec | da fare |
 | 014 | Parametri motore Stockfish (UCI) | sviluppo | OpenSpec | da fare |

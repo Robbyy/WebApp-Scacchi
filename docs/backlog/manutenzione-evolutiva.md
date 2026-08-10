@@ -17,12 +17,13 @@
 | 015 | Pagina info applicazione + versioni | basso | basso-medio | no |
 | 010 | Pannello varianti adattivo nel dettaglio ✅ | medio | medio | no — mini-spec R23 |
 | 011 | Unificare creazione studio + import Lichess ✅ | medio | medio | no — mini-spec R22 |
-| 013 | Menu contestuale editor (cancella / promuovi) | medio | medio | **da decidere** |
+| 013 | Menu contestuale editor (cancella / promuovi) | medio | medio | no — mini-spec R24 |
 
-> La sola voce ancora "da decidere" è ISSUE-013: resta candidata a una **OpenSpec leggera**
-> (mini-spec) se in fase di pianificazione si valuta che il rischio lo giustifichi. Le
-> decisioni di R23 sono formalizzate nella mini-specifica associata a ISSUE-010/008; il
-> relativo [esito](#esito-r23--issue-010--issue-008-2026-08-10) è rilasciato.
+> Le decisioni per il prossimo incremento sono formalizzate nella
+> [mini-specifica R24](#mini-specifica-r24--issue-013--issue-016-move-comments): ISSUE-013
+> resta una manutenzione diretta, mentre `issue-016-move-comments` è la sua estensione
+> contenuta del modello `MoveNode`. L'alternativa «Elimina continuazioni» non fa parte di R24
+> ed è registrata tra i punti aperti della mini-specifica.
 
 ---
 
@@ -537,18 +538,105 @@ Implementata come da mini-spec, solo frontend (nessuna nuova API, parser invaria
   invariato da P14/P15.
 
 ## ISSUE-013 — Menu contestuale editor (cancella sottoalbero / promuovi a mainline)
-**OpenSpec:** **da decidere** (mini-spec se si formalizza l'infrastruttura menu) · **Effort:** medio · **Rischio:** medio.
+**OpenSpec:** no — mini-spec R24 formalizzata il 2026-08-10 · **Effort:** medio · **Rischio:** medio.
 **Scope:** nell'editor manca un modo diretto, dal pannello "Mosse & Varianti", per operare
 sull'albero a partire da una mossa.
-**Accettazione:** menu contestuale (tasto destro) su ogni mossa con due voci:
-- **"Cancella dalla mossa successiva in poi"** (*logica nuova*): elimina tutti i figli del
-  nodo (incluse sotto-varianti), rendendolo foglia; richiede **dialog di conferma**.
+**Accettazione:** menu azioni accessibile su ogni mossa, disponibile anche con tasto destro,
+con due comandi:
+- **"Elimina mossa"** (*riuso* della logica esistente): rimuove il nodo scelto e tutto il suo
+  sottoalbero; se ha figli richiede la conferma già prevista.
 - **"Promuovi a mainline"** (*riuso* di `promoteToMainline` in `move-tree.ts`): visibile
   solo se la mossa è una sotto-variante (tra parentesi, non `children[0]`).
 
-Il click sinistro (navigazione/selezione) resta invariato; le voci distruttive sono
-distinte visivamente; il salvataggio passa per `PUT /api/variants/{id}` (nessun cambio
-schema: si modifica il `tree` JSON).
-**Note:** il grosso del lavoro è l'infrastruttura del menu (right-click, posizionamento,
-dismiss, stile, accessibilità). Verificare coerenza di `moves[]` (mainline derivata) dopo
-cancellazione/promozione.
+Il click sinistro (navigazione/selezione) resta invariato; le voci distruttive sono distinte
+visivamente; il salvataggio passa per `PUT /api/variants/{id}`. La decisione di dettaglio,
+compresa l'estensione limitata di `MoveNode` per i commenti, è nella
+[mini-specifica R24](#mini-specifica-r24--issue-013--issue-016-move-comments).
+
+### Mini-specifica R24 — ISSUE-013 + `issue-016-move-comments`
+
+**Obiettivo.** R24 rende l'albero di una variante più leggibile e modificabile direttamente
+dal pannello «Mosse & Varianti»: azioni riferite alla singola mossa, commento testuale e una
+sola annotazione scacchistica sintetica. Non introduce nuove sezioni di gioco, nuove route o
+nuovi flussi di import.
+
+**Modello dati e compatibilità.** `MoveNode` viene esteso in frontend e backend con due campi
+opzionali, persistiti nel medesimo JSON dell'albero:
+
+```ts
+type MoveNag = '!' | '?' | '!!' | '??' | '!?' | '?!';
+
+interface MoveNode {
+  san: string;
+  children: MoveNode[];
+  comment?: string;
+  nag?: MoveNag;
+}
+```
+
+- Una mossa può avere commento, NAG o entrambi; il NAG è **uno solo** e i sei valori sono
+  mutuamente esclusivi. Rimuovendo l'unico valore selezionato non resta il campo `nag`.
+- Il commento è testo semplice, senza HTML né Markdown: viene sottoposto a `trim`, un valore
+  vuoto non viene salvato e la sua lunghezza massima è **1.000 caratteri**.
+- I JSON già salvati, privi dei due campi, restano validi e vengono letti con `comment`/`nag`
+  assenti. Il backend accetta i payload storici, valida lunghezza e insieme dei NAG e conserva
+  l'invariante `children[0]` = mainline; `moves[]` continua a essere derivato dalla mainline.
+- Non serve una migration Liquibase né cambiano endpoint o schema relazionale: `tree` è già
+  una colonna JSON testuale convertita da `TreeConverter`. Il record Java deve mantenere un
+  costruttore a due argomenti per non rompere i chiamanti esistenti durante l'estensione.
+
+**Azioni sulle mosse.** Il click sinistro sulla mossa mantiene l'attuale significato di
+selezione/navigazione. Ogni mossa espone un pulsante azioni `⋮`, con etichetta accessibile
+«Azioni per &lt;SAN&gt;»; è utilizzabile con mouse, touch e tastiera. Il tasto destro apre lo
+stesso menu come scorciatoia, ma non è l'unico modo per raggiungerlo.
+
+- «Annota la mossa» apre un piccolo dialog modale con textarea e i sei pulsanti NAG. Il
+  pulsante del NAG selezionato è distinguibile e una seconda attivazione lo rimuove; «Salva»
+  aggiorna l'albero locale e lo marca come non salvato, «Annulla» non produce modifiche.
+- «Promuovi a mainline» appare solo per una mossa fuori dalla mainline e riusa
+  `promoteToMainline`: la linea selezionata diventa il percorso di indici zero, senza perdere
+  commenti, NAG o sotto-varianti.
+- «Elimina mossa» elimina la mossa selezionata e tutto il suo sottoalbero, esattamente come
+  il controllo già presente nell'editor. Se il nodo ha figli, il dialog di conferma esplicita
+  la perdita del sottoalbero; se è una foglia l'eliminazione resta immediata. Dopo la rimozione
+  la selezione torna al nodo padre. Non esiste in R24 un secondo comando distruttivo.
+
+Il menu si chiude con `Esc`, click esterno o scelta di un comando e restituisce il focus al
+pulsante che lo ha aperto. Usa semantica menu e stati ARIA appropriati (`aria-haspopup`,
+`aria-expanded`); il dialog annotazioni intrappola il focus finché è aperto e lo restituisce
+all'azione di origine. A viewport stretti il menu/dialog resta sovrapposto e non modifica
+larghezza o posizione della scacchiera.
+
+**Lettura e salvataggio.** Nell'editor il NAG è mostrato accanto al SAN e il commento come
+nota testuale sotto la mossa corrispondente; la stessa rappresentazione in sola lettura è
+visibile nel pannello «Mosse & Varianti» del dettaglio variante. Testi lunghi vanno a capo e
+non generano overflow orizzontale. Le modifiche restano locali finché l'utente non usa il
+normale salvataggio della variante; il `PUT /api/variants/{id}` porta l'intero albero esteso.
+
+**Import PGN/Lichess.** R24 non estende il parser: commenti `{...}`/`; ...`, NAG numerici
+`$n` e suffissi `!?` presenti nell'input sono ancora accettati sintatticamente e scartati.
+L'import non valorizza `comment` né `nag`; la conservazione delle annotazioni già presenti in
+un PGN è una evolutiva distinta, perché richiede associare ogni token al `MoveNode` corretto.
+
+**Fuori scope.** Nessun cambiamento a parser PGN/Lichess, training, statistiche, motore UCI,
+layout strutturale della scacchiera, FEN personalizzata o sezioni Mediogioco/Finale. I
+controlli esistenti «Rendi mainline» ed «Elimina mossa» possono restare come scorciatoie per
+la mossa corrente, ma devono invocare la stessa logica delle rispettive azioni nel menu.
+
+**Criteri di uscita R24.** Test frontend per apertura/chiusura e uso tastiera/touch del menu,
+annotazione (creazione, modifica, cancellazione, limite), visibilità della promozione,
+eliminazione foglia/sottoalbero e salvataggio/caricamento senza perdita di annotazioni. Test
+di `move-tree.ts` verificano che promozione, aggiunta e rimozione preservino i metadati dei
+nodi non rimossi. Test backend verificano serializzazione del nuovo JSON, lettura di JSON
+legacy e rifiuto dei metadati non validi. Build e suite complete verdi; verifica live
+dell'editor e del dettaglio a **1600, 1440, 1024, 768, 375 e 320px**, senza overflow e senza
+contenuti permanenti aggiunti sotto la scacchiera. A rilascio concluso si aggiornano checklist
+E2E, stato e piano.
+
+### Punti aperti — post R24
+
+- **Elimina continuazioni (da decidere):** possibile comando futuro che manterrebbe la mossa
+  selezionata ed eliminerebbe soltanto tutti i suoi figli (mainline e sotto-varianti),
+  rendendola una foglia. Non è incluso in R24, non è un alias di «Elimina mossa» e richiederà
+  una decisione esplicita su etichetta, conferma e collocazione nel menu prima di diventare
+  una nuova issue o un'estensione di ISSUE-013.

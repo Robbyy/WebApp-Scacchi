@@ -64,7 +64,7 @@ Aree principali sotto `src/app`:
 - **Albero mosse `MoveNode`** — `children[0]` è sempre la mainline; gli altri figli sono sotto-varianti. Il campo `moves[]` mantiene la mainline derivata per compatibilità. (ADR 0002.)
 - **Stockfish client-side** — asm.js single-thread in un Web Worker (`frontend/public/stockfish/`); nessun endpoint backend; **mai disponibile in modalità allenamento** (per costruzione: `variant-training` non importa né `StockfishService` né `EvalBar`). (ADR 0009.)
 - **OAuth Lichess (PKCE)** — solo per leggere studi privati/unlisted; token in `sessionStorage`, mai lato backend; non introduce login applicativo. (ADR 0008.)
-- **Import PGN** — parsing client-side con parser dedicato (`core/pgn.ts`); `chess.js` resta motore di regole; varianti annidate, commenti e NAG supportati. (ADR 0007.)
+- **Import PGN** — parsing client-side con parser dedicato (`core/pgn.ts`); `chess.js` resta motore di regole; varianti annidate sono conservate, mentre commenti e NAG sono accettati sintatticamente ma oggi scartati. (ADR 0007.)
 
 ---
 
