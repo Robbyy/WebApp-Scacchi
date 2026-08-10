@@ -17,13 +17,14 @@
 | 015 | Pagina info applicazione + versioni | basso | basso-medio | no |
 | 010 | Pannello varianti adattivo nel dettaglio ✅ | medio | medio | no — mini-spec R23 |
 | 011 | Unificare creazione studio + import Lichess ✅ | medio | medio | no — mini-spec R22 |
-| 013 | Menu contestuale editor (cancella / promuovi) | medio | medio | no — mini-spec R24 |
+| 013 | Menu contestuale editor (cancella / promuovi) ✅ | medio | medio | no — mini-spec R24 |
 
-> Le decisioni per il prossimo incremento sono formalizzate nella
-> [mini-specifica R24](#mini-specifica-r24--issue-013--issue-016-move-comments): ISSUE-013
-> resta una manutenzione diretta, mentre `issue-016-move-comments` è la sua estensione
-> contenuta del modello `MoveNode`. L'alternativa «Elimina continuazioni» non fa parte di R24
-> ed è registrata tra i punti aperti della mini-specifica.
+> Le decisioni e l'esito di R24 sono formalizzati nella
+> [mini-specifica R24](#mini-specifica-r24--issue-013--issue-016-move-comments) e nel
+> [relativo esito](#esito-r24--issue-013--issue-016-move-comments-2026-08-10):
+> ISSUE-013 resta una manutenzione diretta, mentre `issue-016-move-comments` è la sua
+> estensione contenuta del modello `MoveNode`. L'alternativa «Elimina continuazioni» non fa
+> parte di R24 ed è registrata tra i punti aperti.
 
 ---
 

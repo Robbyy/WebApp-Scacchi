@@ -1,6 +1,6 @@
 # Piano progressivo dei rilasci evolutivi
 
-> **Aggiornato:** 2026-08-10 · **Stato:** in corso — **R20, R21, R22 e R23 rilasciati**; i
+> **Aggiornato:** 2026-08-10 · **Stato:** in corso — **R20, R21, R22, R23 e R24 rilasciati**; i
 > rilasci successivi restano pianificazione.
 >
 > **Perimetro:** sole issue evolutive ancora aperte. I difetti registrati su GitHub,
@@ -8,8 +8,8 @@
 > prototipi **P0–P19** resta nell'archivio; Liquibase (ISSUE-019) e la prima slice
 > di dominio di ISSUE-016 sono già completati.
 
-Questo piano usa le etichette **R20–R30** per ordinare i prossimi incrementi. Sono
-identificativi di pianificazione, non tag Git né promesse di deploy pubblico: un
+Questo piano usa le etichette **R20–R30** per descrivere la sequenza degli incrementi già
+consegnati e futuri. Sono identificativi di pianificazione, non tag Git né promesse di deploy pubblico: un
 rilascio si considera chiuso solo con criteri di accettazione verificati, test verdi
 e documentazione aggiornata.
 
@@ -55,7 +55,7 @@ Riferimenti: [backlog](backlog.md),
 | **009** ✅ | Usa meglio lo spazio dell'home su desktop | griglia card studi | rilasciata con R22 (2026-08-06) |
 | **010** ✅ | Permette di passare tra varianti senza tornare allo studio | dettaglio variante, editor, layout responsivo | rilasciata con R23 (2026-08-10) |
 | **008** ✅ | Rimuove l'auto-play non necessario | controlli del dettaglio variante | rilasciata con R23 (2026-08-10) |
-| **013** | Operazioni rapide sull'albero di mosse | editor, menu contestuale, conferma | mini-spec R24 formalizzata; condivide il lavoro UI con i commenti |
+| **013** ✅ | Operazioni rapide sull'albero di mosse | editor, menu contestuale, conferma | rilasciata con R24 (2026-08-10); mini-spec completata |
 | **016** | Estende l'app a Mediogioco e Finale | modello, editor, API, sezioni UI | `phase-domain-model` già implementata; commenti in R24, restano quattro slice OpenSpec |
 | **015** | Espone identità e versioni dell'app | topbar, contratto versione FE/BE | da consolidare con l'hub Impostazioni |
 | **017** | Centralizza le impostazioni e parametrizza SM-2 | topbar, persistenza, `ReviewScheduler` | richiede OpenSpec e scelta DB/localStorage |
@@ -67,8 +67,8 @@ La slice `issue-016-phase-domain-model` è già completata: `Study.phase` distin
 `OPENING`, `MIDDLEGAME` ed `ENDGAME`; import Lichess, training, statistiche e SM-2
 rimangono intenzionalmente limitati alle Aperture.
 
-Restano da realizzare `issue-016-move-comments` (già inclusa in R24 con mini-spec) e, in
-ordine di dipendenza OpenSpec, `issue-016-custom-starting-fen`,
+`issue-016-move-comments` è stata completata con R24. Restano da realizzare, in ordine di
+dipendenza OpenSpec, `issue-016-custom-starting-fen`,
 `issue-016-middlegame-section`, `issue-016-endgame-section` e
 `issue-016-play-position-vs-engine`.
 
@@ -88,7 +88,7 @@ backend e test di regressione, oltre all'editor visuale.
 | **R21 — Motore leggibile** ✅ | **022**, **007** | È il miglior incremento immediato per lo studio e concentra nel medesimo pannello la rimozione del toggle ridondante. | ✅ Rilasciato il 2026-08-05: `UciScore.pv` conserva l'intera sequenza UCI, `pvToSan`/`numberedPv` la rendono in SAN numerata dalla posizione analizzata e `StockfishService.bestLine` la azzera a ogni nuova analisi; il blocco «Linea migliore» sta in `.engine-panel` tra i controlli motore e «Allena questa variante», con «Analisi in corso…» finché manca la PV. Rimosso il toggle «Nascondi/Mostra barra» da dettaglio ed editor: spegnendo il motore spariscono barra e linea. Nessun contenuto aggiunto sotto la scacchiera. |
 | **R22 — Ciclo di vita dello studio** ✅ | **011**, **012**, **009** | Evita tre passaggi separati sulla home/form: un solo modello di form può creare, modificare e importare, mentre la griglia viene verificata nello stesso contesto. | ✅ Rilasciato il 2026-08-06: pagina unica `/studies/new` (creazione, anteprima/upsert Lichess, `?studyId` verificato con semantica additiva preservata, redirect dalla route storica con query param), campi metadati condivisi `study-form-fields` riusati dalla modifica **inline** del dettaglio (`PUT` esistente, `phase` mai inviata), comando Lichess compatto in topbar con bozza in `sessionStorage` ripristinata al ritorno OAuth, griglia home `auto-fit/minmax(320px)` a massimo due colonne. Dettagli nell'[esito R22](backlog/manutenzione-evolutiva.md#esito-r22--issue-011-2026-08-06). |
 | **R23 — Navigazione tra varianti** ✅ | **010**, **008** | Completa il flusso di consultazione della variante e affronta insieme i controlli della stessa schermata, dopo che R21 ne ha fissato il pannello motore. | ✅ Rilasciato il 2026-08-10: rail/drawer, guard editor e rimozione Auto-play; corretti i P1 su risposte HTTP fuori ordine e riavvio motore a FEN invariata. 288 test, build e checklist live a 1600/1440/1024/768/375/320px verdi. Dettagli nell'[esito R23](backlog/manutenzione-evolutiva.md#esito-r23--issue-010--issue-008-2026-08-10). |
-| **R24 — Editor più espressivo** | **013**, `issue-016-move-comments` | Entrambi agiscono sul tree editor: una sola revisione dell'interazione sulle mosse riduce duplicazioni e rende l'editor utile anche prima delle nuove sezioni. | Menu accessibile per annotare, promuovere o eliminare la mossa selezionata con il suo sottoalbero; commento/testo e un NAG persistono nel tree JSON retrocompatibile, senza alterare righe storiche né import PGN. |
+| **R24 — Editor più espressivo** ✅ | **013**, `issue-016-move-comments` | Entrambi agiscono sul tree editor: una sola revisione dell'interazione sulle mosse riduce duplicazioni e rende l'editor utile anche prima delle nuove sezioni. | ✅ Rilasciato il 2026-08-10: menu azioni accessibile, commento/NAG nel tree JSON retrocompatibile, promozione ed eliminazione verificate; frontend 338 e backend 103 test verdi. «Elimina continuazioni» e annotazioni importate da PGN restano fuori scope. |
 | **R25 — Posizioni manuali** | `issue-016-custom-starting-fen` | È il vero sblocco funzionale di Mediogioco/Finale e merita un rilascio isolato per il rischio scacchistico e di persistenza. | OpenSpec completa; editor con palette, validità legale, FEN tecnica e salvataggio solo se valido; backend valida FEN e albero dalla FEN scelta. |
 | **R26 — Mediogioco reale** | `issue-016-middlegame-section` | Trasforma il segnaposto di R20 nella prima sezione posizionale utilizzabile; riusa modello e editor stabilizzati in R25. | Lista, studio, posizioni e dettaglio di Mediogioco; assenza esplicita di import Lichess, training, statistiche e SM-2. |
 | **R27 — Finale reale** | `issue-016-endgame-section` | Replica il paradigma del Mediogioco solo dopo averne validato il riuso, evitando di sviluppare due sezioni divergenti in parallelo. | Lista, studio, posizioni e dettaglio Finale riusano i componenti comuni; regressione Aperture/Mediogioco verde. |

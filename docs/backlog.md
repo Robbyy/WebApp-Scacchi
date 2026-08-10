@@ -41,7 +41,7 @@
 | 015 | Pagina info + versioni | manutenzione | diretto | da fare |
 | 010 | Pannello varianti adattivo nel dettaglio | manutenzione | mini-spec R23 | ✅ fatto (R23) |
 | 011 | Unifica creazione studio + import Lichess | manutenzione | mini-spec R22 | ✅ fatto (R22) |
-| 013 | Menu contestuale editor | manutenzione | diretto — mini-spec R24 | da fare |
+| 013 | Menu contestuale editor | manutenzione | diretto — mini-spec R24 | ✅ fatto (R24) |
 | 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | spezzata in change incrementali |
 | 017 | Menu "Impostazioni" + SM-2 | sviluppo | OpenSpec | da fare |
 | 014 | Parametri motore Stockfish (UCI) | sviluppo | OpenSpec | da fare |
@@ -89,7 +89,7 @@ di questa cadenza di rilasci evolutivi.
 
 1. **ISSUE-016** — scope ampio, modello dati nuovo; senza OpenSpec rischio di sovra-ingegnerizzazione. Mitigazione: partire da `issue-016-phase-domain-model`, poi procedere con slice piccoli.
 2. **ISSUE-014** — incertezza sulle opzioni UCI realmente esposte dalla build asm.js. Mitigazione: audit prima della UI.
-3. **ISSUE-017** — refactor di `ReviewScheduler` da statico a parametrizzato tocca logica testata (84 test BE): rischio regressione SM-2.
+3. **ISSUE-017** — refactor di `ReviewScheduler` da statico a parametrizzato tocca logica testata (103 test BE): rischio regressione SM-2.
 4. **ISSUE-004** — `AudioContext` browser-dipendente, difficile da coprire in headless.
 5. **Cluster topbar affollato** (suono · "?" · ⚙ · Lichess · 3 sezioni) — rischio UX e di conflitti di merge tra ISSUE-011/015/017/021.
 
