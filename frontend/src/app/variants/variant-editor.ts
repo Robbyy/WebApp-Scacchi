@@ -7,10 +7,14 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { EMPTY, Observable } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { Chessboard, MoveMade } from '../chessboard/chessboard';
 import { EvalBar } from '../chessboard/eval-bar';
+import { StudyVariantNav } from './study-variant-nav';
 import { VariantService } from '../core/variant.service';
 import { StudyService } from '../core/study.service';
 import { StockfishService } from '../core/stockfish.service';
@@ -20,6 +24,7 @@ import { CanComponentDeactivate } from './can-deactivate.guard';
 import {
   CreateVariantRequest,
   MoveNode,
+  Variant,
   VariantColor,
   validationMessage,
 } from '../core/variant.model';
@@ -39,7 +44,7 @@ import {
 
 @Component({
   selector: 'app-variant-editor',
-  imports: [FormsModule, RouterLink, Chessboard, EvalBar],
+  imports: [FormsModule, RouterLink, Chessboard, EvalBar, StudyVariantNav],
   templateUrl: './variant-editor.html',
   styleUrl: './variant-editor.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -76,6 +81,13 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
 
   protected readonly editId = signal<number | null>(null);
   protected readonly isEdit = computed(() => this.editId() !== null);
+  /**
+   * ID della variante **effettivamente caricata** dalla risposta corrente:
+   * null mentre il caricamento è in corso, valorizzato solo dalla risposta
+   * della richiesta attiva. È dipendenza dell'effetto motore, così passando a
+   * un'altra variante con la stessa FEN l'analisi riparte davvero.
+   */
+  private readonly loadedVariantId = signal<number | null>(null);
 
   protected readonly tree = signal<MoveNode[]>([]);
   protected readonly currentPath = signal<number[]>([]);
@@ -103,33 +115,143 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
   /** Conferma in sospeso per la cancellazione di un sottoalbero. */
   protected readonly confirmingDelete = signal(false);
 
+  /** Varianti dello studio a cui appartiene quella in modifica (ISSUE-010). */
+  protected readonly studyVariants = signal<Variant[]>([]);
+  /** Drawer varianti aperto: nell'editor il pannello è sempre a sovrapposizione. */
+  protected readonly variantsOpen = signal(false);
+  /**
+   * Il pannello compare solo se serve davvero a navigare: variante esistente,
+   * presente nella risposta dello studio e con almeno un'alternativa. In
+   * creazione non c'è una variante attiva, quindi non compare (ISSUE-010).
+   */
+  protected readonly hasVariantNav = computed(() => {
+    const id = this.editId();
+    const list = this.studyVariants();
+    return id !== null && list.length >= 2 && list.some((v) => v.id === id);
+  });
+
   constructor() {
     const studyParam = this.route.snapshot.queryParamMap.get('studyId');
     if (studyParam) {
       this.studyId.set(Number(studyParam));
     }
-    const idParam = this.route.snapshot.paramMap.get('id');
-    if (idParam) {
-      const id = Number(idParam);
-      this.editId.set(id);
-      this.service.getVariant(id).subscribe({
-        next: (v) => {
-          this.name.set(v.name);
-          this.color.set(v.color);
-          this.startingFen.set(v.startingFen ?? '');
-          this.tree.set(v.tree && v.tree.length ? v.tree : fromLine(v.moves));
-          this.currentPath.set([]);
-        },
-        error: () => this.error.set('Variante non trovata.'),
-      });
-    }
-    // Motore acceso → analizza la posizione corrente a ogni cambio.
+    // Cambiando variante dal pannello resta montato lo stesso componente
+    // (cambia solo `:id`): l'editor deve ricaricare e ripartire pulito qui,
+    // non una sola volta dallo snapshot della route (ISSUE-010). Il caricamento
+    // passa da `switchMap`, così un cambio rapido di `:id` annulla le richieste
+    // ancora in volo (variante e studio) e una risposta precedente non può
+    // sovrascrivere la variante ora aperta.
+    this.route.paramMap
+      .pipe(
+        map((params) => params.get('id')),
+        tap((idParam) => this.resetTransientState(idParam)),
+        switchMap((idParam) => (idParam ? this.load(Number(idParam)) : EMPTY)),
+        takeUntilDestroyed(),
+      )
+      .subscribe();
+    // Motore acceso → analizza la posizione corrente a ogni cambio. La variante
+    // caricata è una dipendenza esplicita: al cambio variante l'analisi riparte
+    // (svuotando valutazione e PV) anche quando la FEN coincide, e non parte
+    // affatto finché la risposta corrente non è arrivata.
     effect(() => {
       const fen = this.fen();
-      if (this.engineOn() && fen) {
+      // Letto direttamente (non tramite un `computed` booleano): serve la
+      // dipendenza dall'identità della variante caricata, che cambia anche
+      // quando la FEN resta la stessa.
+      const loaded = this.loadedVariantId();
+      const loading = this.editId() !== null && loaded === null;
+      if (this.engineOn() && fen && !loading) {
         this.stockfish.analyse(fen);
       }
     });
+  }
+
+  /** Azzera lo stato transitorio prima di (ri)caricare la variante della route. */
+  private resetTransientState(idParam: string | null): void {
+    this.variantsOpen.set(false);
+    this.confirmingDelete.set(false);
+    this.studyVariants.set([]);
+    this.error.set(null);
+    this.saving.set(false);
+    this.dirty.set(false);
+    this.tree.set([]);
+    this.currentPath.set([]);
+    // Finché la risposta corrente non arriva nessuna variante è caricata.
+    this.loadedVariantId.set(null);
+    this.editId.set(idParam ? Number(idParam) : null);
+    if (!idParam) {
+      this.name.set('');
+      this.color.set('WHITE');
+      this.startingFen.set('');
+    }
+  }
+
+  /**
+   * Letture della variante in modifica (dettaglio e, a seguire, studio padre).
+   * Restituisce un flusso unico perché il `switchMap` del chiamante possa
+   * annullarle entrambe al cambio di `:id`.
+   */
+  private load(id: number): Observable<unknown> {
+    return this.service.getVariant(id).pipe(
+      tap((v) => this.apply(v)),
+      switchMap((v) =>
+        v.studyId != null
+          ? this.studyService.getStudy(v.studyId).pipe(
+              tap((s) => this.studyVariants.set(s.variants ?? [])),
+              catchError(() => {
+                this.studyVariants.set([]);
+                return EMPTY;
+              }),
+            )
+          : EMPTY,
+      ),
+      catchError(() => {
+        this.error.set('Variante non trovata.');
+        return EMPTY;
+      }),
+    );
+  }
+
+  /** Applica la variante arrivata dalla richiesta corrente. */
+  private apply(v: Variant): void {
+    this.name.set(v.name);
+    this.color.set(v.color);
+    this.startingFen.set(v.startingFen ?? '');
+    this.tree.set(v.tree && v.tree.length ? v.tree : fromLine(v.moves));
+    this.currentPath.set([]);
+    // Il caricamento non è una modifica dell'utente.
+    this.dirty.set(false);
+    // Da qui la variante è davvero caricata: l'effetto motore riparte.
+    this.loadedVariantId.set(v.id);
+  }
+
+  protected toggleVariants(): void {
+    this.variantsOpen.update((open) => !open);
+  }
+
+  protected closeVariants(): void {
+    this.variantsOpen.set(false);
+  }
+
+  /**
+   * Cambio variante dal pannello. Il guard va invocato **esplicitamente**: con
+   * il solo `canDeactivate` dichiarato sulla route, il riuso del componente al
+   * cambio di `:id` lascerebbe perdere le modifiche non salvate senza chiedere.
+   * A conferma avvenuta lo stato torna pulito, così il guard della route non
+   * ripropone lo stesso dialog durante la navigazione.
+   */
+  protected async requestVariantChange(id: number): Promise<void> {
+    if (id === this.editId()) {
+      this.variantsOpen.set(false);
+      return;
+    }
+    const allowed = await this.canDeactivate();
+    if (!allowed) {
+      return;
+    }
+    this.dirty.set(false);
+    this.variantsOpen.set(false);
+    this.router.navigate(['/variants', id, 'edit']);
   }
 
   protected toggleEngine(): void {

@@ -8,9 +8,13 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { EMPTY, Observable, merge } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { Chessboard } from '../chessboard/chessboard';
 import { EvalBar } from '../chessboard/eval-bar';
+import { StudyVariantNav } from './study-variant-nav';
 import { VariantService } from '../core/variant.service';
 import { MoveSoundService } from '../core/move-sound.service';
 import { StockfishService } from '../core/stockfish.service';
@@ -31,13 +35,14 @@ import {
 
 @Component({
   selector: 'app-variant-detail',
-  imports: [RouterLink, Chessboard, EvalBar],
+  imports: [RouterLink, Chessboard, EvalBar, StudyVariantNav],
   templateUrl: './variant-detail.html',
   styleUrl: './variant-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VariantDetail implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly service = inject(VariantService);
   private readonly moveSound = inject(MoveSoundService);
   private readonly stockfish = inject(StockfishService);
@@ -79,8 +84,21 @@ export class VariantDetail implements OnDestroy {
   });
   /** Percorso (indici di figlio dalla radice) del nodo selezionato; vuoto = posizione iniziale. */
   protected readonly currentPath = signal<number[]>([]);
-  protected readonly playing = signal(false);
-  private timer: ReturnType<typeof setInterval> | null = null;
+
+  /** Varianti dello studio a cui appartiene quella aperta (ISSUE-010). */
+  protected readonly studyVariants = signal<Variant[]>([]);
+  /** Drawer varianti aperto (sotto i 1500px, dove non c'è il rail). */
+  protected readonly variantsOpen = signal(false);
+  /**
+   * Il pannello varianti compare solo se serve davvero a navigare: variante
+   * legata a uno studio, presente nella risposta dello studio e con almeno
+   * un'alternativa (ISSUE-010).
+   */
+  protected readonly hasVariantNav = computed(() => {
+    const id = this.variant()?.id;
+    const list = this.studyVariants();
+    return id != null && list.length >= 2 && list.some((v) => v.id === id);
+  });
 
   protected readonly tree = computed<MoveNode[]>(() => {
     const v = this.variant();
@@ -104,32 +122,87 @@ export class VariantDetail implements OnDestroy {
   );
 
   constructor() {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.service.getVariant(id).subscribe({
-      next: (v) => {
-        this.variant.set(v);
-        if (v.studyId != null) {
-          // Fase derivata dallo studio padre (ISSUE-016): niente denormalizzazione su Variant.
-          this.studyService.getStudy(v.studyId).subscribe({
-            next: (s) => this.isOpening.set(s.phase === 'OPENING'),
-            error: () => this.isOpening.set(true),
-          });
-        }
-      },
-      error: () => this.error.set('Variante non trovata.'),
-    });
-    // Schedule di ripetizione (P19): best-effort, l'assenza non è un errore.
-    this.reviews.getForVariant(id).subscribe({
-      next: (r) => this.review.set(r),
-      error: () => this.review.set(null),
-    });
-    // Quando il motore è acceso, analizza la posizione corrente a ogni cambio.
+    // Angular riusa lo stesso componente quando cambia solo `:id` (cambio
+    // variante dal pannello, ISSUE-010): l'ID va letto dal flusso `paramMap`,
+    // non una sola volta dallo snapshot. Il caricamento passa da `switchMap`,
+    // quindi un cambio di variante annulla le richieste ancora in volo — la
+    // risposta della variante precedente non può più sovrascrivere lo stato
+    // di quella corrente, nemmeno nelle letture dipendenti (studio, review).
+    this.route.paramMap
+      .pipe(
+        map((params) => Number(params.get('id'))),
+        tap(() => this.resetTransientState()),
+        switchMap((id) => this.load(id)),
+        takeUntilDestroyed(),
+      )
+      .subscribe();
+    // Motore acceso → analizza la posizione corrente a ogni cambio. La variante
+    // caricata è una dipendenza esplicita: al cambio variante l'analisi riparte
+    // (svuotando valutazione e PV) anche quando la FEN iniziale coincide.
     effect(() => {
       const fen = this.currentFen();
-      if (this.engineOn() && fen) {
+      const loaded = this.variant()?.id ?? null;
+      if (this.engineOn() && loaded !== null && fen) {
         this.stockfish.analyse(fen);
       }
     });
+  }
+
+  /**
+   * Azzera tutto lo stato transitorio prima di un (ri)caricamento: percorso
+   * mosse, errore, schedule di ripetizione, elenco varianti e drawer.
+   */
+  private resetTransientState(): void {
+    this.variant.set(null);
+    this.error.set(null);
+    this.review.set(null);
+    this.currentPath.set([]);
+    this.isOpening.set(true);
+    this.studyVariants.set([]);
+    this.variantsOpen.set(false);
+  }
+
+  /**
+   * Letture della variante della route: dettaglio (con studio a seguire) e
+   * schedule di ripetizione. Restituisce un flusso unico perché il `switchMap`
+   * del chiamante possa annullarle tutte al cambio di `:id`.
+   */
+  private load(id: number): Observable<unknown> {
+    const variant$ = this.service.getVariant(id).pipe(
+      tap((v) => this.variant.set(v)),
+      switchMap((v) => (v.studyId != null ? this.loadStudy(v.studyId) : EMPTY)),
+      catchError(() => {
+        this.error.set('Variante non trovata.');
+        return EMPTY;
+      }),
+    );
+    // Schedule di ripetizione (P19): best-effort, l'assenza non è un errore.
+    const review$ = this.reviews.getForVariant(id).pipe(
+      tap((r) => this.review.set(r)),
+      catchError(() => {
+        this.review.set(null);
+        return EMPTY;
+      }),
+    );
+    return merge(variant$, review$);
+  }
+
+  /**
+   * Fase e varianti sorelle derivate dallo studio padre (ISSUE-016/010):
+   * niente denormalizzazione su Variant, nessuna nuova API.
+   */
+  private loadStudy(studyId: number): Observable<unknown> {
+    return this.studyService.getStudy(studyId).pipe(
+      tap((s) => {
+        this.isOpening.set(s.phase === 'OPENING');
+        this.studyVariants.set(s.variants ?? []);
+      }),
+      catchError(() => {
+        this.isOpening.set(true);
+        this.studyVariants.set([]);
+        return EMPTY;
+      }),
+    );
   }
 
   /** Accende/spegne il motore sulla posizione corrente. */
@@ -146,6 +219,26 @@ export class VariantDetail implements OnDestroy {
     window.open(`/play?fen=${encodeURIComponent(this.currentFen())}`, '_blank');
   }
 
+  protected toggleVariants(): void {
+    this.variantsOpen.update((open) => !open);
+  }
+
+  protected closeVariants(): void {
+    this.variantsOpen.set(false);
+  }
+
+  /**
+   * Selezione dal pannello varianti: nel dettaglio non c'è nulla da salvare,
+   * quindi si naviga subito al dettaglio della variante scelta.
+   */
+  protected goToVariant(id: number): void {
+    this.variantsOpen.set(false);
+    if (id === this.variant()?.id) {
+      return;
+    }
+    this.router.navigate(['/variants', id]);
+  }
+
   protected isCurrent(path: number[] | undefined): boolean {
     return !!path && pathsEqual(path, this.currentPath());
   }
@@ -154,17 +247,14 @@ export class VariantDetail implements OnDestroy {
     if (!path) {
       return;
     }
-    this.stop();
     this.currentPath.set([...path]);
   }
 
   protected first(): void {
-    this.stop();
     this.currentPath.set([]);
   }
 
   protected prev(): void {
-    this.stop();
     this.currentPath.update((p) => p.slice(0, -1));
   }
 
@@ -177,7 +267,6 @@ export class VariantDetail implements OnDestroy {
   }
 
   protected last(): void {
-    this.stop();
     let path = [...this.currentPath()];
     let kids = childrenAt(this.tree(), path);
     while (kids.length > 0) {
@@ -185,32 +274,6 @@ export class VariantDetail implements OnDestroy {
       kids = kids[0].children;
     }
     this.currentPath.set(path);
-  }
-
-  protected togglePlay(): void {
-    if (this.playing()) {
-      this.stop();
-      return;
-    }
-    if (childrenAt(this.tree(), this.currentPath()).length === 0) {
-      return;
-    }
-    this.playing.set(true);
-    this.timer = setInterval(() => {
-      if (childrenAt(this.tree(), this.currentPath()).length === 0) {
-        this.stop();
-        return;
-      }
-      this.next();
-    }, 900);
-  }
-
-  private stop(): void {
-    this.playing.set(false);
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -225,7 +288,6 @@ export class VariantDetail implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.stop();
     this.stockfish.dispose();
   }
 }

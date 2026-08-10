@@ -35,11 +35,11 @@
 | 021 | Scaffold navigazione 3 sezioni | manutenzione | diretto | ✅ fatto (R20) |
 | 022 | Visualizzazione linea migliore del motore | manutenzione | diretto | ✅ fatto (R21) |
 | 007 | "Nascondi barra" ridondante | manutenzione | diretto | ✅ fatto (R21) |
-| 008 | Rimuovere "Auto-play" | manutenzione | mini-spec R23 | 🟡 candidata R23 (P1 aperti) |
+| 008 | Rimuovere "Auto-play" | manutenzione | mini-spec R23 | ✅ fatto (R23) |
 | 009 | Elenco studi su due colonne | manutenzione | diretto | ✅ fatto (R22) |
 | 012 | Modifica nome/descrizione/colore studio | manutenzione | diretto | ✅ fatto (R22) |
 | 015 | Pagina info + versioni | manutenzione | diretto | da fare |
-| 010 | Pannello varianti adattivo nel dettaglio | manutenzione | mini-spec R23 | 🟡 candidata R23 (P1 aperti) |
+| 010 | Pannello varianti adattivo nel dettaglio | manutenzione | mini-spec R23 | ✅ fatto (R23) |
 | 011 | Unifica creazione studio + import Lichess | manutenzione | mini-spec R22 | ✅ fatto (R22) |
 | 013 | Menu contestuale editor | manutenzione | OpenSpec? da decidere | da fare |
 | 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | spezzata in change incrementali |
@@ -58,9 +58,8 @@ La sequenza dettagliata dei soli incrementi evolutivi è nel
 1. ~~**R20:** ISSUE-021 (scaffold navigazione tre sezioni).~~ ✅ fatto (2026-08-05).
 2. ~~**R21:** ISSUE-022 + ISSUE-007 (linea migliore del motore e semplificazione pannello).~~ ✅ fatto (2026-08-05).
 3. ~~**R22:** ISSUE-011 + ISSUE-012 + ISSUE-009 (ciclo di vita dello studio e home).~~ ✅ fatto (2026-08-06).
-4. **R23:** ISSUE-010 + ISSUE-008 (navigazione e controlli del dettaglio variante;
-   implementazione candidata, due P1 da correggere prima del commit).
-5. **R24:** ISSUE-013 + `issue-016-move-comments` (editor), dopo la chiusura di R23.
+4. ~~**R23:** ISSUE-010 + ISSUE-008 (navigazione e controlli del dettaglio variante).~~ ✅ fatto (2026-08-10).
+5. **R24:** ISSUE-013 + `issue-016-move-comments` (editor).
 6. **R25–R28:** slice residue di ISSUE-016: posizione FEN → Mediogioco → Finale → gioco da posizione.
 7. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
 

@@ -189,27 +189,6 @@
   cursor: default;
 }
 
-/* Pulsante primario: avvia/pausa la riproduzione automatica. */
-.ctrl--play {
-  padding: 0 1.1rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  white-space: nowrap;
-  color: var(--board-light);
-  border-color: transparent;
-  background: linear-gradient(135deg, var(--wood-medium), var(--wood-dark));
-  box-shadow: 0 2px 8px oklch(0.3 0.05 45 / 0.35);
-}
-
-.ctrl--play:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--wood-dark), var(--wood-medium));
-  color: #fff;
-}
-
-.ctrl--reset {
-  margin-left: 0.2rem;
-}
-
 .move-counter {
   margin: 0;
   font-size: 0.85rem;
@@ -460,4 +439,72 @@
   text-align: center;
   padding: 2rem;
   color: var(--text-muted);
+}
+
+/* Pannello varianti dello studio (ISSUE-010) ---------------------------------
+   Sotto i 1500px il dettaglio resta a due colonne e l'elenco vive nel drawer,
+   aperto dal pulsante «Varianti». Da 1500px in su c'è spazio per una terza
+   colonna: compare il rail e il pulsante sparisce. La scacchiera non cambia
+   mai dimensione e nessun blocco nuovo finisce sotto di essa. */
+.variant-rail {
+  display: none;
+}
+
+.variants-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  align-self: flex-start;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.6rem;
+  background: oklch(0.965 0.018 80);
+  color: var(--wood-dark);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.variants-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.variants-toggle:hover {
+  background: var(--wood-light);
+}
+
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: oklch(0.3 0.03 50 / 0.35);
+}
+
+@media (min-width: 1500px) {
+  .detail--rail {
+    max-width: 1520px;
+  }
+
+  .detail--rail .variant-rail {
+    display: block;
+    flex: 0 0 220px;
+    position: sticky;
+    top: 1.5rem;
+    /* Elenco lungo: scorre solo in verticale, dentro la propria colonna. */
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
+  }
+
+  .variants-toggle {
+    display: none;
+  }
+
+  /* Con il rail visibile il drawer non ha più ragione di esistere: se resta
+     aperto da una larghezza inferiore non deve coprire il layout a tre colonne. */
+  .drawer-scrim,
+  app-study-variant-nav.variant-drawer {
+    display: none;
+  }
 }

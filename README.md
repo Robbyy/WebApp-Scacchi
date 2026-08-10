@@ -7,17 +7,16 @@ registrazione sessioni, statistiche e spaced repetition SM-2.
 ## Stato
 
 Parte 1 e Parte 2 (P0–P19) completate e verificate in locale.
-Backend: 84 test verdi. Frontend: 279 test verdi.
+Backend: 84 test verdi. Frontend: 288 test verdi.
 Terza tornata (infrastruttura) avviata: **schema gestito da Liquibase** (ISSUE-019, fatto).
 OpenSpec è installato e lo scaffold `openspec/` è pronto per le change di maggiore impatto.
 ISSUE-003 (header home: titolo e pulsanti a capo) risolta e verificata a Full HD
 (commit `aa5048b`). Evolutiva **R22 completata** (2026-08-06): pagina unica
 creazione/import studio, modifica inline dei metadati e griglia home a due colonne
-(ISSUE-011 + ISSUE-012 + ISSUE-009). Evolutiva **R23 in validazione**: pannello varianti
-adattivo nel dettaglio e nell'editor (rail da 1500px, drawer alle altre larghezze) e rimozione
-di Auto-play (ISSUE-010 + ISSUE-008). Restano due P1 da correggere prima del commit: risposte
-HTTP fuori ordine al cambio variante e riavvio del motore nell'editor a FEN invariata.
-Prossimi: chiusura R23, poi bug ISSUE-004/005/006/020, evolutiva R24 (ISSUE-013 + commenti
+ISSUE-011 + ISSUE-012 + ISSUE-009). Evolutiva **R23 completata** (2026-08-10): pannello
+varianti adattivo nel dettaglio e nell'editor (rail da 1500px, drawer alle altre larghezze),
+rimozione di Auto-play e correzioni P1 al cambio variante (ISSUE-010 + ISSUE-008).
+Prossimi: bug ISSUE-004/005/006/020, evolutiva R24 (ISSUE-013 + commenti
 alle mosse), Supabase PostgreSQL, Supabase Auth, Docker e CI/CD.
 
 ## Stack

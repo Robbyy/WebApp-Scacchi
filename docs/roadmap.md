@@ -35,11 +35,10 @@ Il piano esclude volutamente bug, audit e infrastruttura.
 > incluso, con comando Connetti/Disconnetti in topbar e bozza ripristinata dopo l'OAuth),
 > modifica inline dei metadati nel dettaglio studio e griglia home a due colonne.
 >
-> 🟡 **R23 — Navigazione tra varianti** — implementazione candidata (ISSUE-010 + ISSUE-008,
-> 2026-08-07): elenco varianti, rail/drawer, guard editor e rimozione Auto-play completati;
-> prima del commit restano due P1 sul cambio rapido di variante (ordine risposte HTTP) e sul
-> riavvio del motore nell'editor con FEN invariata.
-> Prossimo incremento dopo la chiusura di R23: **R24** (ISSUE-013 +
+> ✅ **R23 — Navigazione tra varianti** — fatto (ISSUE-010 + ISSUE-008, 2026-08-10):
+> elenco varianti, rail/drawer, guard editor e rimozione Auto-play; corretti anche i P1
+> sull'ordine delle risposte HTTP e sul riavvio del motore nell'editor con FEN invariata.
+> Prossimo incremento: **R24** (ISSUE-013 +
 > `issue-016-move-comments`), previo gate sul formato commento/NAG dei `MoveNode`.
 
 In sintesi: navigazione → linea migliore del motore → gestione studi → flusso

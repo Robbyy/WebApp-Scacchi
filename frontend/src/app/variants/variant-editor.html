@@ -101,6 +101,20 @@
       <h2 class="side-title">{{ isEdit() ? 'Aggiorna la linea' : 'Crea dalla scacchiera' }}</h2>
     </header>
 
+    @if (hasVariantNav()) {
+      <button
+        type="button"
+        class="variants-toggle"
+        (click)="toggleVariants()"
+        [attr.aria-expanded]="variantsOpen()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 6h16v2H4zM4 11h16v2H4zM4 16h16v2H4z" />
+        </svg>
+        Varianti
+      </button>
+    }
+
     <div class="form-field">
       <label for="vname">Nome</label>
       <input
@@ -166,3 +180,15 @@
     </div>
   </aside>
 </div>
+
+@if (hasVariantNav() && variantsOpen()) {
+  <div class="drawer-scrim" (click)="closeVariants()"></div>
+  <app-study-variant-nav
+    class="variant-drawer"
+    [variants]="studyVariants()"
+    [activeId]="editId()!"
+    [drawer]="true"
+    (variantSelected)="requestVariantChange($event)"
+    (dismiss)="closeVariants()"
+  />
+}

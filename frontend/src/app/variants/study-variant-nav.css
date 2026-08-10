@@ -1,0 +1,156 @@
+:host {
+  display: block;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem 0.9rem;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.85rem;
+  box-shadow: 0 4px 14px oklch(0.4 0.05 50 / 0.08);
+}
+
+.nav-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.nav-title {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.nav-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  flex: none;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.55rem;
+  background: oklch(0.965 0.018 80);
+  color: var(--wood-dark);
+  cursor: pointer;
+}
+
+.nav-close svg {
+  width: 15px;
+  height: 15px;
+  fill: currentColor;
+}
+
+.nav-close:hover {
+  background: var(--wood-light);
+}
+
+.nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  width: 100%;
+  /* Target cliccabile pieno anche su touch, senza allargare la colonna. */
+  min-height: 2.75rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.nav-item:hover {
+  background: var(--wood-light);
+}
+
+.nav-item--active {
+  background: var(--brass);
+  border-color: transparent;
+  color: var(--wood-dark);
+}
+
+.nav-item--active:hover {
+  background: var(--brass);
+}
+
+.nav-item__name {
+  font-weight: 600;
+  /* Nomi lunghi vanno a capo: il rail resta a larghezza fissa. */
+  overflow-wrap: anywhere;
+}
+
+.nav-item__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.nav-item__count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.nav-item--active .nav-item__count {
+  color: var(--wood-dark);
+}
+
+.badge {
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.badge--white {
+  background: var(--board-light);
+  color: var(--wood-dark);
+}
+
+.badge--black {
+  background: var(--wood-dark);
+  color: var(--board-light);
+}
+
+/* Drawer a sovrapposizione (dettaglio sotto i 1500px ed editor a ogni
+   larghezza): posizione fissa, quindi non entra nel flusso della pagina — la
+   scacchiera non si sposta né si ridimensiona e non nasce contenuto sotto di
+   essa. Scorre solo in verticale, mai in orizzontale. */
+:host(.nav-host--drawer) {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 41;
+  width: min(320px, 86vw);
+  max-width: 100%;
+}
+
+:host(.nav-host--drawer) .nav {
+  height: 100%;
+  overflow-y: auto;
+  border-radius: 0 0.9rem 0.9rem 0;
+  border-left: none;
+  box-shadow: 0 8px 30px oklch(0.3 0.05 45 / 0.3);
+}

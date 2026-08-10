@@ -409,3 +409,39 @@
   border-color: transparent;
   background: linear-gradient(135deg, var(--wood-medium), var(--wood-dark));
 }
+
+/* Pannello varianti dello studio (ISSUE-010) ---------------------------------
+   L'editor non assume mai il layout permanente a tre colonne: espone solo il
+   pulsante «Varianti» e riusa il drawer a sovrapposizione, così il perimetro
+   visuale resta quello odierno a ogni larghezza. */
+.variants-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  align-self: flex-start;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.6rem;
+  background: oklch(0.965 0.018 80);
+  color: var(--wood-dark);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.variants-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.variants-toggle:hover {
+  background: var(--wood-light);
+}
+
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: oklch(0.3 0.03 50 / 0.35);
+}

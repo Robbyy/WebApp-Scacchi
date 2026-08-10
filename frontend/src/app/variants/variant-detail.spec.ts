@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { BehaviorSubject, Subject, of } from 'rxjs';
 import { VariantDetail } from './variant-detail';
 import { VariantService } from '../core/variant.service';
 import { ReviewService } from '../core/review.service';
@@ -10,6 +10,7 @@ import { StudyService } from '../core/study.service';
 import { UciScore } from '../core/uci';
 import { Variant } from '../core/variant.model';
 import { Study } from '../core/study.model';
+import { ReviewSchedule } from '../core/review.model';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -72,21 +73,32 @@ function setup(
   v: Variant,
   studyService: Partial<StudyService> = {},
   engine = fakeEngine(),
+  variantService: Partial<VariantService> = { getVariant: () => of(v) },
+  reviewService: Partial<ReviewService> = { getForVariant: () => of(null) },
 ) {
+  const paramMap = new BehaviorSubject(convertToParamMap({ id: String(v.id) }));
   TestBed.configureTestingModule({
     imports: [VariantDetail],
     providers: [
       provideRouter([]),
-      { provide: VariantService, useValue: { getVariant: () => of(v) } },
-      { provide: ReviewService, useValue: { getForVariant: () => of(null) } },
+      { provide: VariantService, useValue: variantService },
+      { provide: ReviewService, useValue: reviewService },
       { provide: StockfishService, useValue: engine },
       { provide: StudyService, useValue: studyService },
-      { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: String(v.id) }) } } },
+      {
+        provide: ActivatedRoute,
+        useValue: { paramMap, snapshot: { paramMap: paramMap.value } },
+      },
     ],
   });
   const fixture = TestBed.createComponent(VariantDetail);
   fixture.detectChanges();
-  return { fixture, cmp: fixture.componentInstance as any, engine };
+  /** Simula il cambio di `:id` con lo stesso componente riusato da Angular. */
+  const navigateTo = (id: number) => {
+    paramMap.next(convertToParamMap({ id: String(id) }));
+    fixture.detectChanges();
+  };
+  return { fixture, cmp: fixture.componentInstance as any, engine, navigateTo };
 }
 
 describe('VariantDetail', () => {
@@ -280,5 +292,323 @@ describe('VariantDetail — linea migliore del motore', () => {
     const el: HTMLElement = s.fixture.nativeElement;
     expect(el.querySelector('.side .engine-panel .engine-line')).not.toBeNull();
     expect(el.querySelector('.board-col .engine-line')).toBeNull();
+  });
+});
+
+// ISSUE-008 (R23): la navigazione replay resta ai soli quattro controlli.
+describe('VariantDetail — controlli di replay senza Auto-play', () => {
+  it('exposes exactly first/prev/next/last, with no auto-play control', () => {
+    const { fixture, cmp } = setup(linear);
+    const controls: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('.controls .ctrl'),
+    );
+    expect(controls.length).toBe(4);
+    const labels = controls.map((b) => b.getAttribute('aria-label'));
+    expect(labels).toEqual([
+      "Vai all'inizio",
+      'Mossa precedente',
+      'Mossa successiva',
+      'Vai alla fine',
+    ]);
+    expect(fixture.nativeElement.textContent).not.toContain('Auto-play');
+    expect(fixture.nativeElement.textContent).not.toContain('Pausa');
+    expect(cmp.playing).toBeUndefined();
+    expect(cmp.togglePlay).toBeUndefined();
+  });
+
+  it('keeps keyboard navigation with the arrow keys', () => {
+    const { cmp } = setup(linear);
+    cmp.onKey(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(cmp.currentPath()).toEqual([0]);
+    cmp.onKey(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    expect(cmp.currentPath()).toEqual([]);
+  });
+});
+
+// ISSUE-010 (R23): pannello varianti dello studio nel dettaglio.
+describe('VariantDetail — pannello varianti', () => {
+  const inStudy: Variant = { ...linear, id: 1, studyId: 5 };
+
+  const siblings: Variant[] = [
+    { ...linear, id: 1, name: 'Italiana', studyId: 5 },
+    { ...linear, id: 2, name: 'Siciliana', moves: ['e4', 'c5'], studyId: 5 },
+  ];
+
+  function study(variants: Variant[] | null): Study {
+    return {
+      id: 5,
+      name: 'Repertorio',
+      phase: 'OPENING',
+      variantCount: variants?.length ?? 0,
+      variants,
+    };
+  }
+
+  function withStudy(v: Variant, variants: Variant[] | null, engine = fakeEngine()) {
+    return setup(v, { getStudy: () => of(study(variants)) }, engine);
+  }
+
+  it('shows the panel when the study has an alternative variant', () => {
+    const { fixture, cmp } = withStudy(inStudy, siblings);
+    expect(cmp.hasVariantNav()).toBe(true);
+    const nav: HTMLElement = fixture.nativeElement.querySelector('app-study-variant-nav');
+    expect(nav).not.toBeNull();
+    expect(nav.textContent).toContain('Siciliana');
+    // La variante aperta è quella evidenziata.
+    const current = nav.querySelector('[aria-current="page"]');
+    expect(current?.textContent).toContain('Italiana');
+  });
+
+  it('hides the panel for a legacy variant without a study', () => {
+    const { fixture, cmp } = setup(linear);
+    expect(cmp.hasVariantNav()).toBe(false);
+    expect(fixture.nativeElement.querySelector('app-study-variant-nav')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.variants-toggle')).toBeNull();
+  });
+
+  it('hides the panel when the study has no alternative', () => {
+    const { cmp } = withStudy(inStudy, [siblings[0]]);
+    expect(cmp.hasVariantNav()).toBe(false);
+  });
+
+  it('hides the panel when the study response does not contain the open variant', () => {
+    const { cmp } = withStudy(inStudy, [siblings[1], { ...siblings[1], id: 3 }]);
+    expect(cmp.studyVariants().length).toBe(2);
+    expect(cmp.hasVariantNav()).toBe(false);
+  });
+
+  it('hides the panel when the study response carries no variants', () => {
+    const { cmp } = withStudy(inStudy, null);
+    expect(cmp.hasVariantNav()).toBe(false);
+  });
+
+  it('navigates immediately to the selected variant and closes the drawer', () => {
+    const { fixture, cmp } = withStudy(inStudy, siblings);
+    const router = TestBed.inject(Router);
+    let navTarget: unknown[] | null = null;
+    router.navigate = ((c: unknown[]) => { navTarget = c; return Promise.resolve(true); }) as typeof router.navigate;
+
+    cmp.toggleVariants();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.variant-drawer')).not.toBeNull();
+
+    cmp.goToVariant(2);
+    fixture.detectChanges();
+    expect(navTarget).toEqual(['/variants', 2]);
+    expect(cmp.variantsOpen()).toBe(false);
+    expect(fixture.nativeElement.querySelector('.variant-drawer')).toBeNull();
+  });
+
+  it('does not navigate when the open variant is selected again', () => {
+    const { cmp } = withStudy(inStudy, siblings);
+    const router = TestBed.inject(Router);
+    let calls = 0;
+    router.navigate = (() => { calls++; return Promise.resolve(true); }) as typeof router.navigate;
+    cmp.toggleVariants();
+    cmp.goToVariant(1);
+    expect(calls).toBe(0);
+    expect(cmp.variantsOpen()).toBe(false);
+  });
+
+  it('renders the drawer outside the board column, adding nothing under the board', () => {
+    const { fixture, cmp } = withStudy(inStudy, siblings);
+    cmp.toggleVariants();
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.board-col app-study-variant-nav')).toBeNull();
+    expect(el.querySelector('.detail > .variant-rail')).not.toBeNull();
+  });
+});
+
+// ISSUE-010 (R23): il componente è riusato quando cambia solo `:id`.
+describe('VariantDetail — reazione al cambio di parametro', () => {
+  const first: Variant = { ...linear, id: 1, name: 'Italiana', studyId: 5 };
+  const second: Variant = {
+    ...linear,
+    id: 2,
+    name: 'Siciliana',
+    moves: ['e4', 'c5'],
+    tree: undefined,
+    studyId: 5,
+  };
+  const study: Study = {
+    id: 5,
+    name: 'Repertorio',
+    phase: 'OPENING',
+    variantCount: 2,
+    variants: [first, second],
+  };
+
+  function withRoute(engine = fakeEngine()) {
+    return setup(
+      first,
+      { getStudy: () => of(study) },
+      engine,
+      { getVariant: (id: number) => of(id === 1 ? first : second) },
+    );
+  }
+
+  it('reloads the variant and resets the move path', () => {
+    const s = withRoute();
+    s.cmp.last();
+    expect(s.cmp.currentPath().length).toBe(4);
+
+    s.navigateTo(2);
+
+    expect(s.cmp.variant().id).toBe(2);
+    expect(s.cmp.mainlineLength()).toBe(2);
+    expect(s.cmp.currentPath()).toEqual([]);
+    expect(s.fixture.nativeElement.querySelector('.side-title')?.textContent).toContain('Siciliana');
+  });
+
+  it('closes the drawer after a successful navigation', () => {
+    const s = withRoute();
+    s.cmp.toggleVariants();
+    expect(s.cmp.variantsOpen()).toBe(true);
+    s.navigateTo(2);
+    expect(s.cmp.variantsOpen()).toBe(false);
+    expect(s.fixture.nativeElement.querySelector('.variant-drawer')).toBeNull();
+  });
+
+  it('restarts the analysis on the new variant, emptying evaluation and PV', () => {
+    const s = withRoute();
+    s.cmp.toggleEngine();
+    s.fixture.detectChanges();
+    s.engine.bestLine.set(['e4', 'e5']);
+    s.engine.evaluation.set({ depth: 12, scoreCp: 30, mate: null, pv: ['e2e4'] });
+    s.fixture.detectChanges();
+    expect(s.fixture.nativeElement.querySelector('.engine-line__moves')).not.toBeNull();
+
+    s.navigateTo(2);
+
+    // Il toggle resta acceso, ma i dati mostrati sono solo quelli della nuova analisi.
+    expect(s.cmp.engineOn()).toBe(true);
+    expect(s.engine.analysed.length).toBe(2);
+    expect(s.engine.bestLine()).toEqual([]);
+    expect(s.engine.evaluation()).toBeNull();
+    expect(s.fixture.nativeElement.querySelector('.engine-line__moves')).toBeNull();
+    expect(s.fixture.nativeElement.querySelector('.engine-line__pending')).not.toBeNull();
+  });
+});
+
+// P1 R23: al cambio rapido di `:id` una risposta della variante precedente non
+// deve più poter sovrascrivere lo stato di quella corrente.
+describe('VariantDetail — risposte HTTP fuori ordine', () => {
+  const first: Variant = { ...linear, id: 1, name: 'Italiana', studyId: 5 };
+  const second: Variant = {
+    ...linear,
+    id: 2,
+    name: 'Siciliana',
+    moves: ['e4', 'c5'],
+    studyId: 6,
+  };
+
+  interface Pending<T> {
+    arg: number;
+    subject: Subject<T>;
+  }
+
+  /** Servizio che non risponde subito: ogni chiamata ha un canale tutto suo. */
+  function deferred<T>(calls: Pending<T>[]): (arg: number) => Subject<T> {
+    return (arg: number) => {
+      const subject = new Subject<T>();
+      calls.push({ arg, subject });
+      return subject;
+    };
+  }
+
+  function study(id: number, phase: Study['phase'], variants: Variant[]): Study {
+    return { id, name: `Studio ${id}`, phase, variantCount: variants.length, variants };
+  }
+
+  function schedule(variantId: number): ReviewSchedule {
+    return {
+      variantId,
+      easeFactor: 2.5,
+      intervalDays: 1,
+      repetitions: 1,
+      nextReviewDate: '2026-08-08',
+      due: false,
+    };
+  }
+
+  /** Dettaglio aperto sulla variante 1, con tutte le letture ancora in volo. */
+  function controlled() {
+    const variantCalls: Pending<Variant>[] = [];
+    const studyCalls: Pending<Study>[] = [];
+    const reviewCalls: Pending<ReviewSchedule | null>[] = [];
+    const s = setup(
+      first,
+      { getStudy: deferred(studyCalls) },
+      fakeEngine(),
+      { getVariant: deferred(variantCalls) },
+      { getForVariant: deferred(reviewCalls) },
+    );
+    return { ...s, variantCalls, studyCalls, reviewCalls };
+  }
+
+  it('keeps the current variant when the previous response arrives later', () => {
+    const s = controlled();
+    expect(s.variantCalls.map((c) => c.arg)).toEqual([1]);
+
+    s.navigateTo(2);
+    expect(s.variantCalls.map((c) => c.arg)).toEqual([1, 2]);
+
+    // Risposte in ordine inverso: prima la richiesta più recente…
+    s.variantCalls[1].subject.next(second);
+    s.fixture.detectChanges();
+    expect(s.cmp.variant().id).toBe(2);
+
+    // …poi quella ormai sorpassata, che non deve entrare nello stato.
+    s.variantCalls[0].subject.next(first);
+    s.fixture.detectChanges();
+
+    expect(s.cmp.variant().id).toBe(2);
+    expect(s.cmp.mainlineLength()).toBe(2);
+    expect(s.fixture.nativeElement.querySelector('.side-title')?.textContent).toContain(
+      'Siciliana',
+    );
+  });
+
+  it('ignores study and review responses of the variant left behind', () => {
+    const s = controlled();
+    // La prima variante risponde: parte la lettura del suo studio…
+    s.variantCalls[0].subject.next(first);
+    s.fixture.detectChanges();
+    expect(s.studyCalls.map((c) => c.arg)).toEqual([5]);
+
+    // …ma l'utente cambia variante prima che lo studio abbia risposto.
+    s.navigateTo(2);
+    s.variantCalls[1].subject.next(second);
+    s.fixture.detectChanges();
+    expect(s.studyCalls.map((c) => c.arg)).toEqual([5, 6]);
+
+    // Prima le letture dipendenti della variante corrente…
+    s.studyCalls[1].subject.next(study(6, 'MIDDLEGAME', [second, { ...second, id: 3 }]));
+    s.reviewCalls[1].subject.next(schedule(2));
+    s.fixture.detectChanges();
+
+    // …poi quelle in ritardo della precedente: devono essere scartate.
+    s.studyCalls[0].subject.next(study(5, 'OPENING', [first]));
+    s.reviewCalls[0].subject.next(schedule(1));
+    s.fixture.detectChanges();
+
+    expect(s.cmp.isOpening()).toBe(false);
+    expect(s.cmp.studyVariants().map((v: Variant) => v.id)).toEqual([2, 3]);
+    expect(s.cmp.review().variantId).toBe(2);
+  });
+
+  it('does not surface the error of a request already superseded', () => {
+    const s = controlled();
+    s.navigateTo(2);
+    s.variantCalls[1].subject.next(second);
+    s.fixture.detectChanges();
+
+    s.variantCalls[0].subject.error(new Error('404'));
+    s.reviewCalls[0].subject.error(new Error('500'));
+    s.fixture.detectChanges();
+
+    expect(s.cmp.error()).toBeNull();
+    expect(s.cmp.variant().id).toBe(2);
   });
 });

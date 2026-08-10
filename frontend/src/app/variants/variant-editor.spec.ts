@@ -1,13 +1,14 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { BehaviorSubject, Subject, of } from 'rxjs';
 import { VariantEditor } from './variant-editor';
 import { VariantService } from '../core/variant.service';
 import { StockfishService } from '../core/stockfish.service';
 import { StudyService } from '../core/study.service';
 import { UciScore } from '../core/uci';
 import { CreateVariantRequest, Variant } from '../core/variant.model';
+import { Study } from '../core/study.model';
 import { MoveMade } from '../chessboard/chessboard';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
@@ -18,15 +19,31 @@ function move(san: string): MoveMade {
   return { san, from: '', to: '', fen: '' };
 }
 
-/** Doppio del motore: niente Web Worker nei test. */
+/**
+ * Doppio del motore: niente Web Worker nei test. `analyse`/`stop` replicano il
+ * contratto reale di `StockfishService` — entrambi svuotano valutazione e linea,
+ * così un riavvio mancato è osservabile nei test.
+ */
 function fakeEngine() {
   return {
     available: signal(true),
     evaluation: signal<UciScore | null>(null),
     bestLine: signal<string[]>([]),
     thinking: signal(false),
-    analyse() {},
-    stop() {},
+    analysed: [] as string[],
+    stopped: 0,
+    analyse(fen: string) {
+      this.analysed.push(fen);
+      this.evaluation.set(null);
+      this.bestLine.set([]);
+      this.thinking.set(true);
+    },
+    stop() {
+      this.stopped++;
+      this.evaluation.set(null);
+      this.bestLine.set([]);
+      this.thinking.set(false);
+    },
     dispose() {},
   };
 }
@@ -36,21 +53,25 @@ function setup(
   routeId?: number,
   studyService: Partial<StudyService> = {},
   queryParams: Record<string, string> = {},
+  confirmService: Partial<ConfirmService> = { ask: () => Promise.resolve(true) },
+  engine = fakeEngine(),
 ) {
+  const paramMap = new BehaviorSubject(convertToParamMap(routeId ? { id: String(routeId) } : {}));
   TestBed.configureTestingModule({
     imports: [VariantEditor],
     providers: [
       provideRouter([]),
       { provide: VariantService, useValue: service },
-      { provide: StockfishService, useValue: fakeEngine() },
+      { provide: StockfishService, useValue: engine },
       { provide: StudyService, useValue: studyService },
-      { provide: ConfirmService, useValue: { ask: () => Promise.resolve(true) } },
+      { provide: ConfirmService, useValue: confirmService },
       { provide: ToastService, useValue: { success() {}, error() {}, info() {} } },
       {
         provide: ActivatedRoute,
         useValue: {
+          paramMap,
           snapshot: {
-            paramMap: convertToParamMap(routeId ? { id: String(routeId) } : {}),
+            paramMap: paramMap.value,
             queryParamMap: convertToParamMap(queryParams),
           },
         },
@@ -59,7 +80,12 @@ function setup(
   });
   const fixture = TestBed.createComponent(VariantEditor);
   fixture.detectChanges();
-  return { fixture, cmp: fixture.componentInstance as any };
+  /** Simula il cambio di `:id` con lo stesso componente riusato da Angular. */
+  const navigateTo = (id: number) => {
+    paramMap.next(convertToParamMap({ id: String(id) }));
+    fixture.detectChanges();
+  };
+  return { fixture, cmp: fixture.componentInstance as any, engine, navigateTo };
 }
 
 describe('VariantEditor', () => {
@@ -282,5 +308,343 @@ describe('VariantEditor', () => {
     cmp.toggleEngine();
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.engine-line')).toBeNull();
+  });
+});
+
+// ISSUE-010 (R23): cambio variante dall'editor, con e senza modifiche pendenti.
+describe('VariantEditor — pannello varianti', () => {
+  const START_FEN = START;
+
+  const italiana: Variant = {
+    id: 1,
+    name: 'Italiana',
+    color: 'WHITE',
+    moves: ['e4', 'e5'],
+    startingFen: START_FEN,
+    studyId: 5,
+  };
+  const siciliana: Variant = {
+    id: 2,
+    name: 'Siciliana',
+    color: 'BLACK',
+    moves: ['e4', 'c5'],
+    startingFen: START_FEN,
+    studyId: 5,
+  };
+
+  function study(variants: Variant[] | null): Study {
+    return {
+      id: 5,
+      name: 'Repertorio',
+      phase: 'OPENING',
+      variantCount: variants?.length ?? 0,
+      variants,
+    };
+  }
+
+  function editorOn(
+    variants: Variant[] | null,
+    confirmAnswer = true,
+    current: Variant = italiana,
+  ) {
+    const asked: string[] = [];
+    const s = setup(
+      { getVariant: (id: number) => of(id === 1 ? current : siciliana) },
+      current.id,
+      { getStudy: () => of(study(variants)) },
+      {},
+      {
+        ask: (o: { title?: string }) => {
+          asked.push(o.title ?? '');
+          return Promise.resolve(confirmAnswer);
+        },
+      },
+    );
+    const router = TestBed.inject(Router);
+    const navTargets: unknown[][] = [];
+    router.navigate = ((c: unknown[]) => { navTargets.push(c); return Promise.resolve(true); }) as typeof router.navigate;
+    return { ...s, asked, navTargets };
+  }
+
+  it('offers the drawer, never a permanent third column', () => {
+    const { fixture, cmp } = editorOn([italiana, siciliana]);
+    expect(cmp.hasVariantNav()).toBe(true);
+    expect(fixture.nativeElement.querySelector('.variants-toggle')).not.toBeNull();
+    // Nessun rail: il pannello esiste solo quando il drawer è aperto.
+    expect(fixture.nativeElement.querySelector('app-study-variant-nav')).toBeNull();
+
+    cmp.toggleVariants();
+    fixture.detectChanges();
+    const nav: HTMLElement = fixture.nativeElement.querySelector('app-study-variant-nav');
+    expect(nav.classList.contains('variant-drawer')).toBe(true);
+    expect(fixture.nativeElement.querySelector('.board-col app-study-variant-nav')).toBeNull();
+  });
+
+  it('hides the panel while creating a new variant', () => {
+    const { cmp } = setup({}, undefined, {}, { studyId: '5' });
+    expect(cmp.hasVariantNav()).toBe(false);
+  });
+
+  it('hides the panel when the study has no alternative', () => {
+    const { cmp } = editorOn([italiana]);
+    expect(cmp.hasVariantNav()).toBe(false);
+  });
+
+  it('navigates without asking when there are no unsaved changes', async () => {
+    const { cmp, asked, navTargets } = editorOn([italiana, siciliana]);
+    await cmp.requestVariantChange(2);
+    expect(asked).toEqual([]);
+    expect(navTargets).toEqual([['/variants', 2, 'edit']]);
+    expect(cmp.variantsOpen()).toBe(false);
+  });
+
+  it('asks confirmation with unsaved changes and navigates when confirmed', async () => {
+    const { cmp, asked, navTargets } = editorOn([italiana, siciliana]);
+    cmp.onMove(move('d4'));
+    expect(cmp.dirty()).toBe(true);
+
+    await cmp.requestVariantChange(2);
+
+    expect(asked).toEqual(['Modifiche non salvate']);
+    expect(navTargets).toEqual([['/variants', 2, 'edit']]);
+    // Conferma già data: il guard della route non deve richiederla di nuovo.
+    expect(cmp.dirty()).toBe(false);
+  });
+
+  it('stays on the current variant when the confirmation is refused', async () => {
+    const { cmp, asked, navTargets } = editorOn([italiana, siciliana], false);
+    cmp.onMove(move('d4'));
+
+    await cmp.requestVariantChange(2);
+
+    expect(asked).toEqual(['Modifiche non salvate']);
+    expect(navTargets).toEqual([]);
+    expect(cmp.dirty()).toBe(true);
+    expect(cmp.editId()).toBe(1);
+    // La modifica pendente (variante `d4` accanto a `e4`) è ancora lì.
+    expect(cmp.tree().map((n: { san: string }) => n.san)).toEqual(['e4', 'd4']);
+  });
+
+  it('does not navigate nor ask when the open variant is selected again', async () => {
+    const { cmp, asked, navTargets } = editorOn([italiana, siciliana]);
+    cmp.onMove(move('d4'));
+    cmp.toggleVariants();
+
+    await cmp.requestVariantChange(1);
+
+    expect(asked).toEqual([]);
+    expect(navTargets).toEqual([]);
+    expect(cmp.dirty()).toBe(true);
+    expect(cmp.variantsOpen()).toBe(false);
+  });
+
+  it('reloads and resets its state when only the route id changes', () => {
+    const s = editorOn([italiana, siciliana]);
+    s.cmp.onMove(move('d4'));
+    s.cmp.toggleVariants();
+    expect(s.cmp.dirty()).toBe(true);
+
+    s.navigateTo(2);
+
+    expect(s.cmp.editId()).toBe(2);
+    expect(s.cmp.name()).toBe('Siciliana');
+    expect(s.cmp.color()).toBe('BLACK');
+    expect(s.cmp.tree()[0].san).toBe('e4');
+    expect(s.cmp.tree()[0].children[0].san).toBe('c5');
+    expect(s.cmp.currentPath()).toEqual([]);
+    expect(s.cmp.dirty()).toBe(false);
+    expect(s.cmp.variantsOpen()).toBe(false);
+    expect(s.cmp.confirmingDelete()).toBe(false);
+  });
+});
+
+// P1 R23: al cambio rapido di `:id` una risposta della variante precedente non
+// deve più poter sovrascrivere quella corrente, nemmeno nella lettura dipendente
+// dello studio.
+describe('VariantEditor — risposte HTTP fuori ordine', () => {
+  const italiana: Variant = {
+    id: 1,
+    name: 'Italiana',
+    color: 'WHITE',
+    moves: ['e4', 'e5'],
+    startingFen: START,
+    studyId: 5,
+  };
+  const siciliana: Variant = {
+    id: 2,
+    name: 'Siciliana',
+    color: 'BLACK',
+    moves: ['e4', 'c5'],
+    startingFen: START,
+    studyId: 6,
+  };
+
+  interface Pending<T> {
+    arg: number;
+    subject: Subject<T>;
+  }
+
+  /** Servizio che non risponde subito: ogni chiamata ha un canale tutto suo. */
+  function deferred<T>(calls: Pending<T>[]): (arg: number) => Subject<T> {
+    return (arg: number) => {
+      const subject = new Subject<T>();
+      calls.push({ arg, subject });
+      return subject;
+    };
+  }
+
+  function study(id: number, variants: Variant[]): Study {
+    return {
+      id,
+      name: `Studio ${id}`,
+      phase: 'OPENING',
+      variantCount: variants.length,
+      variants,
+    };
+  }
+
+  /** Editor aperto sulla variante 1, con entrambe le letture ancora in volo. */
+  function controlled() {
+    const variantCalls: Pending<Variant>[] = [];
+    const studyCalls: Pending<Study>[] = [];
+    const s = setup({ getVariant: deferred(variantCalls) }, 1, {
+      getStudy: deferred(studyCalls),
+    });
+    return { ...s, variantCalls, studyCalls };
+  }
+
+  it('keeps the current variant when the previous response arrives later', () => {
+    const s = controlled();
+    expect(s.variantCalls.map((c) => c.arg)).toEqual([1]);
+
+    s.navigateTo(2);
+    expect(s.variantCalls.map((c) => c.arg)).toEqual([1, 2]);
+
+    // Risposte in ordine inverso: prima la richiesta più recente…
+    s.variantCalls[1].subject.next(siciliana);
+    s.fixture.detectChanges();
+    expect(s.cmp.name()).toBe('Siciliana');
+
+    // …poi quella sorpassata, che non deve rientrare nell'editor.
+    s.variantCalls[0].subject.next(italiana);
+    s.fixture.detectChanges();
+
+    expect(s.cmp.editId()).toBe(2);
+    expect(s.cmp.name()).toBe('Siciliana');
+    expect(s.cmp.color()).toBe('BLACK');
+    expect(s.cmp.tree()[0].children[0].san).toBe('c5');
+    expect(s.cmp.dirty()).toBe(false);
+  });
+
+  it('ignores the study response of the variant left behind', () => {
+    const s = controlled();
+    s.variantCalls[0].subject.next(italiana);
+    s.fixture.detectChanges();
+    expect(s.studyCalls.map((c) => c.arg)).toEqual([5]);
+
+    s.navigateTo(2);
+    s.variantCalls[1].subject.next(siciliana);
+    s.fixture.detectChanges();
+    expect(s.studyCalls.map((c) => c.arg)).toEqual([5, 6]);
+
+    s.studyCalls[1].subject.next(study(6, [siciliana, { ...siciliana, id: 3 }]));
+    s.fixture.detectChanges();
+    s.studyCalls[0].subject.next(study(5, [italiana]));
+    s.fixture.detectChanges();
+
+    expect(s.cmp.studyVariants().map((v: Variant) => v.id)).toEqual([2, 3]);
+    expect(s.cmp.hasVariantNav()).toBe(true);
+  });
+
+  it('does not surface the error of a request already superseded', () => {
+    const s = controlled();
+    s.navigateTo(2);
+    s.variantCalls[1].subject.next(siciliana);
+    s.fixture.detectChanges();
+
+    s.variantCalls[0].subject.error(new Error('404'));
+    s.fixture.detectChanges();
+
+    expect(s.cmp.error()).toBeNull();
+    expect(s.cmp.name()).toBe('Siciliana');
+  });
+});
+
+// P1 R23: il riavvio dell'analisi non può dipendere dalla sola FEN.
+describe('VariantEditor — motore al cambio variante', () => {
+  const italiana: Variant = {
+    id: 1,
+    name: 'Italiana',
+    color: 'WHITE',
+    moves: ['e4', 'e5'],
+    startingFen: START,
+    studyId: 5,
+  };
+  /** Variante diversa, **stessa** posizione di partenza. */
+  const spagnola: Variant = {
+    id: 2,
+    name: 'Spagnola',
+    color: 'WHITE',
+    moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'],
+    startingFen: START,
+    studyId: 5,
+  };
+
+  function editorOn() {
+    return setup(
+      { getVariant: (id: number) => of(id === 1 ? italiana : spagnola) },
+      1,
+      { getStudy: () => of({ id: 5, name: 'Repertorio', phase: 'OPENING' as const, variantCount: 2, variants: [italiana, spagnola] }) },
+    );
+  }
+
+  it('restarts the analysis on a different variant with the same FEN', () => {
+    const s = editorOn();
+    s.cmp.toggleEngine();
+    s.fixture.detectChanges();
+    expect(s.engine.analysed).toEqual([START]);
+
+    // Dati dell'analisi in corso sulla variante 1.
+    s.engine.evaluation.set({ depth: 12, scoreCp: 30, mate: null, pv: ['e2e4'] });
+    s.engine.bestLine.set(['e4', 'e5']);
+    s.fixture.detectChanges();
+
+    s.navigateTo(2);
+
+    expect(s.cmp.editId()).toBe(2);
+    // Stessa FEN, ma variante diversa: l'analisi riparte e i dati precedenti
+    // sono stati svuotati.
+    expect(s.engine.analysed).toEqual([START, START]);
+    expect(s.engine.evaluation()).toBeNull();
+    expect(s.engine.bestLine()).toEqual([]);
+    expect(s.cmp.engineOn()).toBe(true);
+  });
+
+  it('does not analyse while the variant is still loading', () => {
+    const variantCalls: { subject: Subject<Variant> }[] = [];
+    const s = setup(
+      {
+        getVariant: () => {
+          const subject = new Subject<Variant>();
+          variantCalls.push({ subject });
+          return subject;
+        },
+      },
+      1,
+    );
+    s.cmp.toggleEngine();
+    s.fixture.detectChanges();
+    expect(s.engine.analysed).toEqual([]);
+
+    variantCalls[0].subject.next(italiana);
+    s.fixture.detectChanges();
+    expect(s.engine.analysed).toEqual([START]);
+  });
+
+  it('analyses right away while creating a new variant', () => {
+    const s = setup({});
+    s.cmp.toggleEngine();
+    s.fixture.detectChanges();
+    expect(s.engine.analysed.length).toBe(1);
   });
 });
