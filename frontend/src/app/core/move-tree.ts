@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { MoveNode } from './variant.model';
+import { MoveNag, MoveNode } from './variant.model';
 
 /** Token per il rendering PGN dell'albero (mainline + varianti tra parentesi). */
 export interface MoveToken {
@@ -8,6 +8,15 @@ export interface MoveToken {
   label?: string;
   path?: number[];
   variation?: boolean;
+  /** Annotazioni del nodo (R24): il NAG affianca il SAN, il commento va sotto. */
+  nag?: MoveNag;
+  comment?: string;
+}
+
+/** Annotazioni di una mossa: assenti quando la mossa non è annotata. */
+export interface MoveAnnotation {
+  comment?: string;
+  nag?: MoveNag;
 }
 
 /** Albero lineare (senza rami) da una lista di mosse SAN. */
@@ -74,6 +83,54 @@ export function promoteToMainline(tree: MoveNode[], path: number[]): MoveNode[] 
   const promotedChild = { ...selected, children: promoteToMainline(selected.children, rest) };
   // Il figlio scelto passa in testa, gli altri mantengono l'ordine relativo.
   return [promotedChild, ...tree.filter((_, i) => i !== head)];
+}
+
+/** Nodo identificato dal percorso, o null se il percorso non esiste (o è vuoto). */
+export function nodeAt(tree: MoveNode[], path: number[]): MoveNode | null {
+  let nodes = tree;
+  let node: MoveNode | null = null;
+  for (const idx of path) {
+    node = nodes[idx] ?? null;
+    if (!node) {
+      return null;
+    }
+    nodes = node.children;
+  }
+  return node;
+}
+
+/**
+ * Sostituisce le annotazioni del nodo in `path`. Commento e NAG sono normalizzati
+ * insieme: un commento vuoto (o di soli spazi) e un NAG assente **non lasciano il
+ * campo** sul nodo, così un nodo mai annotato torna al JSON minimale `{san, children}`.
+ * Il resto dell'albero — e il sottoalbero del nodo — resta invariato.
+ */
+export function setAnnotation(
+  tree: MoveNode[],
+  path: number[],
+  annotation: MoveAnnotation,
+): MoveNode[] {
+  if (path.length === 0) {
+    return tree;
+  }
+  const parent = path.slice(0, -1);
+  const idx = path[path.length - 1];
+  return updateChildrenAt(tree, parent, (kids) =>
+    kids.map((node, i) => (i === idx ? annotate(node, annotation) : node)),
+  );
+}
+
+/** Nodo con le sole annotazioni valorizzate: le altre chiavi spariscono. */
+function annotate(node: MoveNode, annotation: MoveAnnotation): MoveNode {
+  const comment = annotation.comment?.trim();
+  const next: MoveNode = { san: node.san, children: node.children };
+  if (comment) {
+    next.comment = comment;
+  }
+  if (annotation.nag) {
+    next.nag = annotation.nag;
+  }
+  return next;
 }
 
 /** Figli del nodo identificato dal percorso (radice se percorso vuoto). */
@@ -166,7 +223,15 @@ export function buildTokens(tree: MoveNode[]): MoveToken[] {
   };
 
   const emitMove = (node: MoveNode, ply: number, path: number[], depth: number, force: boolean) => {
-    tokens.push({ kind: 'move', san: node.san, label: label(ply, force), path, variation: depth > 0 });
+    tokens.push({
+      kind: 'move',
+      san: node.san,
+      label: label(ply, force),
+      path,
+      variation: depth > 0,
+      nag: node.nag,
+      comment: node.comment,
+    });
   };
 
   const renderContinuation = (

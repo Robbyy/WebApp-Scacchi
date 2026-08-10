@@ -19,6 +19,10 @@ import org.springframework.stereotype.Component;
  * <p>Nota su chesslib: {@code MoveList.loadFromSan} è un semplice decoder SAN→mossa
  * e <b>non</b> verifica la legalità (può produrre mosse illegali). La legalità è
  * quindi controllata esplicitamente con {@code board.legalMoves().contains(move)}.
+ *
+ * <p>Da R24 la visita controlla anche le annotazioni opzionali del nodo
+ * (commento e NAG): un albero senza annotazioni resta valido esattamente come
+ * prima.
  */
 @Component
 public class VariantValidator {
@@ -63,7 +67,26 @@ public class VariantValidator {
             List<Integer> childPath = new ArrayList<>(path);
             childPath.add(i);
             String nextFen = applyMove(fen, node == null ? null : node.san(), childPath, field);
+            validateAnnotations(node, childPath, field);
             validateNodes(node.children(), nextFen, childPath, field);
+        }
+    }
+
+    /**
+     * Annotazioni del nodo (R24): commento entro il limite e NAG fra i sei
+     * ammessi. I nodi privi di entrambi — cioè tutti quelli salvati prima di
+     * R24 — passano senza controlli.
+     */
+    private void validateAnnotations(MoveNode node, List<Integer> path, String field) {
+        String comment = node.comment();
+        if (comment != null && comment.length() > MoveNode.MAX_COMMENT_LENGTH) {
+            throw error(field, path.size(), path,
+                "Commento troppo lungo (massimo " + MoveNode.MAX_COMMENT_LENGTH + " caratteri).");
+        }
+        String nag = node.nag();
+        if (nag != null && !MoveNode.NAGS.contains(nag)) {
+            throw error(field, path.size(), path,
+                "Annotazione non valida: \"" + nag + "\".");
         }
     }
 

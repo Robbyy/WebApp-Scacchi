@@ -270,6 +270,65 @@
   color: var(--text-muted);
 }
 
+/* Mossa + pulsante azioni (ISSUE-013): restano sulla stessa riga logica, così
+   il menu si ancora al controllo giusto anche quando il PGN va a capo. */
+.move-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.05rem;
+}
+
+/* NAG accanto al SAN: parte della stessa mossa, non un elemento a sé. */
+.move-nag {
+  margin-left: 0.1rem;
+  font-weight: 700;
+  color: var(--wood-medium);
+}
+
+.move--current .move-nag {
+  color: var(--wood-dark);
+}
+
+/* Bersaglio di almeno 24px per lato: la voce è pensata anche per il touch,
+   non solo per il mouse. */
+.move-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.move-actions:hover,
+.move-actions:focus-visible {
+  background: var(--wood-light);
+  color: var(--wood-dark);
+}
+
+/* Il commento occupa una riga sua sotto la mossa: `flex-basis` al 100% forza
+   l'a capo dentro il flusso PGN senza uscire dal pannello. Il rientro è
+   `padding` e non `margin`: sommato a una base del 100% un margine renderebbe
+   scorrevole in orizzontale il pannello delle mosse. */
+.move-comment {
+  flex: 0 0 100%;
+  box-sizing: border-box;
+  padding-left: 0.4rem;
+  margin: 0 0 0.15rem;
+  font-size: 0.82rem;
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
 .side {
   display: flex;
   flex-direction: column;

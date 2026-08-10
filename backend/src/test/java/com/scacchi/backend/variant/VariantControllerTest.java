@@ -189,6 +189,100 @@ class VariantControllerTest {
             .andExpect(jsonPath("$.moves[3]").value("Nc6"));
     }
 
+    // R24: commento e NAG viaggiano nello stesso JSON dell'albero.
+    @Test
+    void annotationsSurviveTheRoundTrip() throws Exception {
+        String body = """
+            {"name":"Annotata","color":"WHITE","tree":[
+              {"san":"e4","comment":"Apertura di re","nag":"!","children":[
+                {"san":"e5","children":[]},
+                {"san":"c5","nag":"!?","children":[]}
+              ]}
+            ]}""";
+        MvcResult result = mockMvc.perform(
+                post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andReturn();
+        int id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(get("/api/variants/" + id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.tree[0].comment").value("Apertura di re"))
+            .andExpect(jsonPath("$.tree[0].nag").value("!"))
+            .andExpect(jsonPath("$.tree[0].children[1].nag").value("!?"))
+            // Le mosse non annotate restano prive dei due campi.
+            .andExpect(jsonPath("$.tree[0].children[0].comment").doesNotExist())
+            .andExpect(jsonPath("$.tree[0].children[0].nag").doesNotExist())
+            // L'invariante children[0] = mainline non cambia.
+            .andExpect(jsonPath("$.moves.length()").value(2))
+            .andExpect(jsonPath("$.moves[1]").value("e5"));
+    }
+
+    @Test
+    void aLegacyTreeIsReadBackWithoutAnnotationFields() throws Exception {
+        String body = """
+            {"name":"Legacy","color":"WHITE","tree":[
+              {"san":"e4","children":[{"san":"e5","children":[]}]}
+            ]}""";
+        MvcResult result = mockMvc.perform(
+                post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andReturn();
+        int id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(get("/api/variants/" + id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.tree[0].san").value("e4"))
+            .andExpect(jsonPath("$.tree[0].comment").doesNotExist())
+            .andExpect(jsonPath("$.tree[0].nag").doesNotExist());
+    }
+
+    @Test
+    void updateAddsAnnotationsToAnExistingVariant() throws Exception {
+        String create = """
+            {"name":"Da annotare","color":"WHITE","moves":["e4","e5"]}""";
+        MvcResult result = mockMvc.perform(
+                post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(create))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.tree[0].nag").doesNotExist())
+            .andReturn();
+        int id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+
+        String update = """
+            {"name":"Da annotare","color":"WHITE","tree":[
+              {"san":"e4","nag":"!","children":[{"san":"e5","comment":"Simmetrica","children":[]}]}
+            ]}""";
+        mockMvc.perform(put("/api/variants/" + id).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.tree[0].nag").value("!"))
+            .andExpect(jsonPath("$.tree[0].children[0].comment").value("Simmetrica"))
+            .andExpect(jsonPath("$.moves.length()").value(2));
+    }
+
+    @Test
+    void createRejectsACommentBeyondTheLimit() throws Exception {
+        String body = """
+            {"name":"Commento lungo","color":"WHITE","tree":[
+              {"san":"e4","comment":"%s","children":[]}
+            ]}""".formatted("x".repeat(1001));
+        mockMvc.perform(post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("tree"))
+            .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    void createRejectsAnUnknownNag() throws Exception {
+        String body = """
+            {"name":"NAG ignoto","color":"WHITE","tree":[
+              {"san":"e4","children":[{"san":"e5","nag":"$1","children":[]}]}
+            ]}""";
+        mockMvc.perform(post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("tree"))
+            .andExpect(jsonPath("$.branchPath.length()").value(2));
+    }
+
     @Test
     void updateReturns404WhenMissing() throws Exception {
         String body = """

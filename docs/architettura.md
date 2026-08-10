@@ -61,10 +61,10 @@ Aree principali sotto `src/app`:
 ## Scelte tecniche importanti
 
 - **Scacchiera custom Angular/CSS/SVG** — nessuna libreria di rendering; pezzi Staunton SVG, palette pergamena. Regole e validazione: `chess.js` (frontend) / `chesslib` (backend). Separazione deliberata rendering–regole (ADR 0001, 0004).
-- **Albero mosse `MoveNode`** — `children[0]` è sempre la mainline; gli altri figli sono sotto-varianti. Il campo `moves[]` mantiene la mainline derivata per compatibilità. (ADR 0002.)
+- **Albero mosse `MoveNode`** — `children[0]` è sempre la mainline; gli altri figli sono sotto-varianti. Il campo `moves[]` mantiene la mainline derivata per compatibilità. (ADR 0002.) Da R24 il nodo porta anche due annotazioni opzionali (`comment`, `nag`), nello stesso JSON dell'albero e senza migration.
 - **Stockfish client-side** — asm.js single-thread in un Web Worker (`frontend/public/stockfish/`); nessun endpoint backend; **mai disponibile in modalità allenamento** (per costruzione: `variant-training` non importa né `StockfishService` né `EvalBar`). (ADR 0009.)
 - **OAuth Lichess (PKCE)** — solo per leggere studi privati/unlisted; token in `sessionStorage`, mai lato backend; non introduce login applicativo. (ADR 0008.)
-- **Import PGN** — parsing client-side con parser dedicato (`core/pgn.ts`); `chess.js` resta motore di regole; varianti annidate sono conservate, mentre commenti e NAG sono accettati sintatticamente ma oggi scartati. (ADR 0007.)
+- **Import PGN** — parsing client-side con parser dedicato (`core/pgn.ts`); `chess.js` resta motore di regole; varianti annidate sono conservate, mentre commenti e NAG sono accettati sintatticamente ma oggi scartati. R24 **non** ha esteso il parser: le annotazioni si aggiungono dall'editor, associarle ai nodi in import è un'evolutiva a sé. (ADR 0007.)
 
 ---
 
@@ -140,7 +140,7 @@ Variant 1──1 ReviewSchedule
 - `Study → Variant`: **delete a cascata** (eliminare uno studio elimina le sue varianti).
 - `Variant` non ha una propria `phase`: si deriva sempre dallo studio padre (`studyId` → `Study.phase`); le varianti legacy senza `studyId` sono trattate come `OPENING` (ISSUE-016).
 - `Variant → TrainingSession`: cascade su `TrainingMove`.
-- `MoveNode`: `{ san: string, children: MoveNode[] }` — `children[0]` è la mainline.
+- `MoveNode`: `{ san: string, children: MoveNode[], comment?: string, nag?: '!' | '?' | '!!' | '??' | '!?' | '?!' }` — `children[0]` è la mainline. `comment` e `nag` (R24) sono **opzionali** e vivono nella stessa colonna JSON `tree`: nessuna migration, nessuna colonna nuova. Il backend valida lunghezza del commento (max 1.000 caratteri) e appartenenza del NAG all'insieme dei sei; gli alberi salvati prima di R24 restano validi e un albero non annotato serializza senza i due campi.
 
 ---
 

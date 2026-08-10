@@ -121,14 +121,14 @@ esplicitamente `localStorage` oppure un modello già associabile a utente.
 |---|---|---|
 | R22 | ✅ [Mini-spec di ISSUE-011](backlog/manutenzione-evolutiva.md#mini-specifica-r22--issue-011) formalizzata: pagina unica, semantica del link Lichess e comportamento dell'upsert. | ✅ Eseguita (2026-08-06): test form/create/import, `studyId` valido/inesistente/non-Aperture, redirect storico e modifica inline (frontend 249 verdi); verifica live di flussi, bozza ripristinata dopo unload pieno, OAuth end-to-end con account Lichess reale, topbar e griglia a 1440/1024/768/320/280px. La precedente risposta 401 era legata alla rete di sviluppo. |
 | R23 | ✅ [Mini-spec R23 — ISSUE-010 + ISSUE-008](backlog/manutenzione-evolutiva.md#mini-specifica-r23--issue-010--issue-008) formalizzata: rail da 1500px, drawer sotto soglia, navigazione esplicita nell'editor e rimozione Auto-play. | ✅ Eseguita (2026-08-10): P1 corretti con pipeline cancellabile e identità della variante caricata; frontend 288 verdi, build ok e checklist live 41–44 su app reale a 1600/1440/1024/768/375/320px. |
-| R24 | ✅ [Mini-specifica R24](backlog/manutenzione-evolutiva.md#mini-specifica-r24--issue-013--issue-016-move-comments) formalizzata il 2026-08-10: NAG singolo, commento testuale limitato, JSON retrocompatibile, menu azioni accessibile; «Elimina continuazioni» resta fuori scope e tra i punti aperti. | Test tree TypeScript e serializzazione/deserializzazione backend, menu/dialog e lettura editor/dettaglio; nessuna perdita di mosse o annotazioni esistenti. |
+| R24 | ✅ [Mini-specifica R24](backlog/manutenzione-evolutiva.md#mini-specifica-r24--issue-013--issue-016-move-comments) formalizzata il 2026-08-10: NAG singolo, commento testuale limitato, JSON retrocompatibile, menu azioni accessibile; «Elimina continuazioni» resta fuori scope e tra i punti aperti. | ✅ Eseguita (2026-08-10, [esito R24](backlog/manutenzione-evolutiva.md#esito-r24--issue-013--issue-016-move-comments-2026-08-10)): backend 103 verdi e frontend 338 verdi, build ok e checklist live 45–48 a 1600/1440/1024/768/375/320px su una copia del DB H2; nessuna perdita di mosse o annotazioni, parser PGN/Lichess invariato. |
 | R25–R28 | OpenSpec completa per ogni slice di ISSUE-016, senza ridecidere il modello a fasi già approvato. | Test API/validazione, frontend e checklist manuale della fase interessata. |
 | R29 | Decisione di persistenza delle preferenze e contratto versione backend. | Test di `ReviewScheduler` con parametri e verifica che le schedule esistenti non vengano ricalcolate. |
 | R30 | Audit reale delle opzioni UCI emesse dal worker Stockfish asm.js. | Test del mapping opzioni/comandi UCI e verifica live del motore. |
 
 ## Lavoro preparatorio che può procedere senza cambiare il prodotto
 
-- R20, R21, R22 e R23 sono chiusi; il prossimo incremento pianificato è **R24**. Possono
+- R20, R21, R22, R23 e R24 sono chiusi; il prossimo incremento pianificato è **R25**. Possono
   procedere senza alterare il prodotto la proposta OpenSpec di R25 e l'audit UCI di R30.
 - R23 ha preservato la catena consegnata da R21
   (`parseInfoLine` → `StockfishService.bestLine` → `.engine-line` in `.engine-panel`):
@@ -136,4 +136,6 @@ esplicitamente `localStorage` oppure un modello già associabile a utente.
   aperta la race tra due FEN consecutivi documentata sotto ISSUE-022.
 - Non avviare implementazioni sovrapposte su topbar (021/011/015/017), dettaglio
   variante (022/007/010/008) o tree editor (013/commenti): sono le tre aree con il
-  maggior rischio di conflitto e di regressione UX.
+  maggior rischio di conflitto e di regressione UX. Con R24 chiusa, il tree editor
+  è di nuovo libero, ma chi lo tocca deve passare da `move-tree.ts` (annotazioni
+  incluse) e non duplicarne la logica nei componenti.

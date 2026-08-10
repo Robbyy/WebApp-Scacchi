@@ -39,6 +39,23 @@ const branched: Variant = {
   ],
 };
 
+/** Variante con annotazioni sulle mosse (R24). */
+const annotatedVariant: Variant = {
+  id: 3,
+  name: 'Annotata',
+  color: 'WHITE',
+  moves: ['e4', 'e5'],
+  startingFen: START,
+  tree: [
+    {
+      san: 'e4',
+      comment: 'Apertura di re',
+      nag: '!',
+      children: [{ san: 'e5', children: [] }],
+    },
+  ],
+};
+
 /**
  * Doppio del motore: niente Web Worker nei test, segnali pilotabili a mano.
  * `analyse`/`stop` replicano il contratto reale di `StockfishService` — entrambi
@@ -146,6 +163,24 @@ describe('VariantDetail', () => {
   it('shows training/review/stats for a legacy variant without a study (ISSUE-016)', () => {
     const { cmp } = setup(linear);
     expect(cmp.isOpening()).toBe(true);
+  });
+
+  // R24: la stessa rappresentazione dell'editor, ma in sola lettura.
+  it('shows NAG and comment of an annotated move, without action controls', () => {
+    const { fixture } = setup(annotatedVariant);
+    const el: HTMLElement = fixture.nativeElement;
+
+    expect(el.querySelector('.move-nag')!.textContent?.trim()).toBe('!');
+    expect(el.querySelector('.move-comment')!.textContent?.trim()).toBe('Apertura di re');
+    expect(el.querySelector('.move-actions')).toBeNull();
+    expect(el.querySelector('app-move-annotation-dialog')).toBeNull();
+  });
+
+  it('reads a legacy tree without annotations exactly as before', () => {
+    const { fixture, cmp } = setup(branched);
+    expect(fixture.nativeElement.querySelector('.move-nag')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.move-comment')).toBeNull();
+    expect(cmp.tokens().every((t: any) => t.nag === undefined)).toBe(true);
   });
 
   it('shows training/review/stats for a variant in an opening study', () => {

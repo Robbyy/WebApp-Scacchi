@@ -1,0 +1,27 @@
+<div class="menu-scrim" (click)="dismiss.emit()"></div>
+<div
+  class="menu"
+  role="menu"
+  [attr.aria-label]="'Azioni per ' + san()"
+  [style.left.px]="left()"
+  [style.top.px]="top()"
+>
+  <p class="menu-head">{{ san() }}</p>
+  <button #firstItem #menuItem type="button" role="menuitem" class="menu-item" (click)="choose('annotate')">
+    Annota la mossa
+  </button>
+  @if (canPromote()) {
+    <button #menuItem type="button" role="menuitem" class="menu-item" (click)="choose('promote')">
+      Promuovi a mainline
+    </button>
+  }
+  <button
+    #menuItem
+    type="button"
+    role="menuitem"
+    class="menu-item menu-item--danger"
+    (click)="choose('delete')"
+  >
+    Elimina mossa
+  </button>
+</div>

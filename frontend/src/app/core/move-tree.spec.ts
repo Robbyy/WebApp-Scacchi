@@ -7,10 +7,12 @@ import {
   isOnMainline,
   lineSans,
   mainline,
+  nodeAt,
   pathsEqual,
   promoteToMainline,
   remainingMainline,
   removeNode,
+  setAnnotation,
 } from './move-tree';
 import { MoveNode } from './variant.model';
 
@@ -24,6 +26,21 @@ function sample(): MoveNode[] {
       children: [
         { san: 'e5', children: [{ san: 'Nf3', children: [] }] },
         { san: 'c5', children: [] },
+      ],
+    },
+  ];
+}
+
+/** Stesso albero, con annotazioni su e4, e5 e c5 (R24). */
+function annotated(): MoveNode[] {
+  return [
+    {
+      san: 'e4',
+      comment: 'Apertura di re',
+      nag: '!',
+      children: [
+        { san: 'e5', comment: 'Simmetrica', children: [{ san: 'Nf3', children: [] }] },
+        { san: 'c5', nag: '!?', children: [] },
       ],
     },
   ];
@@ -145,6 +162,107 @@ describe('move-tree', () => {
       expect(sans).toEqual(expect.arrayContaining(['e4', 'e5', 'Nf3', 'c5']));
       expect(tokens.some((t) => t.kind === 'open')).toBe(true);
       expect(tokens.some((t) => t.kind === 'close')).toBe(true);
+    });
+
+    it('carries the annotations of each move on its token (R24)', () => {
+      const tokens = buildTokens(annotated()).filter((t) => t.kind === 'move');
+      const e4 = tokens.find((t) => t.san === 'e4');
+      expect(e4?.nag).toBe('!');
+      expect(e4?.comment).toBe('Apertura di re');
+      expect(tokens.find((t) => t.san === 'c5')?.nag).toBe('!?');
+      expect(tokens.find((t) => t.san === 'Nf3')?.nag).toBeUndefined();
+      expect(tokens.find((t) => t.san === 'Nf3')?.comment).toBeUndefined();
+    });
+  });
+
+  // R24: le annotazioni sono un'estensione del nodo, non una struttura a parte.
+  describe('nodeAt', () => {
+    it('returns the node at a path', () => {
+      expect(nodeAt(annotated(), [0, 1])?.san).toBe('c5');
+      expect(nodeAt(annotated(), [0])?.comment).toBe('Apertura di re');
+    });
+
+    it('returns null for the root or an unknown path', () => {
+      expect(nodeAt(sample(), [])).toBeNull();
+      expect(nodeAt(sample(), [0, 9])).toBeNull();
+    });
+  });
+
+  describe('setAnnotation', () => {
+    it('adds a comment and a NAG to a move', () => {
+      const t = setAnnotation(sample(), [0, 1], { comment: 'Siciliana', nag: '!?' });
+      expect(nodeAt(t, [0, 1])?.comment).toBe('Siciliana');
+      expect(nodeAt(t, [0, 1])?.nag).toBe('!?');
+    });
+
+    it('replaces the previous annotation instead of merging it', () => {
+      const t = setAnnotation(annotated(), [0], { nag: '??' });
+      expect(nodeAt(t, [0])?.nag).toBe('??');
+      expect(nodeAt(t, [0])?.comment).toBeUndefined();
+    });
+
+    it('drops the fields when comment and NAG are cleared', () => {
+      const t = setAnnotation(annotated(), [0], {});
+      const node = nodeAt(t, [0])!;
+      expect('comment' in node).toBe(false);
+      expect('nag' in node).toBe(false);
+    });
+
+    it('trims the comment and ignores a blank one', () => {
+      const t = setAnnotation(sample(), [0], { comment: '  Spazi  ' });
+      expect(nodeAt(t, [0])?.comment).toBe('Spazi');
+      const blank = setAnnotation(annotated(), [0], { comment: '   ' });
+      expect('comment' in nodeAt(blank, [0])!).toBe(false);
+    });
+
+    it('keeps the subtree and the rest of the tree untouched', () => {
+      const t = setAnnotation(annotated(), [0, 0], { nag: '!' });
+      expect(mainline(t)).toEqual(['e4', 'e5', 'Nf3']);
+      expect(nodeAt(t, [0, 0, 0])?.san).toBe('Nf3');
+      expect(nodeAt(t, [0, 1])?.nag).toBe('!?');
+      expect(nodeAt(t, [0])?.comment).toBe('Apertura di re');
+    });
+
+    it('does not mutate the original tree', () => {
+      const t = annotated();
+      setAnnotation(t, [0], { comment: 'Altro' });
+      expect(nodeAt(t, [0])?.comment).toBe('Apertura di re');
+    });
+
+    it('is a no-op for an empty path', () => {
+      const t = sample();
+      expect(setAnnotation(t, [], { nag: '!' })).toBe(t);
+    });
+  });
+
+  // Criterio di uscita R24: le operazioni sull'albero non perdono i metadati
+  // dei nodi che restano.
+  describe('metadati preservati dalle operazioni sull\'albero', () => {
+    it('promoteToMainline keeps comments, NAGs and sub-variations', () => {
+      const t = promoteToMainline(annotated(), [0, 1]); // promuove c5
+      expect(mainline(t)).toEqual(['e4', 'c5']);
+      expect(nodeAt(t, [0])?.comment).toBe('Apertura di re');
+      expect(nodeAt(t, [0])?.nag).toBe('!');
+      expect(nodeAt(t, [0, 0])?.nag).toBe('!?'); // c5, ora mainline
+      expect(nodeAt(t, [0, 1])?.comment).toBe('Simmetrica'); // e5, ora variante
+      expect(nodeAt(t, [0, 1, 0])?.san).toBe('Nf3');
+    });
+
+    it('addChild keeps the annotations of the existing nodes', () => {
+      const { tree, index } = addChild(annotated(), [0, 0], 'Nc3');
+      expect(index).toBe(1);
+      expect(nodeAt(tree, [0])?.comment).toBe('Apertura di re');
+      expect(nodeAt(tree, [0, 0])?.comment).toBe('Simmetrica');
+      expect(nodeAt(tree, [0, 0, 1])?.san).toBe('Nc3');
+      expect(nodeAt(tree, [0, 0, 1])?.comment).toBeUndefined();
+    });
+
+    it('removeNode keeps the annotations of the nodes left in place', () => {
+      const t = removeNode(annotated(), [0, 0]); // rimuove e5 e il suo Nf3
+      expect(nodeAt(t, [0])?.comment).toBe('Apertura di re');
+      expect(nodeAt(t, [0])?.nag).toBe('!');
+      expect(nodeAt(t, [0, 0])?.san).toBe('c5');
+      expect(nodeAt(t, [0, 0])?.nag).toBe('!?');
     });
   });
 });

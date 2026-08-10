@@ -38,9 +38,12 @@ Il piano esclude volutamente bug, audit e infrastruttura.
 > ✅ **R23 — Navigazione tra varianti** — fatto (ISSUE-010 + ISSUE-008, 2026-08-10):
 > elenco varianti, rail/drawer, guard editor e rimozione Auto-play; corretti anche i P1
 > sull'ordine delle risposte HTTP e sul riavvio del motore nell'editor con FEN invariata.
-> Prossimo incremento: **R24** (ISSUE-013 + `issue-016-move-comments`), con
-> [mini-specifica](backlog/manutenzione-evolutiva.md#mini-specifica-r24--issue-013--issue-016-move-comments)
-> formalizzata per formato commento/NAG e retrocompatibilità dei `MoveNode`.
+>
+> ✅ **R24 — Azioni e annotazioni per mossa** — fatto (ISSUE-013 + `issue-016-move-comments`,
+> 2026-08-10): menu `⋮` (anche col tasto destro) con annota/promuovi/elimina, dialog di
+> annotazione con commento e un solo NAG, `MoveNode` esteso in modo retrocompatibile.
+> Vedi l'[esito R24](backlog/manutenzione-evolutiva.md#esito-r24--issue-013--issue-016-move-comments-2026-08-10).
+> Prossimo incremento: **R25** (`issue-016-custom-starting-fen`).
 
 In sintesi: navigazione → linea migliore del motore → gestione studi → flusso
 varianti/editor → Mediogioco e Finale a slice → impostazioni → parametri motore.

@@ -59,7 +59,7 @@ La sequenza dettagliata dei soli incrementi evolutivi è nel
 2. ~~**R21:** ISSUE-022 + ISSUE-007 (linea migliore del motore e semplificazione pannello).~~ ✅ fatto (2026-08-05).
 3. ~~**R22:** ISSUE-011 + ISSUE-012 + ISSUE-009 (ciclo di vita dello studio e home).~~ ✅ fatto (2026-08-06).
 4. ~~**R23:** ISSUE-010 + ISSUE-008 (navigazione e controlli del dettaglio variante).~~ ✅ fatto (2026-08-10).
-5. **R24:** ISSUE-013 + `issue-016-move-comments` (editor).
+5. ~~**R24:** ISSUE-013 + `issue-016-move-comments` (editor).~~ ✅ fatto (2026-08-10).
 6. **R25–R28:** slice residue di ISSUE-016: posizione FEN → Mediogioco → Finale → gioco da posizione.
 7. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
 
@@ -73,7 +73,9 @@ di questa cadenza di rilasci evolutivi.
 - **ISSUE-019 (Liquibase, ✅)** ha sbloccato la catena dati: ISSUE-016, ISSUE-017 (`app_settings`), ISSUE-014 (se persistenza su DB).
 - **ISSUE-021 ✅ → abilita →** ISSUE-016 (scaffold di navigazione + segnaposto; 016 poi li sostituisce con le sezioni reali).
 - **ISSUE-017 → ospita →** ISSUE-014 (sezione "Motore"); **→ affianca →** ISSUE-015 (cluster topbar); **→ tocca →** `ReviewScheduler`.
-- **ISSUE-013 → riusa →** `promoteToMainline` (`move-tree.ts`) + `confirm.service`.
+- **ISSUE-013 ✅ → ha riusato →** `promoteToMainline` (`move-tree.ts`) e la conferma di
+  cancellazione già presente nell'editor; le annotazioni di R24 passano da `setAnnotation`
+  nello stesso modulo.
 - **ISSUE-010 → riusa →** `StudyService.getStudy`, guard editor (`confirm.service` /
   `canLeaveEditor`) e ciclo R21 del pannello motore; il cambio del solo parametro `:id`
   richiede gestione esplicita nel componente.
@@ -94,6 +96,14 @@ di questa cadenza di rilasci evolutivi.
 ---
 
 ## Completati
+
+- **ISSUE-013 + `issue-016-move-comments` — Azioni e annotazioni per mossa** ✅ (R24,
+  2026-08-10). Menu `⋮` (anche col tasto destro) su ogni mossa del pannello «Mosse & varianti»
+  con annota / promuovi a mainline / elimina, dialog di annotazione con commento (max 1.000
+  caratteri) e un solo NAG fra sei; `MoveNode` esteso con `comment`/`nag` opzionali nello stesso
+  JSON dell'albero, senza migration né endpoint nuovi. Backend 103 test verdi, frontend 338.
+  Parser PGN/Lichess non esteso e «Elimina continuazioni» fuori scope: restano punti aperti.
+  Esito: [`backlog/manutenzione-evolutiva.md`](backlog/manutenzione-evolutiva.md).
 
 - **ISSUE-011 + ISSUE-012 + ISSUE-009 — Ciclo di vita dello studio** ✅ (R22, 2026-08-06).
   Pagina unica `/studies/new` per creazione e import Lichess (route storica reindirizzata

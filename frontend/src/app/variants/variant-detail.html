@@ -130,8 +130,11 @@
                     [class.move--current]="isCurrent(t.path)"
                     (click)="goTo(t.path)"
                   >
-                    {{ t.san }}
+                    {{ t.san }}@if (t.nag) {<span class="move-nag">{{ t.nag }}</span>}
                   </button>
+                  @if (t.comment) {
+                    <span class="move-comment">{{ t.comment }}</span>
+                  }
                 }
               }
             }

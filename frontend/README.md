@@ -26,9 +26,10 @@ cornice legno, pezzi Staunton SVG, layout a pannelli). Libreria regole/PGN:
 ## Stato
 
 Scaffold Angular presente e operativo (componenti **standalone**, signals,
-`OnPush`). Parte 1 (Prototipi 0-6), **Parte 2 (P7-P19)** ed evolutive R20-R23 completate.
-Suite: **288 test** (Vitest) verdi. R23 ha aggiunto il pannello varianti adattivo e ha
-corretto il caricamento fuori ordine e il riavvio motore a FEN invariata.
+`OnPush`). Parte 1 (Prototipi 0-6), **Parte 2 (P7-P19)** ed evolutive R20-R24 completate.
+Suite: **338 test** (Vitest) verdi. R23 ha aggiunto il pannello varianti adattivo e ha
+corretto il caricamento fuori ordine e il riavvio motore a FEN invariata; R24 ha aggiunto
+il menu azioni per mossa e le annotazioni (commento + NAG) sui nodi dell'albero.
 
 Aree principali (sotto `src/app`):
 

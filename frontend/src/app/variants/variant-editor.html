@@ -82,7 +82,7 @@
     @if (confirmingDelete()) {
       <div class="confirm-box" role="alertdialog" aria-label="Conferma eliminazione sottoalbero">
         <p class="confirm-text">
-          Eliminare <b>{{ currentLine()[currentLine().length - 1] }}</b> e tutto il suo
+          Eliminare <b>{{ pendingDeleteSan() }}</b> e tutto il suo
           sottoalbero? L'operazione non è reversibile.
         </p>
         <div class="confirm-actions">
@@ -152,15 +152,32 @@
                 @if (t.label) {
                   <span class="move-num">{{ t.label }}</span>
                 }
-                <button
-                  type="button"
-                  class="move"
-                  [class.move--variation]="t.variation"
-                  [class.move--current]="isCurrent(t.path)"
-                  (click)="goTo(t.path)"
-                >
-                  {{ t.san }}
-                </button>
+                <span class="move-wrap">
+                  <button
+                    type="button"
+                    class="move"
+                    [class.move--variation]="t.variation"
+                    [class.move--current]="isCurrent(t.path)"
+                    (click)="goTo(t.path)"
+                    (contextmenu)="openMoveMenu($event, t.path, t.san)"
+                  >
+                    {{ t.san }}@if (t.nag) {<span class="move-nag">{{ t.nag }}</span>}
+                  </button>
+                  <button
+                    type="button"
+                    class="move-actions"
+                    aria-haspopup="menu"
+                    [attr.aria-expanded]="isMenuOpen(t.path)"
+                    [attr.aria-label]="'Azioni per ' + t.san"
+                    [attr.data-move-path]="pathKey(t.path)"
+                    (click)="openMoveMenu($event, t.path, t.san)"
+                  >
+                    &#8942;
+                  </button>
+                </span>
+                @if (t.comment) {
+                  <span class="move-comment">{{ t.comment }}</span>
+                }
               }
             }
           }
@@ -190,5 +207,24 @@
     [drawer]="true"
     (variantSelected)="requestVariantChange($event)"
     (dismiss)="closeVariants()"
+  />
+}
+
+@if (menu(); as m) {
+  <app-move-actions-menu
+    [san]="m.san"
+    [anchor]="m.anchor"
+    [canPromote]="menuCanPromote()"
+    (action)="onMoveAction($event)"
+    (dismiss)="closeMoveMenu()"
+  />
+}
+
+@if (annotating(); as a) {
+  <app-move-annotation-dialog
+    [san]="a.san"
+    [annotation]="a.annotation"
+    (save)="saveAnnotation($event)"
+    (cancel)="closeAnnotation()"
   />
 }

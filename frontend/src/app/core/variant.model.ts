@@ -1,9 +1,24 @@
 export type VariantColor = 'WHITE' | 'BLACK';
 
-/** Nodo dell'albero di mosse: SAN + seguiti (il primo figlio è la mainline). */
+/** Annotazione scacchistica sintetica di una mossa: una sola per nodo (R24). */
+export type MoveNag = '!' | '?' | '!!' | '??' | '!?' | '?!';
+
+/** I sei NAG ammessi, nell'ordine in cui compaiono nel dialog di annotazione. */
+export const MOVE_NAGS: readonly MoveNag[] = ['!', '!!', '?', '??', '!?', '?!'];
+
+/** Lunghezza massima del commento di una mossa (mini-spec R24). */
+export const MAX_MOVE_COMMENT_LENGTH = 1000;
+
+/**
+ * Nodo dell'albero di mosse: SAN + seguiti (il primo figlio è la mainline).
+ * Da R24 può portare un commento testuale e un solo NAG: entrambi sono
+ * opzionali, quindi gli alberi salvati prima restano leggibili senza modifiche.
+ */
 export interface MoveNode {
   san: string;
   children: MoveNode[];
+  comment?: string;
+  nag?: MoveNag;
 }
 
 /** Variante di apertura, allineata a VariantDto del backend (sezione 6 planning). */

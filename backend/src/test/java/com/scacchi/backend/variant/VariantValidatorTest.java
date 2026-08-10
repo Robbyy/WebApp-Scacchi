@@ -57,4 +57,43 @@ class VariantValidatorTest {
             InvalidVariantException.class, () -> validator.validate(req));
         assertEquals("color", ex.getError().field());
     }
+
+    // R24: annotazioni delle mosse (commento entro il limite, NAG fra i sei).
+    private static CreateVariantRequest annotated(String comment, String nag) {
+        MoveNode tree = new MoveNode("e4", List.of(new MoveNode("e5", List.of(), comment, nag)));
+        return new CreateVariantRequest("Test", "WHITE", null, List.of(tree), null);
+    }
+
+    @Test
+    void acceptsAnAnnotatedMove() {
+        assertDoesNotThrow(() -> validator.validate(annotated("Buona mossa", "!?")));
+    }
+
+    @Test
+    void acceptsATreeWithoutAnnotations() {
+        assertDoesNotThrow(() -> validator.validate(annotated(null, null)));
+    }
+
+    @Test
+    void acceptsACommentAtTheLimit() {
+        assertDoesNotThrow(
+            () -> validator.validate(annotated("x".repeat(MoveNode.MAX_COMMENT_LENGTH), null)));
+    }
+
+    @Test
+    void rejectsACommentBeyondTheLimit() {
+        InvalidVariantException ex = assertThrows(
+            InvalidVariantException.class,
+            () -> validator.validate(annotated("x".repeat(MoveNode.MAX_COMMENT_LENGTH + 1), null)));
+        assertEquals("tree", ex.getError().field());
+        assertEquals(List.of(0, 0), ex.getError().branchPath());
+    }
+
+    @Test
+    void rejectsANagOutsideTheAllowedSet() {
+        InvalidVariantException ex = assertThrows(
+            InvalidVariantException.class, () -> validator.validate(annotated(null, "!!!")));
+        assertEquals("tree", ex.getError().field());
+        assertEquals(List.of(0, 0), ex.getError().branchPath());
+    }
 }

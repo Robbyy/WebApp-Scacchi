@@ -21,7 +21,7 @@ Backend e frontend sono **due progetti fisicamente separati** (vedi
 Scaffold Spring Boot presente e operativo. Parte 1 (Prototipi 0-6) e **Parte 2
 (P7-P19)** implementate. Persistenza su **H2 file** (`backend/data/scacchi`,
 `open-in-view: false`); **schema gestito da Liquibase**, `ddl-auto: none`
-(ISSUE-019). Suite: **83 test** verdi.
+(ISSUE-019). Suite: **103 test** verdi.
 
 > **Policy DB:** finché non si migra a Supabase, il file `data/scacchi.mv.db` è
 > **versionato su Git** (ri-incluso nel `.gitignore`): è la fonte dei dati del

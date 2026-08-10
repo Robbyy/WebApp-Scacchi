@@ -1,6 +1,8 @@
 package com.scacchi.backend.variant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -42,5 +44,37 @@ class MoveNodeTest {
             new MoveNode("c5", List.of()),
             new MoveNode("e5", List.of()))));
         assertEquals(List.of("e4", "c5"), MoveNode.mainline(c5First));
+    }
+
+    // R24: annotazioni opzionali, con la firma storica ancora disponibile.
+    @Test
+    void theTwoArgumentConstructorLeavesTheNodeUnannotated() {
+        MoveNode node = new MoveNode("e4", List.of());
+        assertNull(node.comment());
+        assertNull(node.nag());
+    }
+
+    @Test
+    void fromLineBuildsNodesWithoutAnnotations() {
+        MoveNode first = MoveNode.fromLine(List.of("e4", "e5")).get(0);
+        assertNull(first.comment());
+        assertNull(first.nag());
+    }
+
+    @Test
+    void aBlankCommentIsNotKept() {
+        assertNull(new MoveNode("e4", List.of(), "   ", null).comment());
+        assertNull(new MoveNode("e4", List.of(), null, null).comment());
+    }
+
+    @Test
+    void theCommentIsTrimmed() {
+        assertEquals("Apertura di re", new MoveNode("e4", List.of(), "  Apertura di re  ", null).comment());
+    }
+
+    @Test
+    void theSixNagsAreTheOnlyOnesAdmitted() {
+        assertEquals(6, MoveNode.NAGS.size());
+        assertTrue(MoveNode.NAGS.containsAll(List.of("!", "?", "!!", "??", "!?", "?!")));
     }
 }

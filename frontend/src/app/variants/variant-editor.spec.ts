@@ -12,6 +12,7 @@ import { Study } from '../core/study.model';
 import { MoveMade } from '../chessboard/chessboard';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
+import { setAnnotation } from '../core/move-tree';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -308,6 +309,288 @@ describe('VariantEditor', () => {
     cmp.toggleEngine();
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.engine-line')).toBeNull();
+  });
+});
+
+// R24 (ISSUE-013 + issue-016-move-comments): azioni e annotazioni per mossa.
+describe('VariantEditor — menu azioni e annotazioni', () => {
+  /** Editor con l'albero e4 ( e5 -> Nf3 ; c5 ) già giocato. */
+  function editorWithTree() {
+    const s = setup({});
+    s.cmp.onMove(move('e4'));
+    s.cmp.onMove(move('e5'));
+    s.cmp.onMove(move('Nf3'));
+    s.cmp.goTo([0]);
+    s.cmp.onMove(move('c5')); // variante in [0,1]
+    s.fixture.detectChanges();
+    return s;
+  }
+
+  const el = (s: { fixture: { nativeElement: HTMLElement } }) => s.fixture.nativeElement;
+  const actionButtons = (s: { fixture: { nativeElement: HTMLElement } }) =>
+    Array.from(el(s).querySelectorAll<HTMLButtonElement>('.move-actions'));
+  const moveButtons = (s: { fixture: { nativeElement: HTMLElement } }) =>
+    Array.from(el(s).querySelectorAll<HTMLButtonElement>('.move'));
+  const menuItems = (s: { fixture: { nativeElement: HTMLElement } }) =>
+    Array.from(el(s).querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).map((b) =>
+      b.textContent?.trim(),
+    );
+
+  it('gives every move an actions button with an accessible label', () => {
+    const s = editorWithTree();
+    const buttons = actionButtons(s);
+    // Ordine PGN: la variante (c5) è resa fra parentesi subito dopo e5.
+    expect(buttons.length).toBe(4);
+    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Azioni per e4',
+      'Azioni per e5',
+      'Azioni per c5',
+      'Azioni per Nf3',
+    ]);
+    expect(buttons.every((b) => b.getAttribute('aria-haspopup') === 'menu')).toBe(true);
+    expect(buttons.every((b) => b.getAttribute('aria-expanded') === 'false')).toBe(true);
+  });
+
+  it('opens the menu from the actions button and marks it expanded', () => {
+    const s = editorWithTree();
+    actionButtons(s)[0].click();
+    s.fixture.detectChanges();
+
+    expect(s.cmp.menu().path).toEqual([0]);
+    expect(el(s).querySelector('[role="menu"]')).not.toBeNull();
+    expect(actionButtons(s)[0].getAttribute('aria-expanded')).toBe('true');
+    expect(actionButtons(s)[1].getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('opens the same menu with the right button, leaving the left click to navigation', () => {
+    const s = editorWithTree();
+    const nf3 = moveButtons(s)[3];
+    nf3.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    s.fixture.detectChanges();
+
+    expect(s.cmp.menu().san).toBe('Nf3');
+    expect(s.cmp.currentPath()).toEqual([0, 1]); // il tasto destro non naviga
+
+    s.cmp.closeMoveMenu();
+    s.fixture.detectChanges();
+    moveButtons(s)[3].click();
+    expect(s.cmp.currentPath()).toEqual([0, 0, 0]); // il click sinistro sì
+  });
+
+  it('offers the promotion only for a move outside the mainline', () => {
+    const s = editorWithTree();
+    actionButtons(s)[2].click(); // c5, variante
+    s.fixture.detectChanges();
+    expect(menuItems(s)).toEqual(['Annota la mossa', 'Promuovi a mainline', 'Elimina mossa']);
+
+    s.cmp.closeMoveMenu();
+    s.fixture.detectChanges();
+    actionButtons(s)[1].click(); // e5, mainline
+    s.fixture.detectChanges();
+    expect(menuItems(s)).toEqual(['Annota la mossa', 'Elimina mossa']);
+  });
+
+  it('closes the menu and gives the focus back to the button that opened it', () => {
+    const s = editorWithTree();
+    const trigger = actionButtons(s)[0];
+    trigger.click();
+    s.fixture.detectChanges();
+
+    s.cmp.closeMoveMenu();
+    s.fixture.detectChanges();
+
+    expect(s.cmp.menu()).toBeNull();
+    expect(el(s).querySelector('[role="menu"]')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('promotes from the menu and focuses the action of the promoted move after reordering', async () => {
+    const s = editorWithTree();
+    const trigger = actionButtons(s)[2]; // c5
+    trigger.click();
+    s.fixture.detectChanges();
+    s.cmp.onMoveAction('promote');
+    s.fixture.detectChanges();
+    await s.fixture.whenStable();
+    s.fixture.detectChanges();
+
+    expect(s.cmp.tree()[0].children[0].san).toBe('c5');
+    expect(s.cmp.currentPath()).toEqual([0, 0]);
+    expect(s.cmp.dirty()).toBe(true);
+    expect(s.cmp.menu()).toBeNull();
+    expect(document.activeElement).not.toBe(trigger);
+    expect(document.activeElement).toBe(
+      el(s).querySelector<HTMLButtonElement>('[data-move-path="0.0"]'),
+    );
+  });
+
+  it('deletes a leaf from the menu without confirmation, selecting the parent', () => {
+    const s = editorWithTree();
+    actionButtons(s)[3].click(); // Nf3, foglia
+    s.fixture.detectChanges();
+    s.cmp.onMoveAction('delete');
+    s.fixture.detectChanges();
+
+    expect(s.cmp.confirmingDelete()).toBe(false);
+    expect(s.cmp.tree()[0].children[0].children.length).toBe(0);
+    expect(s.cmp.currentPath()).toEqual([0, 0]); // il padre e5
+  });
+
+  it('asks confirmation before deleting a subtree from the menu', () => {
+    const s = editorWithTree();
+    actionButtons(s)[1].click(); // e5, con Nf3 sotto
+    s.fixture.detectChanges();
+    s.cmp.onMoveAction('delete');
+    s.fixture.detectChanges();
+
+    expect(s.cmp.confirmingDelete()).toBe(true);
+    expect(s.cmp.pendingDeleteSan()).toBe('e5');
+    expect(el(s).textContent).toContain('sottoalbero');
+    expect(s.cmp.tree()[0].children.length).toBe(2); // niente di cancellato
+
+    s.cmp.confirmDelete();
+    s.fixture.detectChanges();
+    expect(s.cmp.tree()[0].children.map((c: { san: string }) => c.san)).toEqual(['c5']);
+    expect(s.cmp.currentPath()).toEqual([0]); // il padre e4
+  });
+
+  it('leaves the tree untouched when the confirmation is cancelled', () => {
+    const s = editorWithTree();
+    s.cmp.requestDeleteAt([0]);
+    s.fixture.detectChanges();
+    expect(s.cmp.confirmingDelete()).toBe(true);
+    s.cmp.cancelDelete();
+    expect(s.cmp.confirmingDelete()).toBe(false);
+    expect(s.cmp.tree().length).toBe(1);
+  });
+
+  it('opens the annotation dialog with the current annotation of the move', () => {
+    const s = editorWithTree();
+    s.cmp.tree.set(setAnnotation(s.cmp.tree(), [0], { comment: 'Apertura di re', nag: '!' }));
+    s.fixture.detectChanges();
+
+    actionButtons(s)[0].click();
+    s.fixture.detectChanges();
+    s.cmp.onMoveAction('annotate');
+    s.fixture.detectChanges();
+
+    expect(s.cmp.annotating().path).toEqual([0]);
+    expect(s.cmp.annotating().annotation).toEqual({ comment: 'Apertura di re', nag: '!' });
+    expect(el(s).querySelector('app-move-annotation-dialog')).not.toBeNull();
+    expect(el(s).querySelector('[role="menu"]')).toBeNull();
+  });
+
+  it('saves the annotation on the local tree and marks the variant as unsaved', () => {
+    const s = editorWithTree();
+    actionButtons(s)[1].click();
+    s.fixture.detectChanges();
+    s.cmp.onMoveAction('annotate');
+    s.fixture.detectChanges();
+    s.cmp.saveAnnotation({ comment: 'Simmetrica', nag: '!?' });
+    s.fixture.detectChanges();
+
+    expect(s.cmp.tree()[0].children[0].comment).toBe('Simmetrica');
+    expect(s.cmp.tree()[0].children[0].nag).toBe('!?');
+    expect(s.cmp.dirty()).toBe(true);
+    expect(s.cmp.annotating()).toBeNull();
+  });
+
+  it('cancels the dialog without touching the tree and returns the focus', () => {
+    const s = editorWithTree();
+    const trigger = actionButtons(s)[1];
+    trigger.click();
+    s.fixture.detectChanges();
+    s.cmp.onMoveAction('annotate');
+    s.fixture.detectChanges();
+    const before = s.cmp.tree();
+
+    s.cmp.closeAnnotation();
+    s.fixture.detectChanges();
+
+    expect(s.cmp.tree()).toBe(before);
+    expect(s.cmp.annotating()).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('shows the NAG next to the SAN and the comment under the move', () => {
+    const s = editorWithTree();
+    s.cmp.tree.set(setAnnotation(s.cmp.tree(), [0], { comment: 'Apertura di re', nag: '!' }));
+    s.fixture.detectChanges();
+
+    expect(el(s).querySelector('.move-nag')!.textContent?.trim()).toBe('!');
+    expect(el(s).querySelector('.move-comment')!.textContent?.trim()).toBe('Apertura di re');
+  });
+
+  it('sends the annotated tree on save', () => {
+    let captured: CreateVariantRequest | null = null;
+    const s = setup({
+      createVariant: (req: CreateVariantRequest) => {
+        captured = req;
+        return of({ id: 9, name: 'X', color: 'WHITE', moves: ['e4'], startingFen: '' } as Variant);
+      },
+    });
+    const router = TestBed.inject(Router);
+    router.navigate = (() => Promise.resolve(true)) as typeof router.navigate;
+
+    s.cmp.onMove(move('e4'));
+    s.cmp.tree.set(setAnnotation(s.cmp.tree(), [0], { comment: 'Nota', nag: '!!' }));
+    s.cmp.name.set('X');
+    s.cmp.save();
+
+    expect(captured!.tree?.[0].comment).toBe('Nota');
+    expect(captured!.tree?.[0].nag).toBe('!!');
+    expect(captured!.moves).toEqual(['e4']);
+  });
+
+  it('reloads annotations saved on the variant without losing them', () => {
+    const annotated: Variant = {
+      id: 4,
+      name: 'Italiana',
+      color: 'WHITE',
+      moves: ['e4', 'e5'],
+      tree: [
+        {
+          san: 'e4',
+          comment: 'Apertura di re',
+          nag: '!',
+          children: [{ san: 'e5', children: [] }],
+        },
+      ],
+      startingFen: START,
+    };
+    let captured: CreateVariantRequest | null = null;
+    const s = setup(
+      {
+        getVariant: () => of(annotated),
+        updateVariant: (_id: number, req: CreateVariantRequest) => {
+          captured = req;
+          return of(annotated);
+        },
+      },
+      4,
+    );
+    const router = TestBed.inject(Router);
+    router.navigate = (() => Promise.resolve(true)) as typeof router.navigate;
+
+    expect(s.cmp.tree()[0].comment).toBe('Apertura di re');
+    expect(s.cmp.tree()[0].nag).toBe('!');
+    s.cmp.save();
+    expect(captured!.tree?.[0].comment).toBe('Apertura di re');
+    expect(captured!.tree?.[0].nag).toBe('!');
+  });
+
+  it('drops menu, dialog and pending deletion when the route variant changes', () => {
+    const s = editorWithTree();
+    actionButtons(s)[0].click();
+    s.fixture.detectChanges();
+    s.cmp.requestDeleteAt([0]);
+    s.fixture.detectChanges();
+
+    s.cmp['resetTransientState'](null);
+
+    expect(s.cmp.menu()).toBeNull();
+    expect(s.cmp.annotating()).toBeNull();
+    expect(s.cmp.confirmingDelete()).toBe(false);
   });
 });
 

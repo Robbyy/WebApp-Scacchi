@@ -537,8 +537,8 @@ Implementata come da mini-spec, solo frontend (nessuna nuova API, parser invaria
   **401** era legata alla rete di sviluppo e non ha richiesto modifiche al codice di fetch
   invariato da P14/P15.
 
-## ISSUE-013 — Menu contestuale editor (cancella sottoalbero / promuovi a mainline)
-**OpenSpec:** no — mini-spec R24 formalizzata il 2026-08-10 · **Effort:** medio · **Rischio:** medio.
+## ISSUE-013 — Menu contestuale editor (cancella sottoalbero / promuovi a mainline) ✅
+**OpenSpec:** no — mini-spec R24 formalizzata il 2026-08-10 · **Effort:** medio · **Rischio:** medio · **Stato: ✅ completata (R24, 2026-08-10).**
 **Scope:** nell'editor manca un modo diretto, dal pannello "Mosse & Varianti", per operare
 sull'albero a partire da una mossa.
 **Accettazione:** menu azioni accessibile su ogni mossa, disponibile anche con tasto destro,
@@ -632,6 +632,68 @@ legacy e rifiuto dei metadati non validi. Build e suite complete verdi; verifica
 dell'editor e del dettaglio a **1600, 1440, 1024, 768, 375 e 320px**, senza overflow e senza
 contenuti permanenti aggiunti sotto la scacchiera. A rilascio concluso si aggiornano checklist
 E2E, stato e piano.
+
+### Esito R24 — ISSUE-013 + `issue-016-move-comments` (2026-08-10)
+
+**Stato:** ✅ rilasciata il **2026-08-10**, come da mini-spec e senza sconfinamenti: nessuna
+migration Liquibase, nessun endpoint nuovo, parser PGN/Lichess invariato, «Elimina
+continuazioni» non implementata.
+
+- **Modello dati.** `MoveNode` ha due componenti opzionali in più — `comment` e `nag` — sia nel
+  record Java sia nell'interfaccia TypeScript. Il record conserva il **costruttore a due
+  argomenti** (delega alla canonica con annotazioni nulle), quindi `fromLine` e i chiamanti
+  precedenti compilano invariati; il costruttore compatto fa `trim` del commento e scarta quello
+  vuoto, mentre lascia grezzo il NAG perché un valore fuori insieme venga **rifiutato** e non
+  corretto in silenzio. `@JsonInclude(NON_NULL)` tiene il JSON minimale: un albero non annotato
+  serializza esattamente come prima e i documenti pre-R24 si rileggono con le annotazioni
+  assenti (`TreeConverterTest`). Il limite è in `MoveNode.MAX_COMMENT_LENGTH` (1.000) e l'insieme
+  in `MoveNode.NAGS`.
+- **Validazione backend.** `VariantValidator` visita già ogni nodo per la legalità: la stessa
+  visita ora controlla lunghezza del commento e appartenenza del NAG, riusando l'errore
+  strutturato esistente (`field`, `ply`, `branchPath`). Un albero senza annotazioni non incontra
+  alcun controllo nuovo; `moves[]` resta derivato dalla mainline e `children[0]` resta
+  l'invariante.
+- **Utilità dell'albero.** `move-tree.ts` aggiunge `nodeAt` e `setAnnotation`: quest'ultima
+  **sostituisce** le annotazioni del nodo e non lascia le chiavi quando commento e NAG sono
+  vuoti, così una mossa mai annotata torna al JSON `{san, children}`. `promoteToMainline`,
+  `addChild` e `removeNode` erano già copie per spread e conservano i metadati dei nodi che
+  restano: la cosa è ora fissata da test dedicati. I token di `buildTokens` portano `nag` e
+  `comment`, così editor e dettaglio rendono la stessa cosa senza duplicare logica.
+- **Interazione.** Due componenti nuovi, entrambi fuori dal flusso (`position: fixed`):
+  `move-actions-menu` (`role="menu"`, etichetta «Azioni per &lt;SAN&gt;», focus sulla prima voce,
+  frecce ↑/↓, `Home`/`End`, `Esc`/scrim/scelta comando per chiudere, coordinate rientrate nel
+  viewport) e
+  `move-annotation-dialog` (`aria-modal`, focus iniziale nella textarea, `Tab` intrappolato, i sei
+  NAG con `aria-pressed` e riattivazione che rimuove). Nessuno dei due naviga o tocca l'albero:
+  notificano e basta. L'editor apre il menu dal pulsante `⋮` (bersaglio 24×24px) **e** dal tasto
+  destro sulla mossa, tiene il controllo di origine per restituirgli il focus e, dopo una
+  promozione, ritrova il pulsante della **mossa promossa** nel tree riordinato, e instrada i tre
+  comandi sulla stessa logica dei controlli già presenti — «Rendi mainline» ed «Elimina mossa»
+  sono diventati scorciatoie di `promoteAt`/`requestDeleteAt`. La conferma di cancellazione non è
+  più un flag ma il **percorso** del nodo, perché l'azione può partire da una mossa qualsiasi e non
+  solo da quella selezionata; dopo la rimozione la selezione torna al nodo padre.
+- **Lettura.** NAG accanto al SAN e commento come nota sotto la mossa, in editor e — in sola
+  lettura, senza pulsante azioni — nel dettaglio. Il commento va a capo con
+  `flex-basis: 100%`; il rientro è `padding` e non `margin` perché con una base del 100% un
+  margine rendeva il pannello mosse scorrevole in orizzontale di 6px (individuato e corretto in
+  verifica live).
+- **Verifiche.** Backend **103 test verdi** (+19), frontend **338 test verdi** (+50, 33 file),
+  build production ok con i **soli** warning di budget preesistenti. La correzione successiva
+  del menu copre con test automatici frecce ↑/↓, `Home`/`End` e focus sulla mossa promossa dopo
+  il riordino. Verifica live a
+  **1600/1440/1024/768/375/320px** su editor e dettaglio di una variante reale di 48 nodi, con
+  backend avviato su una **copia** del DB H2 in cartella temporanea (la snapshot condivisa non è
+  stata toccata): menu da pulsante, tasto destro e tastiera; annotazione creata, sostituita e
+  cancellata; promozione che conserva NAG, commento e sotto-varianti; eliminazione foglia
+  immediata e sottoalbero con conferma; salvataggio e rilettura da `GET /api/variants/{id}` con le
+  mosse non annotate ancora `{san, children}`; rifiuto `400` di commento oltre il limite e NAG fuori
+  insieme. Nessun overflow orizzontale di pagina o pannello, scacchiera invariata per larghezza e
+  posizione anche con menu o dialog aperti, console senza errori.
+
+**Limiti noti e migliorie non bloccanti:** nell'ambiente di verifica il pannello browser non
+compone frame, quindi la prova è stata raccolta misurando geometria e stati ARIA dal DOM invece
+che con screenshot. Restano fuori perimetro, per scelta, le annotazioni provenienti dall'import
+PGN/Lichess e «Elimina continuazioni».
 
 ### Punti aperti — post R24
 

@@ -1,0 +1,45 @@
+<div class="dlg-overlay" (click)="cancel.emit()">
+  <div
+    class="dlg-box"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="'Annota la mossa ' + san()"
+    (click)="$event.stopPropagation()"
+  >
+    <h2 class="dlg-title">Annota <span class="dlg-san">{{ san() }}</span></h2>
+
+    <label class="dlg-label" for="move-comment">Commento</label>
+    <textarea
+      #commentBox
+      id="move-comment"
+      class="dlg-textarea"
+      rows="4"
+      [attr.maxlength]="maxLength"
+      [value]="comment()"
+      (input)="onCommentChange($any($event.target).value)"
+      placeholder="Testo semplice, senza formattazione."
+    ></textarea>
+    <p class="dlg-counter">{{ remaining() }} caratteri disponibili</p>
+
+    <p class="dlg-label" id="nag-label">Annotazione</p>
+    <div class="dlg-nags" role="group" aria-labelledby="nag-label">
+      @for (n of nags; track n) {
+        <button
+          type="button"
+          class="dlg-nag"
+          [class.dlg-nag--on]="nag() === n"
+          [attr.aria-pressed]="nag() === n"
+          [attr.aria-label]="'Annotazione ' + n"
+          (click)="toggleNag(n)"
+        >
+          {{ n }}
+        </button>
+      }
+    </div>
+
+    <div class="dlg-actions">
+      <button type="button" class="dlg-btn" (click)="cancel.emit()">Annulla</button>
+      <button type="button" class="dlg-btn dlg-btn--primary" (click)="confirm()">Salva</button>
+    </div>
+  </div>
+</div>

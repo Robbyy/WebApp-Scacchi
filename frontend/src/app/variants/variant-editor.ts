@@ -1,7 +1,10 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  Injector,
   OnDestroy,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -15,6 +18,8 @@ import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { Chessboard, MoveMade } from '../chessboard/chessboard';
 import { EvalBar } from '../chessboard/eval-bar';
 import { StudyVariantNav } from './study-variant-nav';
+import { MenuAnchor, MoveAction, MoveActionsMenu } from './move-actions-menu';
+import { MoveAnnotationDialog } from './move-annotation-dialog';
 import { VariantService } from '../core/variant.service';
 import { StudyService } from '../core/study.service';
 import { StockfishService } from '../core/stockfish.service';
@@ -29,6 +34,7 @@ import {
   validationMessage,
 } from '../core/variant.model';
 import {
+  MoveAnnotation,
   addChild,
   buildTokens,
   childrenAt,
@@ -37,19 +43,45 @@ import {
   isOnMainline,
   lineSans,
   mainline,
+  nodeAt,
   pathsEqual,
   promoteToMainline,
   removeNode,
+  setAnnotation,
 } from '../core/move-tree';
+
+/** Stato del menu azioni: la mossa a cui si riferisce e dove ancorarlo. */
+interface MoveMenuState {
+  path: number[];
+  san: string;
+  anchor: MenuAnchor;
+}
+
+/** Stato del dialog di annotazione: mossa e annotazioni da cui partire. */
+interface MoveAnnotationState {
+  path: number[];
+  san: string;
+  annotation: MoveAnnotation;
+}
 
 @Component({
   selector: 'app-variant-editor',
-  imports: [FormsModule, RouterLink, Chessboard, EvalBar, StudyVariantNav],
+  imports: [
+    FormsModule,
+    RouterLink,
+    Chessboard,
+    EvalBar,
+    StudyVariantNav,
+    MoveActionsMenu,
+    MoveAnnotationDialog,
+  ],
   templateUrl: './variant-editor.html',
   styleUrl: './variant-editor.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VariantEditor implements CanComponentDeactivate, OnDestroy {
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   private readonly service = inject(VariantService);
   private readonly studyService = inject(StudyService);
   private readonly stockfish = inject(StockfishService);
@@ -112,8 +144,30 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
   protected readonly canPromote = computed(
     () => this.currentPath().length > 0 && !this.onMainline(),
   );
-  /** Conferma in sospeso per la cancellazione di un sottoalbero. */
-  protected readonly confirmingDelete = signal(false);
+
+  /**
+   * Cancellazione in attesa di conferma (ISSUE-013): il percorso del nodo, non
+   * un semplice flag, perché l'azione può partire da una mossa qualsiasi del
+   * pannello e non solo da quella selezionata.
+   */
+  private readonly pendingDelete = signal<number[] | null>(null);
+  protected readonly confirmingDelete = computed(() => this.pendingDelete() !== null);
+  protected readonly pendingDeleteSan = computed(() => {
+    const path = this.pendingDelete();
+    return path ? (nodeAt(this.tree(), path)?.san ?? '') : '';
+  });
+
+  /** Menu azioni aperto su una mossa: percorso, SAN e ancora del controllo di origine. */
+  protected readonly menu = signal<MoveMenuState | null>(null);
+  /** Nel menu la promozione esiste solo per una mossa fuori dalla mainline. */
+  protected readonly menuCanPromote = computed(() => {
+    const open = this.menu();
+    return !!open && open.path.length > 0 && !isOnMainline(open.path);
+  });
+  /** Mossa in annotazione nel dialog modale, con le annotazioni di partenza. */
+  protected readonly annotating = signal<MoveAnnotationState | null>(null);
+  /** Controllo che ha aperto menu o dialog: riceve indietro il focus alla chiusura. */
+  private menuTrigger: HTMLElement | null = null;
 
   /** Varianti dello studio a cui appartiene quella in modifica (ISSUE-010). */
   protected readonly studyVariants = signal<Variant[]>([]);
@@ -169,7 +223,10 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
   /** Azzera lo stato transitorio prima di (ri)caricare la variante della route. */
   private resetTransientState(idParam: string | null): void {
     this.variantsOpen.set(false);
-    this.confirmingDelete.set(false);
+    this.pendingDelete.set(null);
+    this.menu.set(null);
+    this.annotating.set(null);
+    this.menuTrigger = null;
     this.studyVariants.set([]);
     this.error.set(null);
     this.saving.set(false);
@@ -273,7 +330,7 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
 
   /** Mossa legale giocata: segue il figlio esistente o crea una nuova variante. */
   protected onMove(move: MoveMade): void {
-    this.confirmingDelete.set(false);
+    this.pendingDelete.set(null);
     const kids = childrenAt(this.tree(), this.currentPath());
     const existing = kids.findIndex((c) => c.san === move.san);
     if (existing >= 0) {
@@ -304,31 +361,143 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
 
   protected goTo(path: number[] | undefined): void {
     if (path) {
-      this.confirmingDelete.set(false);
+      this.pendingDelete.set(null);
       this.currentPath.set([...path]);
     }
   }
 
   protected first(): void {
-    this.confirmingDelete.set(false);
+    this.pendingDelete.set(null);
     this.currentPath.set([]);
   }
 
   protected prev(): void {
-    this.confirmingDelete.set(false);
+    this.pendingDelete.set(null);
     this.currentPath.update((p) => p.slice(0, -1));
   }
 
   protected next(): void {
     if (childrenAt(this.tree(), this.currentPath()).length > 0) {
-      this.confirmingDelete.set(false);
+      this.pendingDelete.set(null);
       this.currentPath.update((p) => [...p, 0]);
     }
   }
 
-  /** Promuove la linea corrente a mainline (il ramo scelto diventa il principale). */
+  /**
+   * Menu azioni della mossa (ISSUE-013): lo aprono sia il pulsante `⋮` sia il
+   * tasto destro sulla mossa. Il click sinistro resta navigazione e non passa
+   * di qui. Si ancora al controllo di origine, che riceverà indietro il focus.
+   */
+  protected openMoveMenu(event: MouseEvent, path: number[] | undefined, san: string | undefined): void {
+    if (!path || !san) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const trigger = event.currentTarget as HTMLElement | null;
+    this.menuTrigger = trigger;
+    const rect = trigger?.getBoundingClientRect();
+    this.menu.set({
+      path: [...path],
+      san,
+      anchor: rect
+        ? { x: rect.left, y: rect.bottom + 4 }
+        : { x: event.clientX, y: event.clientY },
+    });
+  }
+
+  protected isMenuOpen(path: number[] | undefined): boolean {
+    const open = this.menu();
+    return !!path && !!open && pathsEqual(open.path, path);
+  }
+
+  /** Chiave stabile del percorso, usata per ritrovare un'azione dopo il riordino dell'albero. */
+  protected pathKey(path: number[] | undefined): string | null {
+    return path ? path.join('.') : null;
+  }
+
+  /** Chiusura senza comando (`Esc`, click esterno): il focus torna all'origine. */
+  protected closeMoveMenu(): void {
+    this.menu.set(null);
+    this.restoreMenuFocus();
+  }
+
+  /** Comando scelto nel menu: stessa logica dei controlli già presenti nell'editor. */
+  protected onMoveAction(action: MoveAction): void {
+    const open = this.menu();
+    if (!open) {
+      return;
+    }
+    this.menu.set(null);
+    if (action === 'annotate') {
+      // Il focus passa al dialog: torna al pulsante di origine alla sua chiusura.
+      const node = nodeAt(this.tree(), open.path);
+      this.annotating.set({
+        path: open.path,
+        san: open.san,
+        annotation: { comment: node?.comment, nag: node?.nag },
+      });
+      return;
+    }
+    if (action === 'promote') {
+      this.promoteAt(open.path);
+      // La promozione riordina i token: il pulsante DOM di origine può ora
+      // rappresentare un'altra mossa. Dopo il render cerca quello della linea
+      // promossa, divenuta il percorso di soli zeri.
+      this.focusActionAt(open.path.map(() => 0));
+    } else {
+      this.requestDeleteAt(open.path);
+      this.restoreMenuFocus();
+    }
+  }
+
+  /** Salva le annotazioni sull'albero locale: la variante resta da salvare. */
+  protected saveAnnotation(annotation: MoveAnnotation): void {
+    const open = this.annotating();
+    if (!open) {
+      return;
+    }
+    this.tree.set(setAnnotation(this.tree(), open.path, annotation));
+    this.dirty.set(true);
+    this.closeAnnotation();
+  }
+
+  /** Chiude il dialog senza modifiche e restituisce il focus all'azione di origine. */
+  protected closeAnnotation(): void {
+    this.annotating.set(null);
+    this.restoreMenuFocus();
+  }
+
+  private restoreMenuFocus(): void {
+    const trigger = this.menuTrigger;
+    this.menuTrigger = null;
+    trigger?.focus();
+  }
+
+  /** Restituisce il focus al pulsante della mossa in `path` dopo il render Angular. */
+  private focusActionAt(path: number[]): void {
+    const key = this.pathKey(path);
+    this.menuTrigger = null;
+    afterNextRender(() => {
+      if (key === null) {
+        return;
+      }
+      this.host.nativeElement
+        .querySelector<HTMLButtonElement>(`[data-move-path="${key}"]`)
+        ?.focus();
+    }, { injector: this.injector });
+  }
+
+  /** Promuove la linea corrente a mainline (scorciatoia dell'azione del menu). */
   protected makeMainline(): void {
-    const path = this.currentPath();
+    this.promoteAt(this.currentPath());
+  }
+
+  /**
+   * Promuove a mainline la linea che passa per `path` (riuso di
+   * `promoteToMainline`): commenti, NAG e sotto-varianti restano dove sono.
+   */
+  protected promoteAt(path: number[]): void {
     if (path.length === 0 || isOnMainline(path)) {
       return;
     }
@@ -338,45 +507,54 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
     this.dirty.set(true);
   }
 
-  /**
-   * Richiede la cancellazione del nodo corrente. Se il nodo ha figli (sottoalbero)
-   * chiede conferma; una mossa-foglia viene rimossa direttamente.
-   */
+  /** Elimina la mossa corrente (scorciatoia dell'azione del menu). */
   protected deleteCurrent(): void {
-    const path = this.currentPath();
+    this.requestDeleteAt(this.currentPath());
+  }
+
+  /**
+   * Richiede la cancellazione del nodo in `path`. Se il nodo ha figli
+   * (sottoalbero) chiede conferma; una mossa-foglia viene rimossa direttamente.
+   */
+  protected requestDeleteAt(path: number[]): void {
     if (path.length === 0) {
       return;
     }
     if (childrenAt(this.tree(), path).length > 0) {
-      this.confirmingDelete.set(true);
+      this.pendingDelete.set([...path]);
       return;
     }
-    this.performDelete();
+    this.performDelete(path);
   }
 
   /** Conferma la cancellazione del sottoalbero. */
   protected confirmDelete(): void {
-    this.confirmingDelete.set(false);
-    this.performDelete();
+    const path = this.pendingDelete();
+    this.pendingDelete.set(null);
+    if (path) {
+      this.performDelete(path);
+    }
   }
 
   /** Annulla la cancellazione in sospeso. */
   protected cancelDelete(): void {
-    this.confirmingDelete.set(false);
+    this.pendingDelete.set(null);
   }
 
-  private performDelete(): void {
-    const path = this.currentPath();
+  private performDelete(path: number[]): void {
     if (path.length === 0) {
       return;
     }
     this.tree.set(removeNode(this.tree(), path));
-    this.currentPath.update((p) => p.slice(0, -1));
+    // Dopo la rimozione la selezione torna al nodo padre.
+    this.currentPath.set(path.slice(0, -1));
     this.dirty.set(true);
   }
 
   protected reset(): void {
-    this.confirmingDelete.set(false);
+    this.pendingDelete.set(null);
+    this.menu.set(null);
+    this.annotating.set(null);
     this.tree.set([]);
     this.currentPath.set([]);
     this.dirty.set(true);

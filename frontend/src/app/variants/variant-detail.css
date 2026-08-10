@@ -393,6 +393,30 @@
   color: var(--text-muted);
 }
 
+/* Annotazioni in sola lettura (R24): stessa rappresentazione dell'editor —
+   NAG accanto al SAN, commento come nota testuale sotto la mossa. */
+.move-nag {
+  margin-left: 0.1rem;
+  font-weight: 700;
+  color: var(--wood-medium);
+}
+
+.move--current .move-nag {
+  color: var(--wood-dark);
+}
+
+.move-comment {
+  flex: 0 0 100%;
+  box-sizing: border-box;
+  padding-left: 0.4rem;
+  margin: 0 0 0.15rem;
+  font-size: 0.82rem;
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
 .detail-actions {
   display: flex;
   flex-direction: column;

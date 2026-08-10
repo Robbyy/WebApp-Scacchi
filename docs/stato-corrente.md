@@ -1,6 +1,6 @@
 # Stato corrente — WebApp Scacchi
 
-> Aggiornato al: **2026-08-10** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi; + ISSUE-021 navigazione a tre sezioni; + ISSUE-022/ISSUE-007 linea migliore del motore; + R22 ISSUE-011/012/009 ciclo di vita dello studio; OAuth R22 operativo; + R23 ISSUE-010/008 rilasciata).
+> Aggiornato al: **2026-08-10** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi; + ISSUE-021 navigazione a tre sezioni; + ISSUE-022/ISSUE-007 linea migliore del motore; + R22 ISSUE-011/012/009 ciclo di vita dello studio; OAuth R22 operativo; + R23 ISSUE-010/008 rilasciata; + R24 ISSUE-013/`issue-016-move-comments` rilasciata).
 > Non è un diario cronologico. La storia per-prototipo è in `docs/archive/stato-avanzamento-2026-06-28.md` e nel git log.
 
 ---
@@ -8,7 +8,7 @@
 ## Sintesi
 
 La webapp è funzionante in locale. **Parte 1 (P0–P6) e Parte 2 (P7–P19) completate e verificate.**
-Suite automatica verde: backend **84 test**, frontend **288 test**.
+Suite automatica verde: backend **103 test**, frontend **338 test**.
 La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE-019); restano Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
 In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre le Aperture: **ISSUE-016 (`issue-016-phase-domain-model`)** introduce `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), immutabile dopo la creazione — vedi [ADR 0014](adr/decisioni-tecniche.md).
 
@@ -22,6 +22,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Ciclo di vita dello studio (R22, ISSUE-011/012/009)**: pagina unica `/studies/new` che sostituisce form inline della home e pagina import Lichess — senza link crea uno studio vuoto, con link fa anteprima/import (upsert incluso), con `?studyId` aggiunge una variante per capitolo a uno studio esistente verificato. Comando compatto Connetti/Disconnetti Lichess nella topbar (bozza del form in `sessionStorage`, ripristinata al ritorno dall'OAuth); home su griglia adattiva a massimo due colonne (card ≥320px).
 - **Navigazione tra varianti (R23, ISSUE-010)**: dal dettaglio (e dall'editor) si passa a un'altra variante dello stesso studio senza tornare al dettaglio studio. Componente riusabile `study-variant-nav` (`<nav aria-label="Varianti dello studio">`, voci con nome/colore/numero mosse, `aria-current="page"` sulla corrente): **rail** a colonna solo da **1500px** nel dettaglio, **drawer** a sovrapposizione alle altre larghezze e sempre nell'editor (focus iniziale sulla chiusura, `Esc`, chiusura automatica dopo la navigazione). Il pannello non compare per varianti legacy senza studio, per studi con una sola variante o se la variante non è nella risposta dello studio. Nessuna nuova API: i dati arrivano dal `GET /api/studies/{id}` già usato per la fase. Il cambio rapido usa una pipeline cancellabile e l'editor riavvia il motore anche a FEN invariata.
 - **Replay senza Auto-play (R23, ISSUE-008)**: il dettaglio variante ha quattro controlli omogenei — inizio, precedente, successiva, fine — più le frecce `←/→` da tastiera. Riproduzione automatica, timer e pulsante Pausa rimossi.
+- **Azioni e annotazioni per mossa (R24, ISSUE-013 + `issue-016-move-comments`)**: nel pannello «Mosse & varianti» dell'editor ogni mossa ha un pulsante azioni `⋮` (raggiungibile anche col tasto destro) con «Annota la mossa», «Promuovi a mainline» (solo per una sotto-variante) ed «Elimina mossa»; il click sinistro resta navigazione. Il menu usa ↑/↓ e `Home`/`End` e, dopo una promozione, il focus passa al pulsante della mossa promossa nel tree riordinato. `MoveNode` porta due campi opzionali — `comment` (testo semplice, max 1.000 caratteri) e `nag` (uno solo fra `!`, `?`, `!!`, `??`, `!?`, `?!`) — persistiti nello stesso JSON dell'albero: nessuna migration, nessun endpoint nuovo, JSON pre-R24 leggibili e alberi non annotati serializzati identici a prima. NAG accanto al SAN e commento come nota sotto la mossa, anche in sola lettura nel dettaglio. Il parser PGN/Lichess **non** è stato esteso: commenti e NAG presenti nell'input restano accettati e scartati.
 - **Training loop**: allenamento su scacchiera con supporto rami multipli, validazione scacchistica backend (chesslib), registrazione sessione (mosse, errori, esito).
 - **Motore Stockfish client-side**: toggle unico nel dettaglio/editor che governa anche la barra di valutazione (ISSUE-007, R21), «Gioca contro il computer» in nuova tab. Mai disponibile in allenamento.
 - **Linea migliore del motore (ISSUE-022, R21)**: nel **solo dettaglio variante**, il pannello motore laterale mostra la Principal Variation di Stockfish in SAN e numerata dalla posizione analizzata, aggiornata a ogni profondità; «Analisi in corso…» finché manca la PV, nessuna linea obsoleta al cambio di posizione. Spegnendo il motore `stop()` svuota valutazione e linea e ignora le righe `info` tardive del worker finché non parte una nuova analisi. Cambiando variante col motore acceso (R23) il toggle resta acceso ma l'analisi riparte dalla FEN iniziale della nuova variante, svuotando valutazione e PV. Editor, allenamento e «Gioca contro il computer» restano esclusi.
@@ -36,7 +37,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 
 - **Stack**: Java 21 · Spring Boot 4.1.0 · Maven · JPA/Hibernate · H2 file (`backend/data/scacchi`) · chesslib (JitPack).
 - **Package**: `ping`, `variant`, `study`, `training`, `stats`, `review`.
-- **Test**: 84 verdi (`mvnw.cmd test`). Copertura: CRUD varianti/studi, validazione legalità, round-trip albero, import bulk/upsert Lichess, sessioni, statistiche, SM-2, fasi di gioco (ISSUE-016).
+- **Test**: 103 verdi (`mvnw.cmd test`). Copertura: CRUD varianti/studi, validazione legalità, round-trip albero, annotazioni delle mosse (R24: serializzazione, JSON legacy, rifiuto di commento oltre il limite e NAG fuori insieme), import bulk/upsert Lichess, sessioni, statistiche, SM-2, fasi di gioco (ISSUE-016).
 - **Avvio locale**: `mvnw.cmd spring-boot:run` (PowerShell; impostare `MAVEN_OPTS=-Djavax.net.ssl.trustStoreType=Windows-ROOT`).
 
 ---
@@ -46,16 +47,16 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Stack**: Angular 22 · TypeScript · Vitest · componenti standalone · signals · OnPush · chess.js · Stockfish asm.js.
 - **Aree**: `chessboard`, `variants`, `studies`, `stats`, `reviews`, `play`, `sections`, `core`.
 - **Routing**: `/` → lista studi (Aperture), `/studies/new` → creazione/import studio (ISSUE-011; dichiarata prima della route dinamica, la storica `/studies/import-lichess` vi reindirizza preservando i query param), `/studies/:id` → dettaglio studio, `/variants/:id` → dettaglio variante, `/variants/:id/training`, `/variants/:id/stats`, `/studies/:id/stats`, `/reviews`, `/play`, `/middlegame` e `/endgame` → segnaposto di sezione (ISSUE-021).
-- **Test**: 288 verdi (`npm test -- --watch=false`, Vitest headless).
+- **Test**: 338 verdi (`npm test -- --watch=false`, Vitest headless).
 - **Avvio locale**: `npm start` (frontend su `http://localhost:4200`, con proxy verso `http://localhost:8080`).
 
 ---
 
 ## Verifiche live e checklist manuale
 
-Verifiche browser superate senza errori console: training, editor, import PGN ramificato, import/sync Lichess (studio pubblico reale `OR3CU5Je`) + OAuth, Stockfish e gioca-vs-computer, sessioni, statistiche, spaced repetition. Per R22: pagina `/studies/new` (creazione, anteprima, import, `?studyId`, errori dedicati, bozza OAuth), modifica inline e griglia verificate live su mock backend a 1440/1024/768/320/280px. Il flusso OAuth end-to-end con account Lichess reale è considerato operativo nella verifica corrente; la precedente risposta 401 era legata alla rete di sviluppo. Per R23: rail/drawer varianti, cambio variante dal dettaglio e dall'editor (pulito e con modifiche pendenti), riavvio dell'analisi col motore acceso e assenza di Auto-play verificati live sull'app reale a 1600/1440/1024/768/375/320px, senza overflow orizzontale e con la scacchiera invariata.
+Verifiche browser superate senza errori console: training, editor, import PGN ramificato, import/sync Lichess (studio pubblico reale `OR3CU5Je`) + OAuth, Stockfish e gioca-vs-computer, sessioni, statistiche, spaced repetition. Per R22: pagina `/studies/new` (creazione, anteprima, import, `?studyId`, errori dedicati, bozza OAuth), modifica inline e griglia verificate live su mock backend a 1440/1024/768/320/280px. Il flusso OAuth end-to-end con account Lichess reale è considerato operativo nella verifica corrente; la precedente risposta 401 era legata alla rete di sviluppo. Per R23: rail/drawer varianti, cambio variante dal dettaglio e dall'editor (pulito e con modifiche pendenti), riavvio dell'analisi col motore acceso e assenza di Auto-play verificati live sull'app reale a 1600/1440/1024/768/375/320px, senza overflow orizzontale e con la scacchiera invariata. Per R24: menu azioni (pulsante e tasto destro), dialog di annotazione, promozione ed eliminazione foglia/sottoalbero, lettura in sola lettura nel dettaglio e rifiuto backend dei metadati non validi verificati alle stesse sei larghezze su una variante reale di 48 nodi — su una **copia** del DB H2 in cartella temporanea, per non toccare la snapshot condivisa.
 
-Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **45 flussi** (12 core + 25 Parte 2 + 1 evolutivo R21 + 3 evolutivi R22 + 4 evolutivi R23).
+Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **49 flussi** (12 core + 25 Parte 2 + 1 evolutivo R21 + 3 evolutivi R22 + 4 evolutivi R23 + 4 evolutivi R24).
 
 ---
 
@@ -90,19 +91,20 @@ Nella versione rilasciata non risultano bug bloccanti attivi. R23 ha chiuso i du
 - Sync Lichess periodica.
 - Runner E2E browser (Playwright/Cypress) — rinviato alla terza tornata.
 - Editor manuale di posizione e input/UI per FEN custom (Mediogioco/Finale) — prossima change `issue-016-custom-starting-fen`.
-- Viste/sezioni complete Mediogioco e Finale (oggi solo il segnaposto di ISSUE-021), commenti alle mosse, gioco contro il motore da una posizione salvata, tag/categorie — change successive a ISSUE-016 (vedi `docs/roadmap.md`).
+- Conservazione di commenti e NAG **presenti in un PGN importato** (o da Lichess): R24 annota solo dall'editor, l'import continua a scartare `{...}`, `; ...` e `$n` — evolutiva distinta.
+- Comando «Elimina continuazioni» (mantenere la mossa ed eliminarne i soli figli): esplicitamente fuori da R24, resta un punto aperto da decidere.
+- Viste/sezioni complete Mediogioco e Finale (oggi solo il segnaposto di ISSUE-021), gioco contro il motore da una posizione salvata, tag/categorie — change successive a ISSUE-016 (vedi `docs/roadmap.md`).
 - Multi-PV (più linee del motore), frecce/highlight della PV sulla scacchiera e click sulla linea per eseguirla — esplicitamente fuori dal perimetro di ISSUE-022.
 
 ---
 
 ## Prossima fase
 
-**R23** (ISSUE-010 + ISSUE-008) è rilasciata — vedi
-[esito R23](backlog/manutenzione-evolutiva.md#esito-r23--issue-010--issue-008-2026-08-10).
-Il prossimo incremento è **R24** (ISSUE-013 + `issue-016-move-comments`): la sua
-[mini-specifica](backlog/manutenzione-evolutiva.md#mini-specifica-r24--issue-013--issue-016-move-comments)
-ha fissato formato commento/NAG, compatibilità JSON e interazioni del menu. Resta aperta,
-fuori dal rilascio, la possibile azione «Elimina continuazioni».
+**R24** (ISSUE-013 + `issue-016-move-comments`) è rilasciata — vedi
+[esito R24](backlog/manutenzione-evolutiva.md#esito-r24--issue-013--issue-016-move-comments-2026-08-10).
+Restano fuori dal rilascio, come punti aperti, la possibile azione «Elimina continuazioni» e la
+conservazione delle annotazioni già presenti in un PGN importato.
+Il prossimo incremento evolutivo è **R25** (`issue-016-custom-starting-fen`).
 
 La terza tornata infrastrutturale prosegue poi in quest'ordine:
 
