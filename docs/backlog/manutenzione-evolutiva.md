@@ -22,7 +22,7 @@
 > La sola voce ancora "da decidere" è ISSUE-013: resta candidata a una **OpenSpec leggera**
 > (mini-spec) se in fase di pianificazione si valuta che il rischio lo giustifichi. Le
 > decisioni di R23 sono formalizzate nella mini-specifica associata a ISSUE-010/008; il
-> relativo [esito](#esito-r23--issue-010--issue-008-2026-08-07) è rilasciato.
+> relativo [esito](#esito-r23--issue-010--issue-008-2026-08-10) è rilasciato.
 
 ---
 
@@ -180,7 +180,7 @@ la navigazione con frecce ←/→ e i pulsanti inizio/indietro/avanti/fine è su
 **Note:** aggiornare eventuali test e la checklist che referenziano l'auto-play. La decisione
 di dettaglio è nella [mini-specifica R23](#mini-specifica-r23--issue-010--issue-008).
 
-**Esito (R23, 2026-08-07):** rimossi dal dettaglio variante il pulsante Auto-play/Pausa, il
+**Esito (R23, 2026-08-10):** rimossi dal dettaglio variante il pulsante Auto-play/Pausa, il
 signal `playing`, il timer `setInterval`, `togglePlay()`, il metodo privato `stop()` (e le sue
 chiamate in `goTo`/`first`/`prev`/`last`) e gli stili `.ctrl--play`/`.ctrl--reset`. La barra
 `.controls` espone ora esattamente quattro pulsanti omogenei — inizio, precedente, successiva,
@@ -316,7 +316,7 @@ Verifica live a **1600, 1440, 1024, 768, 375 e 320px**, senza overflow orizzonta
 nuovo contenuto permanente sotto la scacchiera. Build e suite frontend verdi; documentazione e
 checklist E2E aggiornate a rilascio concluso.
 
-### Esito R23 — ISSUE-010 + ISSUE-008 (2026-08-07)
+### Esito R23 — ISSUE-010 + ISSUE-008 (2026-08-10)
 
 **Stato:** ✅ rilasciata il **2026-08-10**. Le due correzioni P1 nel ciclo di
 caricamento/nell'analisi dell'editor sono state applicate e verificate con test, build e
