@@ -55,7 +55,7 @@ Ordine consigliato di lettura:
    - setup e test → [`backend/README.md`](backend/README.md), [`frontend/README.md`](frontend/README.md)
    - checklist manuale → [`docs/checklist-e2e.md`](docs/checklist-e2e.md)
    - change/spec → [`openspec/`](openspec/) (CLI `openspec`, comandi Claude `/opsx:*`)
-4. [`docs/adr/decisioni-tecniche.md`](docs/adr/decisioni-tecniche.md) — decisioni architetturali (ADR 0001–0013)
+4. [`docs/adr/decisioni-tecniche.md`](docs/adr/decisioni-tecniche.md) — decisioni architetturali (ADR 0001–0014)
 5. [`docs/roadmap.md`](docs/roadmap.md) — cosa viene dopo · [`docs/backlog.md`](docs/backlog.md) — backlog (indice; classi in [`docs/backlog/`](docs/backlog/): bug, manutenzione evolutiva, sviluppi importanti) · [`docs/piano-rilasci-evolutivi.md`](docs/piano-rilasci-evolutivi.md) — sequenza prioritaria dei prossimi rilasci evolutivi
 
 Storico: [`docs/archive/`](docs/archive/) · git log

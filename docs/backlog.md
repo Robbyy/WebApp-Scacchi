@@ -121,7 +121,7 @@ di questa cadenza di rilasci evolutivi.
 
 - **ISSUE-019 — Introduzione Liquibase** ✅ (2026-06-29, commit `85b4a54`). Schema gestito da
   Liquibase (`spring-boot-liquibase`), baseline con precondizione `MARK_RAN`, `ddl-auto: none`;
-  Verifica iniziale: 66 test verdi; suite corrente: 84 test backend verdi. Avvio dev verificato.
+  Verifica iniziale: 66 test verdi; suite corrente: 103 test backend verdi. Avvio dev verificato.
   Spec: [`specs/liquibase.md`](specs/liquibase.md).
   Ha risolto anche l'incoerenza sul DB di esempio (tracciato di proposito, doc allineati).
 
