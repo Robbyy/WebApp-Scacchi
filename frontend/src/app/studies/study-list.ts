@@ -8,7 +8,7 @@ import { ToastService } from '../core/toast.service';
 
 /**
  * Home a studi (Prototipo 12): elenco degli studi con eliminazione (a cascata
- * sulle varianti), sul modello degli *studies* di Lichess. La creazione e
+ * sugli elementi figli), sul modello degli *studies* di Lichess. La creazione e
  * l'import Lichess vivono nella pagina unificata `/studies/new` (ISSUE-011);
  * le card sono su griglia adattiva a una o due colonne (ISSUE-009).
  */
@@ -29,7 +29,7 @@ export class StudyList implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly loading = signal(true);
   protected readonly deletingId = signal<number | null>(null);
-  /** Quante varianti sono da ripetere oggi (badge "Ripeti oggi"); P19. */
+  /** Quanti elementi sono da ripetere oggi (badge "Ripeti oggi"); P19. */
   protected readonly dueCount = signal(0);
 
   ngOnInit(): void {
@@ -52,9 +52,11 @@ export class StudyList implements OnInit {
 
   protected async remove(study: Study): Promise<void> {
     const count = study.variantCount;
+    const label = this.itemLabel(study);
+    const pluralLabel = this.itemLabelPlural(study);
     const warning =
       count > 0
-        ? ` Verranno eliminate anche le sue ${count} variant${count === 1 ? 'e' : 'i'}.`
+        ? ` Verranno eliminate anche le sue ${count} ${count === 1 ? label : pluralLabel}.`
         : '';
     const ok = await this.confirm.ask({
       title: 'Elimina studio',
@@ -90,5 +92,13 @@ export class StudyList implements OnInit {
       default:
         return '';
     }
+  }
+
+  protected itemLabel(study: Study): string {
+    return study.phase === 'OPENING' || study.phase == null ? 'variante' : 'posizione';
+  }
+
+  protected itemLabelPlural(study: Study): string {
+    return study.phase === 'OPENING' || study.phase == null ? 'varianti' : 'posizioni';
   }
 }

@@ -1,6 +1,6 @@
 # Stato corrente — WebApp Scacchi
 
-> Aggiornato al: **2026-08-13** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi; + ISSUE-021 navigazione a tre sezioni; + ISSUE-022/ISSUE-007 linea migliore del motore; + R22 ISSUE-011/012/009 ciclo di vita dello studio; OAuth R22 operativo; + R23 ISSUE-010/008 rilasciata; + R24 ISSUE-013/`issue-016-move-comments` rilasciata; + R25 implementata e integrata in `master`, in verifica, commit `d38a507`).
+> Aggiornato al: **2026-08-13** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi; + ISSUE-021 navigazione a tre sezioni; + ISSUE-022/ISSUE-007 linea migliore del motore; + R22 ISSUE-011/012/009 ciclo di vita dello studio; OAuth R22 operativo; + R23 ISSUE-010/008 rilasciata; + R24 ISSUE-013/`issue-016-move-comments` rilasciata; + R25 rilasciata dopo verifica E2E 49–52).
 > Non è un diario cronologico. La storia per-prototipo è in `docs/archive/stato-avanzamento-2026-06-28.md` e nel git log.
 
 ---
@@ -8,7 +8,7 @@
 ## Sintesi
 
 La webapp è funzionante in locale. **Parte 1 (P0–P6) e Parte 2 (P7–P19) completate e verificate.**
-Suite automatica verde: backend **117 test**, frontend **343 test**.
+Suite automatica verde: backend **120 test**, frontend **346 test**.
 La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE-019); restano Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
 In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre le Aperture: **ISSUE-016 (`issue-016-phase-domain-model`)** introduce `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), immutabile dopo la creazione — vedi [ADR 0014](adr/decisioni-tecniche.md).
 
@@ -30,7 +30,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Spaced repetition SM-2**: scheduling dopo ogni allenamento, vista «Ripeti oggi», indicatore prossima ripetizione nel dettaglio variante.
 - **Navigazione a tre sezioni (ISSUE-021, R20)**: tab-link **Aperture** (`/`), **Mediogioco** (`/middlegame`) e **Finale** (`/endgame`) nella topbar, dentro una `<nav aria-label="Sezione di studio">` con `aria-current="page"` sulla sezione attiva (derivata dall'URL: le pagine di dettaglio delle Aperture mantengono acceso il tab Aperture). Mediogioco e Finale montano il segnaposto riusabile `sections/coming-soon` («In fase di implementazione»); i contenuti reali arrivano con le slice di ISSUE-016.
 - **Modello a fasi di gioco (ISSUE-016)**: ogni studio ha una `phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), scelta alla creazione e immutabile. `Variant` resta l'elemento figlio comune (variante/capitolo in `OPENING`, posizione creata manualmente in `MIDDLEGAME`/`ENDGAME`). Import/sync Lichess, training, review SM-2 e statistiche restano applicati solo alle Aperture; per le altre fasi il backend rifiuta la richiesta (non solo nascondimento in UI).
-- **Posizioni manuali (R25, `issue-016-custom-starting-fen`)**: editor visuale per piazzamento/rimozione pezzi, lato al tratto, arrocco ed en-passant; generazione e normalizzazione della FEN, associazione allo studio, salvataggio anche senza mosse e validazione backend della posizione e dell'albero dalla FEN scelta. Implementazione committata in `d38a507` e integrata in `master`. R25 resta in verifica: sono aperti il comportamento senza `startingFen`, il flusso UI per creare/modificare l'albero delle mosse e la terminologia/navigazione fuori dalle Aperture (task 6.1–6.3).
+- **Posizioni manuali (R25, `issue-016-custom-starting-fen`)**: editor visuale per piazzamento/rimozione pezzi, lato al tratto, arrocco ed en-passant; generazione e normalizzazione della FEN, associazione allo studio, salvataggio anche senza mosse e validazione backend della posizione e dell'albero dalla FEN scelta. I task 6.1–6.3 e i flussi E2E 49–52 sono chiusi: FEN mancante/vuota rifiutata, accesso diretto all'editor dell'albero e terminologia/navigazione posizionale completati. Le sezioni reali Mediogioco/Finale restano pianificate in R26/R27.
 
 ---
 
@@ -38,7 +38,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 
 - **Stack**: Java 21 · Spring Boot 4.1.0 · Maven · JPA/Hibernate · H2 file (`backend/data/scacchi`) · chesslib (JitPack).
 - **Package**: `ping`, `variant`, `study`, `training`, `stats`, `review`.
-- **Test**: 117 verdi (`mvnw.cmd test`). Copertura: CRUD varianti/studi, validazione legalità, FEN custom e albero dalla posizione iniziale effettiva (R25), round-trip albero, annotazioni delle mosse (R24: serializzazione, JSON legacy, rifiuto di commento oltre il limite e NAG fuori insieme), import bulk/upsert Lichess, sessioni, statistiche, SM-2, fasi di gioco (ISSUE-016).
+- **Test**: 120 verdi (`mvnw.cmd test`). Copertura: CRUD varianti/studi, validazione legalità, FEN custom e albero dalla posizione iniziale effettiva (R25), round-trip albero, annotazioni delle mosse (R24: serializzazione, JSON legacy, rifiuto di commento oltre il limite e NAG fuori insieme), import bulk/upsert Lichess, sessioni, statistiche, SM-2, fasi di gioco (ISSUE-016).
 - **Avvio locale**: `mvnw.cmd spring-boot:run` (PowerShell; impostare `MAVEN_OPTS=-Djavax.net.ssl.trustStoreType=Windows-ROOT`).
 
 ---
@@ -48,22 +48,22 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Stack**: Angular 22 · TypeScript · Vitest · componenti standalone · signals · OnPush · chess.js · Stockfish asm.js.
 - **Aree**: `chessboard`, `variants`, `positions`, `studies`, `stats`, `reviews`, `play`, `sections`, `core`.
 - **Routing**: `/` → lista studi (Aperture), `/studies/new` → creazione/import studio (ISSUE-011; dichiarata prima della route dinamica, la storica `/studies/import-lichess` vi reindirizza preservando i query param), `/studies/:id` → dettaglio studio, `/variants/:id` → dettaglio variante, `/positions/new?studyId={id}` e `/positions/:id/edit` → editor posizione R25, `/variants/:id/training`, `/variants/:id/stats`, `/studies/:id/stats`, `/reviews`, `/play`, `/middlegame` e `/endgame` → segnaposto di sezione (ISSUE-021).
-- **Test**: 343 verdi (`npm test -- --watch=false`, Vitest headless), inclusi i test dell'editor visuale R25.
+- **Test**: 346 verdi (`npm test -- --watch=false`, Vitest headless), inclusi i test dell'editor visuale R25, del passaggio all'editor dell'albero e della terminologia posizionale nella home.
 - **Avvio locale**: `npm start` (frontend su `http://localhost:4200`, con proxy verso `http://localhost:8080`).
 
 ---
 
 ## Verifiche live e checklist manuale
 
-Verifiche browser superate senza errori console: training, editor, import PGN ramificato, import/sync Lichess (studio pubblico reale `OR3CU5Je`) + OAuth, Stockfish e gioca-vs-computer, sessioni, statistiche, spaced repetition. Per R22: pagina `/studies/new` (creazione, anteprima, import, `?studyId`, errori dedicati, bozza OAuth), modifica inline e griglia verificate live su mock backend a 1440/1024/768/320/280px. Il flusso OAuth end-to-end con account Lichess reale è considerato operativo nella verifica corrente; la precedente risposta 401 era legata alla rete di sviluppo. Per R23: rail/drawer varianti, cambio variante dal dettaglio e dall'editor (pulito e con modifiche pendenti), riavvio dell'analisi col motore acceso e assenza di Auto-play verificati live sull'app reale a 1600/1440/1024/768/375/320px, senza overflow orizzontale e con la scacchiera invariata. Per R24: menu azioni (pulsante e tasto destro), dialog di annotazione, promozione ed eliminazione foglia/sottoalbero, lettura in sola lettura nel dettaglio e rifiuto backend dei metadati non validi verificati alle stesse sei larghezze su una variante reale di 48 nodi — su una **copia** del DB H2 in cartella temporanea, per non toccare la snapshot condivisa. Per R25 è stata eseguita una verifica live preliminare su H2 in memoria: apertura dello studio non di Apertura, accesso all'editor posizione e navigazione tra più posizioni; l'audit ha confermato i tre punti aperti 6.1–6.3, quindi la checklist R25 non è ancora chiusa.
+Verifiche browser superate senza errori console: training, editor, import PGN ramificato, import/sync Lichess (studio pubblico reale `OR3CU5Je`) + OAuth, Stockfish e gioca-vs-computer, sessioni, statistiche, spaced repetition. Per R22: pagina `/studies/new` (creazione, anteprima, import, `?studyId`, errori dedicati, bozza OAuth), modifica inline e griglia verificate live su mock backend a 1440/1024/768/320/280px. Il flusso OAuth end-to-end con account Lichess reale è considerato operativo nella verifica corrente; la precedente risposta 401 era legata alla rete di sviluppo. Per R23: rail/drawer varianti, cambio variante dal dettaglio e dall'editor (pulito e con modifiche pendenti), riavvio dell'analisi col motore acceso e assenza di Auto-play verificati live sull'app reale a 1600/1440/1024/768/375/320px, senza overflow orizzontale e con la scacchiera invariata. Per R24: menu azioni (pulsante e tasto destro), dialog di annotazione, promozione ed eliminazione foglia/sottoalbero, lettura in sola lettura nel dettaglio e rifiuto backend dei metadati non validi verificati alle stesse sei larghezze su una variante reale di 48 nodi — su una **copia** del DB H2 in cartella temporanea, per non toccare la snapshot condivisa. Per R25: flussi 49–52 verificati il 2026-08-13 su H2 file temporaneo; creati e poi rimossi studi/posizioni di test, verificati FEN con arrocco/en-passant, albero legale e rifiuto atomico, rifiuti di configurazioni illegali, compatibilità Aperture e terminologia posizionale. Il database persistente non è stato usato.
 
-Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **53 flussi** (12 core + 25 Parte 2 + 1 evolutivo R21 + 3 evolutivi R22 + 4 evolutivi R23 + 4 evolutivi R24 + 4 flussi R25 in verifica).
+Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **53 flussi** (12 core + 25 Parte 2 + 1 evolutivo R21 + 3 evolutivi R22 + 4 evolutivi R23 + 4 evolutivi R24 + 4 flussi R25 verificati).
 
 ---
 
 ## Problemi noti
 
-Nella versione R24 rilasciata non risultano bug bloccanti attivi. R23 ha chiuso i due P1 il 2026-08-10; restano come debito tecnico la race UCI di ISSUE-022 e il ritorno del focus al pulsante «Varianti» alla chiusura del drawer. R25 è committata ma non ancora dichiarata rilasciata: i task 6.1–6.3 della change OpenSpec restano aperti e costituiscono il gate di chiusura. **Policy DB**: finché non si migra a Supabase, il file `backend/data/scacchi.mv.db` **è versionato su Git** (il `.gitignore` lo ri-include di proposito) ed è la fonte dei dati del repertorio condivisa tra le postazioni; va committato dopo modifiche a repertorio o schema.
+Nella versione R25 rilasciata non risultano bug bloccanti attivi. R23 ha chiuso i due P1 il 2026-08-10; restano come debito tecnico la race UCI di ISSUE-022 e il ritorno del focus al pulsante «Varianti» alla chiusura del drawer. **Policy DB**: finché non si migra a Supabase, il file `backend/data/scacchi.mv.db` **è versionato su Git** (il `.gitignore` lo ri-include di proposito) ed è la fonte dei dati del repertorio condivisa tra le postazioni; va committato dopo modifiche a repertorio o schema.
 
 ---
 
@@ -104,11 +104,9 @@ Nella versione R24 rilasciata non risultano bug bloccanti attivi. R23 ha chiuso 
 [esito R24](backlog/manutenzione-evolutiva.md#esito-r24--issue-013--issue-016-move-comments-2026-08-10).
 Restano fuori dal rilascio, come punti aperti, la possibile azione «Elimina continuazioni» e la
 conservazione delle annotazioni già presenti in un PGN importato.
-**R25** (`issue-016-custom-starting-fen`) è implementata e in verifica manuale. Le suite
-automatiche risultano verdi (117 test backend e 343 frontend), ma il rilascio non è ancora
-chiuso: restano da verificare il comportamento senza `startingFen`, il flusso UI per l'albero
-delle mosse e la terminologia/navigazione delle posizioni, come dettagliato nei task aperti
-6.1–6.3 della change.
+**R25** (`issue-016-custom-starting-fen`) è rilasciata e verificata manualmente. Le suite
+automatiche risultano verdi (120 test backend e 346 frontend), i flussi E2E 49–52 sono conclusi
+su database temporaneo e i task OpenSpec 6.1–6.3 sono completati.
 
 La terza tornata infrastrutturale prosegue poi in quest'ordine:
 

@@ -147,13 +147,6 @@ public class VariantService {
         if (request == null) {
             validator.validate(request, START_FEN, true, false);
         }
-        if (request.startingFen() == null || request.startingFen().isBlank()) {
-            // Compatibilità con i client e le posizioni create prima dell'editor R25.
-            CreateVariantRequest legacyPosition = new CreateVariantRequest(
-                request.name(), Color.WHITE.name(), request.moves(), request.tree(), null, START_FEN);
-            validator.validate(legacyPosition, START_FEN, true, false);
-            return new PreparedVariant(legacyPosition, Color.WHITE, START_FEN);
-        }
         String startingFen = validator.validateAndNormalizeStartingFen(request.startingFen());
         Color color = startingFen.split(" ")[1].equals("w") ? Color.WHITE : Color.BLACK;
         CreateVariantRequest normalized = new CreateVariantRequest(

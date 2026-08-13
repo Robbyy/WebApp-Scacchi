@@ -60,7 +60,7 @@ La sequenza dettagliata dei soli incrementi evolutivi è nel
 3. ~~**R22:** ISSUE-011 + ISSUE-012 + ISSUE-009 (ciclo di vita dello studio e home).~~ ✅ fatto (2026-08-06).
 4. ~~**R23:** ISSUE-010 + ISSUE-008 (navigazione e controlli del dettaglio variante).~~ ✅ fatto (2026-08-10).
 5. ~~**R24:** ISSUE-013 + `issue-016-move-comments` (editor).~~ ✅ fatto (2026-08-10).
-6. **R25:** posizione FEN custom. ✅ Implementata e integrata in `master`; verifica manuale ancora aperta.
+6. **R25:** posizione FEN custom. ✅ Implementata, integrata in `master` e verificata manualmente (flussi E2E 49–52, 2026-08-13).
 7. **R26–R28:** slice residue di ISSUE-016: Mediogioco → Finale → gioco da posizione.
 8. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
 
@@ -90,7 +90,7 @@ di questa cadenza di rilasci evolutivi.
 
 1. **ISSUE-016** — scope ampio, modello dati nuovo; senza OpenSpec rischio di sovra-ingegnerizzazione. Mitigazione: partire da `issue-016-phase-domain-model`, poi procedere con slice piccoli.
 2. **ISSUE-014** — incertezza sulle opzioni UCI realmente esposte dalla build asm.js. Mitigazione: audit prima della UI.
-3. **ISSUE-017** — refactor di `ReviewScheduler` da statico a parametrizzato tocca logica testata (103 test BE): rischio regressione SM-2.
+3. **ISSUE-017** — refactor di `ReviewScheduler` da statico a parametrizzato tocca logica testata (120 test BE): rischio regressione SM-2.
 4. **ISSUE-004** — `AudioContext` browser-dipendente, difficile da coprire in headless.
 5. **Cluster topbar affollato** (suono · "?" · ⚙ · Lichess · 3 sezioni) — rischio UX e di conflitti di merge tra ISSUE-011/015/017/021.
 
@@ -122,7 +122,7 @@ di questa cadenza di rilasci evolutivi.
 
 - **ISSUE-019 — Introduzione Liquibase** ✅ (2026-06-29, commit `85b4a54`). Schema gestito da
   Liquibase (`spring-boot-liquibase`), baseline con precondizione `MARK_RAN`, `ddl-auto: none`;
-  Verifica iniziale: 66 test verdi; suite corrente: 103 test backend verdi. Avvio dev verificato.
+  Verifica iniziale: 66 test verdi; suite corrente: 120 test backend verdi. Avvio dev verificato.
   Spec: [`specs/liquibase.md`](specs/liquibase.md).
   Ha risolto anche l'incoerenza sul DB di esempio (tracciato di proposito, doc allineati).
 

@@ -97,7 +97,7 @@
 
   <aside class="side">
     <header class="side-head">
-      <p class="side-kicker">{{ isEdit() ? 'Modifica variante' : 'Nuova variante' }}</p>
+      <p class="side-kicker">{{ isEdit() ? ('Modifica ' + itemLabel()) : ('Nuova ' + itemLabel()) }}</p>
       <h2 class="side-title">{{ isEdit() ? 'Aggiorna la linea' : 'Crea dalla scacchiera' }}</h2>
     </header>
 
@@ -111,7 +111,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 6h16v2H4zM4 11h16v2H4zM4 16h16v2H4z" />
         </svg>
-        Varianti
+        {{ isPosition() ? 'Posizioni' : 'Varianti' }}
       </button>
     }
 
@@ -126,18 +126,20 @@
       />
     </div>
 
-    <div class="form-field">
-      <label for="vcolor">Lato da allenare</label>
-      <select id="vcolor" name="color" [ngModel]="color()" (ngModelChange)="onColorChange($event)">
-        <option value="WHITE">Bianco</option>
-        <option value="BLACK">Nero</option>
-      </select>
-    </div>
+    @if (!isPosition()) {
+      <div class="form-field">
+        <label for="vcolor">Lato da allenare</label>
+        <select id="vcolor" name="color" [ngModel]="color()" (ngModelChange)="onColorChange($event)">
+          <option value="WHITE">Bianco</option>
+          <option value="BLACK">Nero</option>
+        </select>
+      </div>
+    }
 
     <div class="panel">
-      <h3 class="panel-title">Mosse &amp; varianti</h3>
+      <h3 class="panel-title">{{ isPosition() ? 'Mosse &amp; rami' : 'Mosse &amp; varianti' }}</h3>
       @if (tokens().length === 0) {
-        <p class="panel-note">Gioca le mosse sulla scacchiera. Da una posizione, una mossa diversa crea una variante.</p>
+        <p class="panel-note">Gioca le mosse sulla scacchiera. Da una posizione, una mossa diversa crea {{ isPosition() ? 'un ramo' : 'una variante' }}.</p>
       } @else {
         <div class="pgn">
           @for (t of tokens(); track $index) {
@@ -191,7 +193,7 @@
 
     <div class="actions">
       <button type="button" class="btn btn--primary" (click)="save()" [disabled]="saving()">
-        {{ saving() ? 'Salvataggio…' : (isEdit() ? 'Salva modifiche' : 'Salva variante') }}
+        {{ saving() ? 'Salvataggio…' : (isEdit() ? 'Salva modifiche' : ('Salva ' + itemLabel())) }}
       </button>
       <a class="btn" routerLink="/">Annulla</a>
     </div>
@@ -204,6 +206,7 @@
     class="variant-drawer"
     [variants]="studyVariants()"
     [activeId]="editId()!"
+    [positionMode]="isPosition()"
     [drawer]="true"
     (variantSelected)="requestVariantChange($event)"
     (dismiss)="closeVariants()"

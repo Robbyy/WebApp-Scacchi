@@ -1,13 +1,16 @@
-<nav class="nav" aria-label="Varianti dello studio">
+<nav
+  class="nav"
+  [attr.aria-label]="positionMode() ? 'Posizioni dello studio' : 'Varianti dello studio'"
+>
   <div class="nav-head">
-    <h3 class="nav-title">Varianti</h3>
+    <h3 class="nav-title">{{ positionMode() ? 'Posizioni' : 'Varianti' }}</h3>
     @if (drawer()) {
       <button
         #closeButton
         type="button"
         class="nav-close"
         (click)="dismiss.emit()"
-        aria-label="Chiudi l'elenco delle varianti"
+        [attr.aria-label]="positionMode() ? 'Chiudi l\'elenco delle posizioni' : 'Chiudi l\'elenco delle varianti'"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z" />
@@ -28,12 +31,14 @@
         >
           <span class="nav-item__name">{{ v.name }}</span>
           <span class="nav-item__meta">
-            <span
-              class="badge"
-              [class.badge--white]="v.color === 'WHITE'"
-              [class.badge--black]="v.color === 'BLACK'"
-              >{{ v.color === 'WHITE' ? 'Bianco' : 'Nero' }}</span
-            >
+            @if (!positionMode()) {
+              <span
+                class="badge"
+                [class.badge--white]="v.color === 'WHITE'"
+                [class.badge--black]="v.color === 'BLACK'"
+                >{{ v.color === 'WHITE' ? 'Bianco' : 'Nero' }}</span
+              >
+            }
             <span class="nav-item__count">{{ v.moves.length }} mosse</span>
           </span>
         </button>

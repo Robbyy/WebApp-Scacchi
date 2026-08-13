@@ -53,9 +53,18 @@ function setup(options: { save?: (request: CreateVariantRequest) => unknown; pha
   });
   const fixture = TestBed.createComponent(PositionEditor);
   const router = TestBed.inject(Router);
-  router.navigate = (() => Promise.resolve(true)) as typeof router.navigate;
+  let navTarget: unknown[] | null = null;
+  router.navigate = ((commands: unknown[]) => {
+    navTarget = commands;
+    return Promise.resolve(true);
+  }) as typeof router.navigate;
   fixture.detectChanges();
-  return { fixture, cmp: fixture.componentInstance as any, captured: () => captured };
+  return {
+    fixture,
+    cmp: fixture.componentInstance as any,
+    captured: () => captured,
+    navigated: () => navTarget,
+  };
 }
 
 describe('PositionEditor', () => {
@@ -77,7 +86,7 @@ describe('PositionEditor', () => {
   });
 
   it('saves a valid position without moves and without a training color', () => {
-    const { cmp, captured } = setup();
+    const { cmp, captured, navigated } = setup();
     cmp.useStandardPosition();
     cmp.onNameChange('Posizione iniziale');
     cmp.save();
@@ -88,6 +97,7 @@ describe('PositionEditor', () => {
       tree: [],
       startingFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     });
+    expect(navigated()).toEqual(['/variants', 31, 'edit']);
   });
 
   it('keeps the backend validation message visible after a failed save', () => {

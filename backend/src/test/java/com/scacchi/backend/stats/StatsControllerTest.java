@@ -123,7 +123,8 @@ class StatsControllerTest {
         int studyId = JsonPath.read(study.getResponse().getContentAsString(), "$.id");
 
         String variantBody = """
-            {"name":"Posizione","color":"WHITE","moves":["e4"]}""";
+            {"name":"Posizione","moves":[],
+             "startingFen":"4k3/8/8/8/8/8/8/4K3 w - - 0 1"}""";
         MvcResult variant = mockMvc.perform(post("/api/studies/" + studyId + "/variants")
                 .contentType(MediaType.APPLICATION_JSON).content(variantBody))
             .andExpect(status().isCreated())

@@ -224,7 +224,9 @@ export class PositionEditor implements CanComponentDeactivate {
         this.dirty.set(false);
         this.saving.set(false);
         this.toast.success(this.isEdit() ? 'Posizione aggiornata.' : 'Posizione salvata.');
-        this.router.navigate(['/variants', saved.id]);
+        // Dopo il setup della FEN l'utente può completare o correggere
+        // l'albero delle mosse nell'editor esistente (task R25 6.2).
+        this.router.navigate(['/variants', saved.id, 'edit']);
       },
       error: (err) => {
         const message = validationMessage(err) ?? 'Salvataggio non riuscito.';

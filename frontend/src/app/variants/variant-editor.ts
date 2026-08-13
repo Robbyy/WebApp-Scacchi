@@ -113,6 +113,10 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
 
   protected readonly editId = signal<number | null>(null);
   protected readonly isEdit = computed(() => this.editId() !== null);
+  /** La fase dello studio decide la terminologia e se esporre il lato da allenare. */
+  protected readonly isOpening = signal(true);
+  protected readonly isPosition = computed(() => !this.isOpening());
+  protected readonly itemLabel = computed(() => this.isPosition() ? 'posizione' : 'variante');
   /**
    * ID della variante **effettivamente caricata** dalla risposta corrente:
    * null mentre il caricamento è in corso, valorizzato solo dalla risposta
@@ -236,6 +240,7 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
     // Finché la risposta corrente non arriva nessuna variante è caricata.
     this.loadedVariantId.set(null);
     this.editId.set(idParam ? Number(idParam) : null);
+    this.isOpening.set(true);
     if (!idParam) {
       this.name.set('');
       this.color.set('WHITE');
@@ -254,8 +259,12 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
       switchMap((v) =>
         v.studyId != null
           ? this.studyService.getStudy(v.studyId).pipe(
-              tap((s) => this.studyVariants.set(s.variants ?? [])),
+              tap((s) => {
+                this.isOpening.set(s.phase === 'OPENING');
+                this.studyVariants.set(s.variants ?? []);
+              }),
               catchError(() => {
+                this.isOpening.set(true);
                 this.studyVariants.set([]);
                 return EMPTY;
               }),
@@ -576,7 +585,7 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
   protected save(): void {
     const name = this.name().trim();
     if (!name) {
-      this.error.set('Inserisci un nome per la variante.');
+      this.error.set(`Inserisci un nome per la ${this.itemLabel()}.`);
       return;
     }
     if (this.tree().length === 0) {
@@ -587,7 +596,7 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
     this.saving.set(true);
     const request: CreateVariantRequest = {
       name,
-      color: this.color(),
+      ...(this.isPosition() ? {} : { color: this.color() }),
       moves: mainline(this.tree()),
       tree: this.tree(),
       // Conserva la FEN della posizione quando si modifica una voce esistente.
@@ -605,7 +614,11 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
     save$.subscribe({
       next: (saved) => {
         this.dirty.set(false);
-        this.toast.success(this.isEdit() ? 'Variante aggiornata.' : 'Variante salvata.');
+        this.toast.success(
+          this.isPosition()
+            ? (this.isEdit() ? 'Posizione aggiornata.' : 'Posizione salvata.')
+            : (this.isEdit() ? 'Variante aggiornata.' : 'Variante salvata.'),
+        );
         this.router.navigate(['/variants', saved.id]);
       },
       error: (err) => {

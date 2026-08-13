@@ -289,6 +289,46 @@ describe('VariantEditor', () => {
     expect(updateId).toBe(5);
   });
 
+  it('loads a custom position and saves new moves while preserving its FEN', () => {
+    const startingFen = '4k3/8/8/8/8/8/8/4K3 w - - 0 1';
+    const position: Variant = {
+      id: 31,
+      name: 'Re e pedone',
+      color: 'WHITE',
+      moves: [],
+      tree: [],
+      startingFen,
+      studyId: 7,
+    };
+    let captured: CreateVariantRequest | null = null;
+    const { cmp, fixture } = setup(
+      {
+        getVariant: () => of(position),
+        updateVariant: (_id: number, request: CreateVariantRequest) => {
+          captured = request;
+          return of({ ...position, moves: ['Ke2'], tree: [{ san: 'Ke2', children: [] }] });
+        },
+      },
+      31,
+      { getStudy: () => of({ id: 7, name: 'Finali pratici', phase: 'ENDGAME', variantCount: 1 }) },
+    );
+    const router = TestBed.inject(Router);
+    router.navigate = (() => Promise.resolve(true)) as typeof router.navigate;
+
+    expect(cmp.isPosition()).toBe(true);
+    expect(fixture.nativeElement.querySelector('#vcolor')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.side-kicker')?.textContent?.trim()).toBe('Modifica posizione');
+    expect(cmp.fen()).toBe(startingFen);
+    cmp.onMove(move('Ke2'));
+    cmp.save();
+
+    expect(captured).not.toBeNull();
+    expect(captured!.startingFen).toBe(startingFen);
+    expect(captured!.color).toBeUndefined();
+    expect(captured!.moves).toEqual(['Ke2']);
+    expect(captured!.tree?.[0].san).toBe('Ke2');
+  });
+
   // ISSUE-007: un solo controllo, il toggle del motore, governa anche la barra.
   it('has no separate show/hide button for the evaluation bar', () => {
     const { fixture, cmp } = setup({});

@@ -11,7 +11,7 @@ import {
 import { Variant } from '../core/variant.model';
 
 /**
- * Elenco delle varianti dello studio corrente (ISSUE-010, R23). Riceve la lista
+ * Elenco degli elementi dello studio corrente (ISSUE-010, R23). Riceve la lista
  * nell'ordine fornito dall'API e l'ID attivo, e si limita a **notificare** la
  * selezione: la navigazione — e, nell'editor, il guard sulle modifiche non
  * salvate — restano responsabilità del componente padre.
@@ -28,10 +28,12 @@ import { Variant } from '../core/variant.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudyVariantNav implements AfterViewInit {
-  /** Varianti dello studio, nell'ordine restituito da `GET /api/studies/{id}`. */
+  /** Elementi dello studio, nell'ordine restituito da `GET /api/studies/{id}`. */
   readonly variants = input.required<Variant[]>();
   /** ID della variante aperta: riceve lo stile attivo e `aria-current="page"`. */
   readonly activeId = input.required<number>();
+  /** In Mediogioco/Finale gli elementi sono posizioni, non varianti allenabili. */
+  readonly positionMode = input(false);
   /** true quando il pannello è mostrato come drawer a sovrapposizione. */
   readonly drawer = input(false);
   /** Variante scelta dall'utente: sta al padre decidere se e come navigare. */

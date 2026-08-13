@@ -1,5 +1,5 @@
 @if (error()) {
-  <p class="detail-error">{{ error() }} — <a routerLink="/">torna alle varianti</a></p>
+  <p class="detail-error">{{ error() }} — <a routerLink="/">torna agli studi</a></p>
 } @else if (variant(); as v) {
   <div class="detail" [class.detail--rail]="hasVariantNav()">
     @if (hasVariantNav()) {
@@ -7,6 +7,7 @@
         class="variant-rail"
         [variants]="studyVariants()"
         [activeId]="v.id"
+        [positionMode]="isPosition()"
         (variantSelected)="goToVariant($event)"
       />
     }
@@ -48,7 +49,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 6h16v2H4zM4 11h16v2H4zM4 16h16v2H4z" />
           </svg>
-          Varianti
+          {{ isPosition() ? 'Posizioni' : 'Varianti' }}
         </button>
       }
 
@@ -191,6 +192,7 @@
       class="variant-drawer"
       [variants]="studyVariants()"
       [activeId]="v.id"
+      [positionMode]="isPosition()"
       [drawer]="true"
       (variantSelected)="goToVariant($event)"
       (dismiss)="closeVariants()"

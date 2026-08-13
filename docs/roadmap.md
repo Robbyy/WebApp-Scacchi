@@ -44,9 +44,8 @@ Il piano esclude volutamente bug, audit e infrastruttura.
 > annotazione con commento e un solo NAG, `MoveNode` esteso in modo retrocompatibile.
 > Vedi l'[esito R24](backlog/manutenzione-evolutiva.md#esito-r24--issue-013--issue-016-move-comments-2026-08-10).
 >
-> ⏳ **R25 — Posizioni manuali** — implementata e committata (`d38a507`), ma ancora in
-> verifica: restano aperti il comportamento senza `startingFen`, il flusso UI per l'albero
-> delle mosse e la terminologia/navigazione fuori dalle Aperture. La prossima slice dopo la
+> ✅ **R25 — Posizioni manuali** — rilasciata il 2026-08-13 dopo la verifica
+> manuale dei flussi E2E 49–52. La prossima slice dopo la
 > chiusura di R25 è **R26** (`issue-016-middlegame-section`).
 
 In sintesi: navigazione → linea migliore del motore → gestione studi → flusso

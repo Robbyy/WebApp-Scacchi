@@ -257,6 +257,38 @@ class StudyControllerTest {
     }
 
     @Test
+    void rejectsAnEmptyPositionWithoutCustomStartingFen() throws Exception {
+        int studyId = createStudyWithPhase("Posizioni", "MIDDLEGAME");
+        String body = """
+            {"name":"FEN mancante","moves":[],"tree":[]}""";
+
+        mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("startingFen"));
+
+        mockMvc.perform(get("/api/studies/" + studyId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.variantCount").value(0));
+    }
+
+    @Test
+    void rejectsAnEmptyPositionWithABlankCustomStartingFen() throws Exception {
+        int studyId = createStudyWithPhase("Posizioni", "ENDGAME");
+        String body = """
+            {"name":"FEN vuota","moves":[],"tree":[],"startingFen":"   "}""";
+
+        mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("startingFen"));
+
+        mockMvc.perform(get("/api/studies/" + studyId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.variantCount").value(0));
+    }
+
+    @Test
     void rejectsAnIllegalCustomStartingFenWithoutSavingThePosition() throws Exception {
         int studyId = createStudyWithPhase("Posizioni", "MIDDLEGAME");
         String body = """
@@ -307,6 +339,29 @@ class StudyControllerTest {
         mockMvc.perform(get("/api/variants/" + variantId))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("Re in movimento"))
+            .andExpect(jsonPath("$.startingFen").value(originalFen));
+    }
+
+    @Test
+    void rejectsAnUpdateWithoutCustomStartingFenAndPreservesThePosition() throws Exception {
+        int studyId = createStudyWithPhase("Posizioni", "MIDDLEGAME");
+        String originalFen = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
+        String create = """
+            {"name":"Posizione originale","moves":[],"startingFen":"%s"}""".formatted(originalFen);
+        int variantId = JsonPath.read(mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(create))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.id");
+
+        String update = """
+            {"name":"Non deve salvarsi","moves":[]}""";
+        mockMvc.perform(put("/api/variants/" + variantId)
+                .contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("startingFen"));
+
+        mockMvc.perform(get("/api/variants/" + variantId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Posizione originale"))
             .andExpect(jsonPath("$.startingFen").value(originalFen));
     }
 

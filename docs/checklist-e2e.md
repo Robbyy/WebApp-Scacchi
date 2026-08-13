@@ -1,7 +1,7 @@
 # Checklist E2E manuale - WebApp Scacchi
 
 > Checklist ripetibile per la validazione manuale end-to-end, verificata fino alla release
-> evolutiva R24 (2026-08-10), con i flussi R25 aggiunti e ancora in verifica.
+> evolutiva R25 (2026-08-13), con i flussi R25 verificati.
 > Eseguibile in pochi minuti dopo ogni rilascio significativo, prima di dichiararlo completato.
 > Complementare ai test automatici (vedi sezione "Copertura automatica" in fondo).
 
@@ -90,22 +90,24 @@
 
 ---
 
-## Flussi aggiunti (evolutiva R25 — in verifica)
+## Flussi aggiunti (evolutiva R25 — verificata)
 
-- [ ] **49. Creare una posizione manuale in uno studio Mediogioco/Finale (R25)** — dal dettaglio di uno studio `MIDDLEGAME` o `ENDGAME` premere `Nuova posizione`; l'editor apre la scacchiera di configurazione, mantiene il `studyId` dello studio padre, richiede il titolo e permette di salvare una posizione valida anche senza mosse.
-- [ ] **50. Configurare e validare la FEN (R25)** — piazzare/rimuovere pezzi, cambiare il lato al tratto, arrocco ed en-passant; verificare FEN readonly canonica con contatori `0 1`, errori per re/pedoni/arrocco/en-passant non validi e derivazione del colore tecnico dal lato al tratto.
-- [ ] **51. Salvare e rivalidare l'albero dalla FEN custom (R25)** — verificare una continuazione legale dalla posizione custom, il rifiuto di una mossa incompatibile e il rifiuto atomico quando la modifica della FEN rende illegale l'albero esistente. Il flusso UI per aggiungere/modificare l'albero resta da decidere nel task aperto 6.2.
-- [ ] **52. Compatibilità Aperture e terminologia posizionale (R25)** — verificare che Aperture, import Lichess, training, review e varianti legacy restino invariati; nelle liste, breadcrumb e navigazione di Mediogioco/Finale usare “posizione” e non mostrare il campo tecnico `color` come lato di training.
+- [x] **49. Creare una posizione manuale in uno studio Mediogioco/Finale (R25)** — verificato il 2026-08-13 su H2 temporaneo: dal dettaglio `MIDDLEGAME` `Nuova posizione` mantiene lo studio padre, richiede il titolo e salva anche con `moves`/`tree` vuoti; il salvataggio apre `/variants/:id/edit`.
+- [x] **50. Configurare e validare la FEN (R25)** — verificati piazzamento, lato al tratto, arrocco ed en-passant; FEN readonly canonica con contatori `0 1`, derivazione del colore tecnico dalla FEN e rifiuti UI per re mancanti, pedone sulla prima traversa, arrocco incoerente ed en-passant incoerente. Verificata anche la cattura `exd6` da en-passant.
+- [x] **51. Salvare e rivalidare l'albero dalla FEN custom (R25)** — verificata una continuazione legale (`Ke2`), la persistenza di `startingFen`, `moves` e `tree`, il rifiuto di una mossa incompatibile e il rifiuto atomico quando la modifica della FEN rende illegale l'albero esistente.
+- [x] **52. Compatibilità Aperture e terminologia posizionale (R25)** — verificati lista/dettaglio Aperture con `Nuova variante`, training, statistiche, badge e lato di allenamento invariati; Mediogioco usa “posizioni” in home, dettaglio, breadcrumb e navigazione, senza esporre `color` come lato di training. Una FEN custom inviata a uno studio `OPENING` è rifiutata dal backend con `400`.
 
-> Audit preliminare del 2026-08-13: l'accesso all'editor e la navigazione tra posizioni sono stati
-> verificati su H2 in memoria; l'audit ha confermato i tre punti aperti 6.1–6.3 della change
-> OpenSpec. Il database persistente `backend/data/scacchi.mv.db` non fa parte della checklist.
+> Audit conclusivo del 2026-08-13: flussi 49–52 verificati con backend su H2 file temporaneo e frontend
+> su `http://localhost:4200`; suite automatica verde (120 backend, 346 frontend). Durante la prova
+> `http://127.0.0.1:4200` ha mostrato un limite dell'ambiente Browser Use sulle mutazioni, non riprodotto
+> su `localhost`; nessun difetto applicativo è risultato. Il database persistente
+> `backend/data/scacchi.mv.db` non è stato usato né modificato.
 
 ---
 
 ## Pulizia
 
-- [ ] Eliminare studi e varianti di test creati durante la checklist, lasciando i seed di default.
+- [x] Studi e varianti di test eliminati dal database temporaneo; i seed del database persistente sono invariati.
 
 ---
 
@@ -113,8 +115,8 @@
 
 Questi flussi sono coperti anche da test automatici (da eseguire prima della checklist manuale):
 
-- **Backend** (`mvnw.cmd test` — **117 test**): CRUD varianti, validazione legalità (mainline e albero, `400` strutturato), FEN custom R25 (normalizzazione, re, pedoni, arrocco, en-passant, lato che ha appena mosso, mosse dalla FEN e aggiornamento atomico), round-trip albero `tree → DB → DTO`, annotazioni R24 (`MoveNodeTest` costruttore a due argomenti e normalizzazione del commento, `TreeConverterTest` lettura di JSON legacy e assenza dei campi per un albero non annotato, `VariantValidatorTest`/`VariantControllerTest` limite del commento e insieme dei NAG), `MoveNode`/mainline, CRUD studi (creazione variante nello studio, cancellazione a cascata, import bulk e upsert Lichess), sessioni di allenamento (`TrainingSessionControllerTest`), statistiche (`StatsControllerTest`), spaced repetition (`ReviewSchedulerTest` SM-2 puro + `ReviewControllerTest`).
-- **Frontend** (`npm test -- --watch=false` — **343 test**): scacchiera (click, drag, promozione, hide-on-drag, audio), editor posizione R25 (setup visuale, FEN, arrocco, en-passant, salvataggio senza mosse, errori backend e guard di fase), editor varianti (mosse, varianti, promuovi a mainline, conferma cancellazione, guard, creazione in studio), training (mosse corrette/errate, rami, completamento, audio, submit sessione), studi (lista/dettaglio/eliminazione, CTA e modifica inline R22), pagina unica creazione/import R22 (`study-new` — creazione locale, anteprima e suggerimenti, upsert con metadati locali, `?studyId` valido/inesistente/non-Aperture, errore di import parziale, bozza `sessionStorage`; redirect della route storica in `app.routes`), import PGN (anche in studio) e parser `pgn`, import/auth Lichess (`lichess`, `lichess-auth`), comando Lichess in topbar (`app`), motore (`uci` — parsing PV completa, `pvToSan`, `numberedPv` —, `play`, `stockfish.service` — ciclo spegnimento/riaccensione con worker finto e righe `info` tardive), linea migliore e toggle unico del pannello motore R21 (`variant-detail`, `variant-editor`), pannello varianti R23 (`study-variant-nav` — incluso il caricamento cancellabile, le risposte fuori ordine, il riavvio a FEN identica, drawer/editor e assenza di Auto-play), azioni e annotazioni per mossa R24 (`move-actions-menu`, incluso il ciclo ↑/↓/`Home`/`End`, `move-annotation-dialog`, il blocco «menu azioni e annotazioni» di `variant-editor` e la lettura in sola lettura in `variant-detail`), statistiche (`stats-format`, `stats.service`, `variant-stats`, `study-stats`), ripetizione (`review-format`, `review.service`, `review-due`), navigazione R20 (`app`, `app.routes`, `study-sections`, `coming-soon`), più i servizi `StudyService`/`MoveSoundService` e le utilità `move-tree`.
+- **Backend** (`mvnw.cmd test` — **120 test**): CRUD varianti, validazione legalità (mainline e albero, `400` strutturato), FEN custom R25 (normalizzazione, FEN mancante/vuota, re, pedoni, arrocco, en-passant, lato che ha appena mosso, mosse dalla FEN e aggiornamento atomico), round-trip albero `tree → DB → DTO`, annotazioni R24 (`MoveNodeTest` costruttore a due argomenti e normalizzazione del commento, `TreeConverterTest` lettura di JSON legacy e assenza dei campi per un albero non annotato, `VariantValidatorTest`/`VariantControllerTest` limite del commento e insieme dei NAG), `MoveNode`/mainline, CRUD studi (creazione variante nello studio, cancellazione a cascata, import bulk e upsert Lichess), sessioni di allenamento (`TrainingSessionControllerTest`), statistiche (`StatsControllerTest`), spaced repetition (`ReviewSchedulerTest` SM-2 puro + `ReviewControllerTest`).
+- **Frontend** (`npm test -- --watch=false` — **346 test**): scacchiera (click, drag, promozione, hide-on-drag, audio), editor posizione R25 (setup visuale, FEN, arrocco, en-passant, salvataggio senza mosse, accesso all'editor dell'albero, errori backend e guard di fase), editor varianti (mosse, varianti, promuovi a mainline, conferma cancellazione, guard, creazione in studio), navigazione posizionale R25 (etichette «Posizioni», assenza dei badge Bianco/Nero e del lato da allenare, regressione Aperture), terminologia fase-aware nella home, training (mosse corrette/errate, rami, completamento, audio, submit sessione), studi (lista/dettaglio/eliminazione, CTA e modifica inline R22), pagina unica creazione/import R22 (`study-new` — creazione locale, anteprima e suggerimenti, upsert con metadati locali, `?studyId` valido/inesistente/non-Aperture, errore di import parziale, bozza `sessionStorage`; redirect della route storica in `app.routes`), import PGN (anche in studio) e parser `pgn`, import/auth Lichess (`lichess`, `lichess-auth`), comando Lichess in topbar (`app`), motore (`uci` — parsing PV completa, `pvToSan`, `numberedPv` —, `play`, `stockfish.service` — ciclo spegnimento/riaccensione con worker finto e righe `info` tardive), linea migliore e toggle unico del pannello motore R21 (`variant-detail`, `variant-editor`), pannello varianti R23 (`study-variant-nav` — incluso il caricamento cancellabile, le risposte fuori ordine, il riavvio a FEN identica, drawer/editor e assenza di Auto-play), azioni e annotazioni per mossa R24 (`move-actions-menu`, incluso il ciclo ↑/↓/`Home`/`End`, `move-annotation-dialog`, il blocco «menu azioni e annotazioni» di `variant-editor` e la lettura in sola lettura in `variant-detail`), statistiche (`stats-format`, `stats.service`, `variant-stats`, `study-stats`), ripetizione (`review-format`, `review.service`, `review-due`), navigazione R20 (`app`, `app.routes`, `study-sections`, `coming-soon`), più i servizi `StudyService`/`MoveSoundService` e le utilità `move-tree`.
 
 ### Runner E2E browser (rinviato)
 Un runner E2E completo (Playwright/Cypress) è **rinviato**: richiede tooling e download aggiuntivi non prioritari in questa fase. La combinazione *test unit/integrazione + questa checklist + verifica live nel preview* copre i percorsi critici. Da rivalutare quando l'app si avvicina all'uso reale o all'integrazione CI/CD (terza tornata).

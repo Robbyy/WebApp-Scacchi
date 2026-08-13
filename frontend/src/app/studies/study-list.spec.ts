@@ -10,6 +10,7 @@ import { ToastService } from '../core/toast.service';
 
 const s1: Study = { id: 1, name: 'Repertorio', phase: 'OPENING', variantCount: 2 };
 const s2: Study = { id: 2, name: 'Siciliana', color: 'BLACK', phase: 'OPENING', variantCount: 0 };
+const s3: Study = { id: 3, name: 'Finali', phase: 'ENDGAME', variantCount: 1 };
 
 function setup(service: Partial<StudyService>, confirmResult = true) {
   TestBed.configureTestingModule({
@@ -46,6 +47,13 @@ describe('StudyList', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('form')).toBeNull();
     expect(el.textContent).not.toContain('Importa da Lichess');
+  });
+
+  it('uses positional terminology for middlegame and endgame studies (R25)', () => {
+    const { fixture } = setup({ getStudies: () => of([s3]) });
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('1 posizione');
+    expect(text).not.toContain('1 variante');
   });
 
   it('removes a study after confirmation', async () => {

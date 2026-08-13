@@ -47,7 +47,7 @@
                 >
               }
               <span class="study-count"
-                >{{ s.variantCount }} variant{{ s.variantCount === 1 ? 'e' : 'i' }}</span
+                >{{ s.variantCount }} {{ s.variantCount === 1 ? itemLabel(s) : itemLabelPlural(s) }}</span
               >
             </span>
           </a>

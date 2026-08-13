@@ -14,12 +14,13 @@ const list: Variant[] = [
   variant(3, 'Francese', ['e4', 'e6'], 'BLACK'),
 ];
 
-function setup(variants: Variant[], activeId: number, drawer = false) {
+function setup(variants: Variant[], activeId: number, drawer = false, positionMode = false) {
   TestBed.configureTestingModule({ imports: [StudyVariantNav] });
   const fixture = TestBed.createComponent(StudyVariantNav);
   fixture.componentRef.setInput('variants', variants);
   fixture.componentRef.setInput('activeId', activeId);
   fixture.componentRef.setInput('drawer', drawer);
+  fixture.componentRef.setInput('positionMode', positionMode);
   fixture.detectChanges();
   return fixture;
 }
@@ -48,6 +49,16 @@ describe('StudyVariantNav', () => {
     expect(first.querySelector('.badge')?.textContent?.trim()).toBe('Bianco');
     expect(first.querySelector('.nav-item__count')?.textContent?.trim()).toBe('3 mosse');
     expect(items(fixture)[1].querySelector('.badge')?.textContent?.trim()).toBe('Nero');
+  });
+
+  it('uses positional labels and hides the training colour outside openings', () => {
+    const fixture = setup(list, 1, false, true);
+    const nav: HTMLElement = fixture.nativeElement.querySelector('nav');
+
+    expect(nav.getAttribute('aria-label')).toBe('Posizioni dello studio');
+    expect(fixture.nativeElement.querySelector('.nav-title')?.textContent?.trim()).toBe('Posizioni');
+    expect(items(fixture).every((item) => item.querySelector('.badge') === null)).toBe(true);
+    expect(items(fixture)[0].querySelector('.nav-item__count')?.textContent?.trim()).toBe('3 mosse');
   });
 
   it('marks only the active variant, visually and for assistive tech', () => {
