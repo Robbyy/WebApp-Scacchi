@@ -56,7 +56,7 @@ Riferimenti: [backlog](backlog.md),
 | **010** ✅ | Permette di passare tra varianti senza tornare allo studio | dettaglio variante, editor, layout responsivo | rilasciata con R23 (2026-08-10) |
 | **008** ✅ | Rimuove l'auto-play non necessario | controlli del dettaglio variante | rilasciata con R23 (2026-08-10) |
 | **013** ✅ | Operazioni rapide sull'albero di mosse | editor, menu contestuale, conferma | rilasciata con R24 (2026-08-10); mini-spec completata |
-| **016** | Estende l'app a Mediogioco e Finale | modello, editor, API, sezioni UI | `phase-domain-model` già implementata; commenti in R24, restano quattro slice OpenSpec |
+| **016** | Estende l'app a Mediogioco e Finale | modello, editor, API, sezioni UI | modello a fasi completato; R25 implementata e in verifica; restano R26–R28 |
 | **015** | Espone identità e versioni dell'app | topbar, contratto versione FE/BE | da consolidare con l'hub Impostazioni |
 | **017** | Centralizza le impostazioni e parametrizza SM-2 | topbar, persistenza, `ReviewScheduler` | richiede OpenSpec e scelta DB/localStorage |
 | **014** | Configura i parametri UCI del motore | worker Stockfish, Impostazioni | richiede audit UCI e ISSUE-017 |
@@ -68,7 +68,8 @@ La slice `issue-016-phase-domain-model` è già completata: `Study.phase` distin
 rimangono intenzionalmente limitati alle Aperture.
 
 `issue-016-move-comments` è stata completata con R24. `issue-016-custom-starting-fen` è stata
-implementata sul branch di lavoro ed è in verifica manuale; restano da realizzare, in ordine di
+implementata, committata in `d38a507` e pubblicata sul branch dedicato; è in verifica manuale.
+Restano da realizzare, in ordine di
 dipendenza OpenSpec,
 `issue-016-middlegame-section`, `issue-016-endgame-section` e
 `issue-016-play-position-vs-engine`.
@@ -124,7 +125,7 @@ esplicitamente `localStorage` oppure un modello già associabile a utente.
 | R22 | ✅ [Mini-spec di ISSUE-011](backlog/manutenzione-evolutiva.md#mini-specifica-r22--issue-011) formalizzata: pagina unica, semantica del link Lichess e comportamento dell'upsert. | ✅ Eseguita (2026-08-06): test form/create/import, `studyId` valido/inesistente/non-Aperture, redirect storico e modifica inline (frontend 249 verdi); verifica live di flussi, bozza ripristinata dopo unload pieno, OAuth end-to-end con account Lichess reale, topbar e griglia a 1440/1024/768/320/280px. La precedente risposta 401 era legata alla rete di sviluppo. |
 | R23 | ✅ [Mini-spec R23 — ISSUE-010 + ISSUE-008](backlog/manutenzione-evolutiva.md#mini-specifica-r23--issue-010--issue-008) formalizzata: rail da 1500px, drawer sotto soglia, navigazione esplicita nell'editor e rimozione Auto-play. | ✅ Eseguita (2026-08-10): P1 corretti con pipeline cancellabile e identità della variante caricata; frontend 288 verdi, build ok e checklist live 41–44 su app reale a 1600/1440/1024/768/375/320px. |
 | R24 | ✅ [Mini-specifica R24](backlog/manutenzione-evolutiva.md#mini-specifica-r24--issue-013--issue-016-move-comments) formalizzata il 2026-08-10: NAG singolo, commento testuale limitato, JSON retrocompatibile, menu azioni accessibile; «Elimina continuazioni» resta fuori scope e tra i punti aperti. | ✅ Eseguita (2026-08-10, [esito R24](backlog/manutenzione-evolutiva.md#esito-r24--issue-013--issue-016-move-comments-2026-08-10)): backend 103 verdi e frontend 338 verdi, build ok e checklist live 45–48 a 1600/1440/1024/768/375/320px su una copia del DB H2; nessuna perdita di mosse o annotazioni, parser PGN/Lichess invariato. |
-| R25 | ✅ OpenSpec completa; implementazione e test automatici eseguiti. | Verifica manuale dei task aperti 6.1–6.3 e decisione esplicita prima della chiusura del rilascio. |
+| R25 | ✅ OpenSpec completa; implementazione e test automatici eseguiti (117 backend, 343 frontend; commit `d38a507`). | Verifica manuale dei task aperti 6.1–6.3 e decisione esplicita prima della chiusura del rilascio. |
 | R26–R28 | OpenSpec completa per ogni slice di ISSUE-016, senza ridecidere il modello a fasi già approvato. | Test API/validazione, frontend e checklist manuale della fase interessata. |
 | R29 | Decisione di persistenza delle preferenze e contratto versione backend. | Test di `ReviewScheduler` con parametri e verifica che le schedule esistenti non vengano ricalcolate. |
 | R30 | Audit reale delle opzioni UCI emesse dal worker Stockfish asm.js. | Test del mapping opzioni/comandi UCI e verifica live del motore. |
