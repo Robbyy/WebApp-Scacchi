@@ -60,8 +60,9 @@ La sequenza dettagliata dei soli incrementi evolutivi è nel
 3. ~~**R22:** ISSUE-011 + ISSUE-012 + ISSUE-009 (ciclo di vita dello studio e home).~~ ✅ fatto (2026-08-06).
 4. ~~**R23:** ISSUE-010 + ISSUE-008 (navigazione e controlli del dettaglio variante).~~ ✅ fatto (2026-08-10).
 5. ~~**R24:** ISSUE-013 + `issue-016-move-comments` (editor).~~ ✅ fatto (2026-08-10).
-6. **R25–R28:** slice residue di ISSUE-016: posizione FEN → Mediogioco → Finale → gioco da posizione.
-7. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
+6. **R25:** posizione FEN custom. ✅ Implementata e integrata in `master`; verifica manuale ancora aperta.
+7. **R26–R28:** slice residue di ISSUE-016: Mediogioco → Finale → gioco da posizione.
+8. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
 
 I bug GitHub e l'audit di sicurezza seguono le proprie priorità e **non** fanno parte
 di questa cadenza di rilasci evolutivi.

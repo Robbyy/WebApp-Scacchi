@@ -68,7 +68,7 @@ La slice `issue-016-phase-domain-model` è già completata: `Study.phase` distin
 rimangono intenzionalmente limitati alle Aperture.
 
 `issue-016-move-comments` è stata completata con R24. `issue-016-custom-starting-fen` è stata
-implementata, committata in `d38a507` e pubblicata sul branch dedicato; è in verifica manuale.
+implementata, committata in `d38a507` e integrata in `master`; è in verifica manuale.
 Restano da realizzare, in ordine di
 dipendenza OpenSpec,
 `issue-016-middlegame-section`, `issue-016-endgame-section` e

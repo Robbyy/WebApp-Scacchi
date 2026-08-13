@@ -7,7 +7,7 @@ registrazione sessioni, statistiche e spaced repetition SM-2.
 ## Stato
 
 Parte 1 e Parte 2 (P0–P19) completate e verificate in locale.
-Backend: 103 test verdi. Frontend: 338 test verdi.
+Backend: 117 test verdi. Frontend: 343 test verdi.
 Terza tornata (infrastruttura) avviata: **schema gestito da Liquibase** (ISSUE-019, fatto).
 OpenSpec è installato e lo scaffold `openspec/` è pronto per le change di maggiore impatto.
 ISSUE-003 (header home: titolo e pulsanti a capo) risolta e verificata a Full HD
@@ -19,7 +19,8 @@ rimozione di Auto-play e correzioni P1 al cambio variante (ISSUE-010 + ISSUE-008
 Evolutiva **R24 completata** (2026-08-10): menu azioni per mossa nell'editor e annotazioni
 (commento + un NAG) sui nodi dell'albero, lette anche nel dettaglio (ISSUE-013 +
 `issue-016-move-comments`).
-Prossimi: bug ISSUE-004/005/006/020, evolutiva R25 (`issue-016-custom-starting-fen`),
+R25 (`issue-016-custom-starting-fen`) è implementata e integrata in `master`, ma resta in
+verifica manuale; seguono R26 (`issue-016-middlegame-section`), i bug ISSUE-004/005/006/020,
 Supabase PostgreSQL, Supabase Auth, Docker e CI/CD.
 
 ## Stack
