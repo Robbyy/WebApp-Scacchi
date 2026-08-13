@@ -1,6 +1,17 @@
 @if (error()) {
-  <p class="detail-error">{{ error() }} — <a routerLink="/">torna agli studi</a></p>
+  <p class="detail-error">{{ error() }} — <a [routerLink]="paths.studyList">{{ backLabel }}</a></p>
+} @else if (sectionChecking()) {
+  <p class="detail-muted">Verifica della sezione&#8230;</p>
 } @else if (variant(); as v) {
+  @if (hasSectionContext && v.studyId) {
+    <nav class="crumbs" aria-label="Percorso posizione">
+      <a [routerLink]="paths.studyList">{{ parentLabel }}</a>
+      <span class="crumb-sep">/</span>
+      <a [routerLink]="paths.study(v.studyId)">{{ studyName() }}</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb-current" aria-current="page">{{ v.name }}</span>
+    </nav>
+  }
   <div class="detail" [class.detail--rail]="hasVariantNav()">
     @if (hasVariantNav()) {
       <app-study-variant-nav
@@ -69,9 +80,13 @@
               <span class="engine-depth">prof. {{ ev.depth }}</span>
             }
           </button>
-          <button class="engine-sub" type="button" (click)="playVsComputer()" [disabled]="!engineAvailable()">
-            Gioca contro il computer
-          </button>
+          @if (isOpening()) {
+            <!-- Avviare una partita dalla FEN salvata di una posizione è R28:
+                 qui resta solo l'analisi (ISSUE-016). -->
+            <button class="engine-sub" type="button" (click)="playVsComputer()" [disabled]="!engineAvailable()">
+              Gioca contro il computer
+            </button>
+          }
         </div>
         @if (!engineAvailable()) {
           <p class="engine-note">Motore non disponibile in questo ambiente.</p>
@@ -165,12 +180,28 @@
       </p>
 
       <div class="detail-actions">
-        <a class="edit-link" [routerLink]="isPosition() ? ['/positions', v.id, 'edit'] : ['/variants', v.id, 'edit']">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-          </svg>
-          Modifica {{ isPosition() ? 'posizione' : 'variante' }}
-        </a>
+        @if (isPosition()) {
+          <!-- R25 separa posizione iniziale e albero: due azioni distinte. -->
+          <a class="edit-link" [routerLink]="paths.positionSetup(v.id)">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+            </svg>
+            Configura posizione iniziale
+          </a>
+          <a class="edit-link" [routerLink]="paths.positionEdit(v.id)">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+            </svg>
+            Modifica mosse
+          </a>
+        } @else {
+          <a class="edit-link" [routerLink]="paths.positionEdit(v.id)">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+            </svg>
+            Modifica variante
+          </a>
+        }
         @if (isOpening()) {
           <a class="edit-link" routerLink="/variants/{{ v.id }}/stats">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -179,8 +210,8 @@
             Statistiche
           </a>
         }
-        <a class="back-link" [routerLink]="v.studyId ? ['/studies', v.studyId] : ['/']"
-          >&#8592; {{ v.studyId ? 'Torna allo studio' : 'Studi' }}</a
+        <a class="back-link" [routerLink]="v.studyId ? paths.study(v.studyId) : paths.studyList"
+          >&#8592; {{ v.studyId ? 'Torna allo studio' : parentLabel }}</a
         >
       </div>
     </aside>

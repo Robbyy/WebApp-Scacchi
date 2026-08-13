@@ -1,9 +1,9 @@
 @if (error()) {
-  <p class="detail-error">{{ error() }} — <a routerLink="/">torna agli studi</a></p>
+  <p class="detail-error">{{ error() }} — <a [routerLink]="paths.studyList">{{ backLabel }}</a></p>
 } @else if (study(); as s) {
   <section class="study">
     <nav class="crumbs">
-      <a routerLink="/">Studi</a>
+      <a [routerLink]="paths.studyList">{{ parentLabel }}</a>
       <span class="crumb-sep">/</span>
       <span class="crumb-current">{{ s.name }}</span>
     </nav>
@@ -108,7 +108,7 @@
           Importa da Lichess
         </a>
       } @else {
-        <a class="new-cta" [routerLink]="['/positions', 'new']" [queryParams]="{ studyId: s.id }">
+        <a class="new-cta" [routerLink]="paths.newPosition" [queryParams]="{ studyId: s.id }">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" /></svg>
           Nuova posizione
         </a>
@@ -121,7 +121,7 @@
       <ul class="variant-cards">
         @for (v of variants(); track v.id) {
           <li class="variant-card">
-            <a class="variant-main" [routerLink]="['/variants', v.id]">
+            <a class="variant-main" [routerLink]="paths.position(v.id)">
               <span class="variant-name">{{ v.name }}</span>
               <span class="variant-meta">
                 @if (isOpening()) {

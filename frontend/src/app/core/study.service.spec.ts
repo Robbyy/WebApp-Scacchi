@@ -34,6 +34,29 @@ describe('StudyService', () => {
     expect(received).toEqual(studies);
   });
 
+  it('lists a single phase via GET /api/studies?phase=… (ISSUE-016)', () => {
+    const studies: Study[] = [
+      { id: 3, name: 'Strutture di pedoni', phase: 'MIDDLEGAME', variantCount: 4 },
+    ];
+    let received: Study[] | undefined;
+    service.getStudiesByPhase('MIDDLEGAME').subscribe((s) => (received = s));
+
+    const req = httpMock.expectOne('/api/studies?phase=MIDDLEGAME');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('phase')).toBe('MIDDLEGAME');
+    req.flush(studies);
+    expect(received).toEqual(studies);
+  });
+
+  it('keeps the openings list without any phase filter (ISSUE-016)', () => {
+    service.getStudies().subscribe();
+
+    const req = httpMock.expectOne('/api/studies');
+    expect(req.request.urlWithParams).toBe('/api/studies');
+    expect(req.request.params.keys()).toEqual([]);
+    req.flush([]);
+  });
+
   it('fetches a study detail via GET /api/studies/:id', () => {
     let received: Study | undefined;
     service.getStudy(7).subscribe((s) => (received = s));

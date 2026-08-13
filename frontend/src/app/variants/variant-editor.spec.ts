@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { BehaviorSubject, Subject, of } from 'rxjs';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { VariantEditor } from './variant-editor';
 import { VariantService } from '../core/variant.service';
 import { StockfishService } from '../core/stockfish.service';
@@ -13,6 +13,7 @@ import { MoveMade } from '../chessboard/chessboard';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
 import { setAnnotation } from '../core/move-tree';
+import { MIDDLEGAME_SECTION_CONTEXT, SECTION_CONTEXT_DATA } from '../core/study-sections';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -56,6 +57,8 @@ function setup(
   queryParams: Record<string, string> = {},
   confirmService: Partial<ConfirmService> = { ask: () => Promise.resolve(true) },
   engine = fakeEngine(),
+  /** `data` della route: con il contesto l'editor è quello di sezione. */
+  data: Record<string, unknown> = {},
 ) {
   const paramMap = new BehaviorSubject(convertToParamMap(routeId ? { id: String(routeId) } : {}));
   TestBed.configureTestingModule({
@@ -74,6 +77,7 @@ function setup(
           snapshot: {
             paramMap: paramMap.value,
             queryParamMap: convertToParamMap(queryParams),
+            data,
           },
         },
       },
@@ -221,8 +225,8 @@ describe('VariantEditor', () => {
       },
     });
     const router = TestBed.inject(Router);
-    let navTarget: unknown[] | null = null;
-    router.navigate = ((c: unknown[]) => { navTarget = c; return Promise.resolve(true); }) as typeof router.navigate;
+    let navTarget: string | null = null;
+    router.navigateByUrl = ((url: string) => { navTarget = url; return Promise.resolve(true); }) as typeof router.navigateByUrl;
 
     cmp.onMove(move('e4'));
     cmp.onMove(move('e5'));
@@ -232,7 +236,7 @@ describe('VariantEditor', () => {
     expect(captured!.name).toBe('Italiana');
     expect(captured!.moves).toEqual(['e4', 'e5']);
     expect(captured!.tree?.[0].san).toBe('e4');
-    expect(navTarget).toEqual(['/variants', 7]);
+    expect(navTarget).toBe('/variants/7');
   });
 
   it('creates inside a study via the nested endpoint when studyId is present', () => {
@@ -246,8 +250,8 @@ describe('VariantEditor', () => {
       { studyId: '3' },
     );
     const router = TestBed.inject(Router);
-    let navTarget: unknown[] | null = null;
-    router.navigate = ((c: unknown[]) => { navTarget = c; return Promise.resolve(true); }) as typeof router.navigate;
+    let navTarget: string | null = null;
+    router.navigateByUrl = ((url: string) => { navTarget = url; return Promise.resolve(true); }) as typeof router.navigateByUrl;
 
     expect(cmp.studyId()).toBe(3);
     cmp.onMove(move('e4'));
@@ -256,7 +260,7 @@ describe('VariantEditor', () => {
 
     expect(studyArg).toBe(3);
     expect(createCalled).toBe(false);
-    expect(navTarget).toEqual(['/variants', 8]);
+    expect(navTarget).toBe('/variants/8');
   });
 
   it('loads an existing variant in edit mode and updates it', () => {
@@ -279,7 +283,7 @@ describe('VariantEditor', () => {
       5,
     );
     const router = TestBed.inject(Router);
-    router.navigate = (() => Promise.resolve(true)) as typeof router.navigate;
+    router.navigateByUrl = (() => Promise.resolve(true)) as typeof router.navigateByUrl;
 
     expect(cmp.isEdit()).toBe(true);
     expect(cmp.tree()[0].san).toBe('e4');
@@ -313,7 +317,7 @@ describe('VariantEditor', () => {
       { getStudy: () => of({ id: 7, name: 'Finali pratici', phase: 'ENDGAME', variantCount: 1 }) },
     );
     const router = TestBed.inject(Router);
-    router.navigate = (() => Promise.resolve(true)) as typeof router.navigate;
+    router.navigateByUrl = (() => Promise.resolve(true)) as typeof router.navigateByUrl;
 
     expect(cmp.isPosition()).toBe(true);
     expect(fixture.nativeElement.querySelector('#vcolor')).toBeNull();
@@ -570,7 +574,7 @@ describe('VariantEditor — menu azioni e annotazioni', () => {
       },
     });
     const router = TestBed.inject(Router);
-    router.navigate = (() => Promise.resolve(true)) as typeof router.navigate;
+    router.navigateByUrl = (() => Promise.resolve(true)) as typeof router.navigateByUrl;
 
     s.cmp.onMove(move('e4'));
     s.cmp.tree.set(setAnnotation(s.cmp.tree(), [0], { comment: 'Nota', nag: '!!' }));
@@ -610,7 +614,7 @@ describe('VariantEditor — menu azioni e annotazioni', () => {
       4,
     );
     const router = TestBed.inject(Router);
-    router.navigate = (() => Promise.resolve(true)) as typeof router.navigate;
+    router.navigateByUrl = (() => Promise.resolve(true)) as typeof router.navigateByUrl;
 
     expect(s.cmp.tree()[0].comment).toBe('Apertura di re');
     expect(s.cmp.tree()[0].nag).toBe('!');
@@ -684,8 +688,8 @@ describe('VariantEditor — pannello varianti', () => {
       },
     );
     const router = TestBed.inject(Router);
-    const navTargets: unknown[][] = [];
-    router.navigate = ((c: unknown[]) => { navTargets.push(c); return Promise.resolve(true); }) as typeof router.navigate;
+    const navTargets: string[] = [];
+    router.navigateByUrl = ((url: string) => { navTargets.push(url); return Promise.resolve(true); }) as typeof router.navigateByUrl;
     return { ...s, asked, navTargets };
   }
 
@@ -717,7 +721,7 @@ describe('VariantEditor — pannello varianti', () => {
     const { cmp, asked, navTargets } = editorOn([italiana, siciliana]);
     await cmp.requestVariantChange(2);
     expect(asked).toEqual([]);
-    expect(navTargets).toEqual([['/variants', 2, 'edit']]);
+    expect(navTargets).toEqual(['/variants/2/edit']);
     expect(cmp.variantsOpen()).toBe(false);
   });
 
@@ -729,7 +733,7 @@ describe('VariantEditor — pannello varianti', () => {
     await cmp.requestVariantChange(2);
 
     expect(asked).toEqual(['Modifiche non salvate']);
-    expect(navTargets).toEqual([['/variants', 2, 'edit']]);
+    expect(navTargets).toEqual(['/variants/2/edit']);
     // Conferma già data: il guard della route non deve richiederla di nuovo.
     expect(cmp.dirty()).toBe(false);
   });
@@ -969,5 +973,239 @@ describe('VariantEditor — motore al cambio variante', () => {
     s.cmp.toggleEngine();
     s.fixture.detectChanges();
     expect(s.engine.analysed.length).toBe(1);
+  });
+});
+
+describe('VariantEditor (Mediogioco, ISSUE-016)', () => {
+  const CUSTOM_FEN = '4k3/8/8/3pP3/8/8/8/4K3 w - - 0 1';
+
+  const position: Variant = {
+    id: 41,
+    name: 'Centro bloccato',
+    color: 'WHITE',
+    moves: ['Ke2'],
+    tree: [{ san: 'Ke2', comment: 'Il re va al centro', nag: '!', children: [] }],
+    startingFen: CUSTOM_FEN,
+    studyId: 6,
+  };
+
+  const sibling: Variant = {
+    id: 42,
+    name: 'Maggioranza in ala',
+    color: 'WHITE',
+    moves: [],
+    tree: [],
+    startingFen: CUSTOM_FEN,
+    studyId: 6,
+  };
+
+  function study(phase: Study['phase'], variants: Variant[] = [position, sibling]): Study {
+    return { id: 6, name: 'Strutture di pedoni', phase, variantCount: variants.length, variants };
+  }
+
+  /** Editor montato sotto `/middlegame/positions/:id/edit`. */
+  function middlegame(
+    service: Partial<VariantService> = { getVariant: () => of(position) },
+    studyService: Partial<StudyService> = { getStudy: () => of(study('MIDDLEGAME')) },
+    engine = fakeEngine(),
+  ) {
+    const s = setup(service, position.id, studyService, {}, { ask: () => Promise.resolve(true) }, engine, {
+      [SECTION_CONTEXT_DATA]: MIDDLEGAME_SECTION_CONTEXT,
+    });
+    const router = TestBed.inject(Router);
+    let navTarget: string | null = null;
+    router.navigateByUrl = ((url: string) => {
+      navTarget = url;
+      return Promise.resolve(true);
+    }) as typeof router.navigateByUrl;
+    return { ...s, el: s.fixture.nativeElement as HTMLElement, navigated: () => navTarget };
+  }
+
+  it('loads the position keeping FEN, tree and annotations', () => {
+    const { cmp, el } = middlegame();
+    expect(cmp.sectionError()).toBeNull();
+    expect(cmp.isPosition()).toBe(true);
+    expect(cmp.fen()).toBe(CUSTOM_FEN);
+    expect(cmp.tree()[0].san).toBe('Ke2');
+    expect(el.querySelector('.move-nag')?.textContent).toContain('!');
+    expect(el.querySelector('.move-comment')?.textContent).toContain('Il re va al centro');
+    // Il lato da allenare non esiste per una posizione.
+    expect(el.querySelector('#vcolor')).toBeNull();
+  });
+
+  it('keeps the editor hidden and save inert while the parent phase is pending', () => {
+    const pendingStudy = new Subject<Study>();
+    let updated = false;
+    const { cmp, el, fixture } = middlegame(
+      {
+        getVariant: () => of(position),
+        updateVariant: () => {
+          updated = true;
+          return of(position);
+        },
+      },
+      { getStudy: () => pendingStudy.asObservable() },
+    );
+
+    expect(cmp.sectionChecking()).toBe(true);
+    expect(cmp.sectionVerified()).toBe(false);
+    expect(el.querySelector('.detail')).toBeNull();
+    expect(el.querySelector('app-chessboard')).toBeNull();
+    expect(el.querySelector('.engine-sub')).toBeNull();
+    expect(el.querySelector('#vcolor')).toBeNull();
+    expect(el.textContent).toContain('Verifica della sezione');
+
+    cmp.save();
+    expect(updated).toBe(false);
+
+    pendingStudy.next(study('MIDDLEGAME'));
+    pendingStudy.complete();
+    fixture.detectChanges();
+
+    expect(cmp.sectionChecking()).toBe(false);
+    expect(cmp.sectionVerified()).toBe(true);
+    expect(el.querySelector('.detail')).not.toBeNull();
+    expect(cmp.fen()).toBe(CUSTOM_FEN);
+  });
+
+  it('never opens or saves a delayed position belonging to the wrong phase', () => {
+    const pendingStudy = new Subject<Study>();
+    let updated = false;
+    const { cmp, el, fixture } = middlegame(
+      {
+        getVariant: () => of(position),
+        updateVariant: () => {
+          updated = true;
+          return of(position);
+        },
+      },
+      { getStudy: () => pendingStudy.asObservable() },
+    );
+
+    pendingStudy.next(study('ENDGAME'));
+    pendingStudy.complete();
+    fixture.detectChanges();
+    cmp.save();
+
+    expect(cmp.sectionVerified()).toBe(false);
+    expect(cmp.sectionError()).toContain('non appartiene alla sezione Mediogioco');
+    expect(el.querySelector('.detail')).toBeNull();
+    expect(updated).toBe(false);
+  });
+
+  it('saves the tree preserving the starting FEN and opens the canonical detail', () => {
+    let captured: CreateVariantRequest | null = null;
+    const { cmp, navigated } = middlegame({
+      getVariant: () => of(position),
+      updateVariant: (_id: number, request: CreateVariantRequest) => {
+        captured = request;
+        return of({ ...position, id: 41 });
+      },
+    });
+
+    cmp.onMove(move('Kd2'));
+    cmp.save();
+
+    expect(captured).toEqual({
+      name: 'Centro bloccato',
+      moves: ['Ke2'],
+      tree: [
+        { san: 'Ke2', comment: 'Il re va al centro', nag: '!', children: [] },
+        { san: 'Kd2', children: [] },
+      ],
+      startingFen: CUSTOM_FEN,
+    });
+    expect(navigated()).toBe('/middlegame/positions/41');
+  });
+
+  it('changes sibling position without leaving the section', async () => {
+    const { cmp, navigated } = middlegame();
+    expect(cmp.hasVariantNav()).toBe(true);
+    await cmp.requestVariantChange(42);
+    expect(navigated()).toBe('/middlegame/positions/42/edit');
+  });
+
+  it('cancels back to the position detail', () => {
+    const { el } = middlegame();
+    const cancel = Array.from(el.querySelectorAll<HTMLAnchorElement>('a')).find((a) =>
+      a.textContent?.includes('Annulla'),
+    );
+    expect(cancel?.getAttribute('href')).toBe('/middlegame/positions/41');
+  });
+
+  it('refuses a variant of an opening study without opening the editor', () => {
+    const { cmp, el } = middlegame(undefined, { getStudy: () => of(study('OPENING')) });
+    expect(cmp.sectionError()).toBe('Questa posizione non appartiene alla sezione Mediogioco.');
+    expect(el.querySelector('app-chessboard')).toBeNull();
+    expect(el.querySelector('.actions')).toBeNull();
+    expect(el.querySelector<HTMLAnchorElement>('.list-error a')?.getAttribute('href')).toBe(
+      '/middlegame',
+    );
+    expect(cmp.tree().length).toBe(0);
+  });
+
+  it('refuses a position of an endgame study and saves nothing', () => {
+    let updated = false;
+    const { cmp } = middlegame(
+      {
+        getVariant: () => of(position),
+        updateVariant: () => {
+          updated = true;
+          return of(position);
+        },
+      },
+      { getStudy: () => of(study('ENDGAME')) },
+    );
+
+    cmp.save();
+    expect(cmp.sectionError()).toContain('non appartiene alla sezione Mediogioco');
+    expect(updated).toBe(false);
+  });
+
+  it('refuses the position when its study cannot be read', () => {
+    const { cmp } = middlegame(undefined, { getStudy: () => throwError(() => new Error('500')) });
+    expect(cmp.sectionError()).toContain('Studio della posizione non trovato');
+  });
+
+  it('keeps Stockfish but not the play command (ISSUE-016)', () => {
+    const engine = fakeEngine();
+    const { cmp, el, fixture } = middlegame(undefined, undefined, engine);
+    expect(el.querySelector('.engine-toggle')).not.toBeNull();
+    expect(el.querySelector('.engine-sub')).toBeNull();
+    expect(el.textContent).not.toContain('Gioca contro il computer');
+
+    cmp.toggleEngine();
+    fixture.detectChanges();
+    expect(engine.analysed).toEqual([CUSTOM_FEN]);
+    expect(el.querySelector('app-eval-bar')).not.toBeNull();
+  });
+
+  it('keeps the unsaved-changes guard', async () => {
+    const { cmp } = middlegame();
+    expect(await cmp.canDeactivate()).toBe(true);
+    cmp.onMove(move('Kd2'));
+    expect(cmp.dirty()).toBe(true);
+    expect(await cmp.canDeactivate()).toBe(true);
+  });
+
+  it('keeps the play command and the generic URLs for an opening variant', () => {
+    const opening: Variant = {
+      id: 9,
+      name: 'Italiana',
+      color: 'WHITE',
+      moves: ['e4'],
+      startingFen: START,
+      studyId: 5,
+    };
+    const { fixture } = setup({ getVariant: () => of(opening) }, 9, {
+      getStudy: () => of({ id: 5, name: 'Repertorio', phase: 'OPENING', variantCount: 1, variants: [opening] }),
+    });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.engine-sub')?.textContent).toContain('Gioca contro il computer');
+    expect(el.querySelector('#vcolor')).not.toBeNull();
+    const cancel = Array.from(el.querySelectorAll<HTMLAnchorElement>('a')).find((a) =>
+      a.textContent?.includes('Annulla'),
+    );
+    expect(cancel?.getAttribute('href')).toBe('/');
   });
 });

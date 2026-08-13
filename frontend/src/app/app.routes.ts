@@ -15,13 +15,37 @@ import { PlayVsComputer } from './play/play';
 import { ComingSoon } from './sections/coming-soon';
 import { canLeaveEditor } from './variants/can-deactivate.guard';
 import { PositionEditor } from './positions/position-editor';
+import { MIDDLEGAME_SECTION_CONTEXT, SECTION_CONTEXT_DATA } from './core/study-sections';
+import { PositionStudyList } from './sections/position-study-list';
+import { PositionStudyNew } from './sections/position-study-new';
 
 export const routes: Routes = [
   { path: '', component: StudyList },
-  // Sezioni Mediogioco/Finale (ISSUE-021): per ora solo il segnaposto riusabile,
-  // che riceve `section` come input dalla route. Le sezioni reali arrivano con
-  // le slice `issue-016-middlegame-section` / `issue-016-endgame-section`.
-  { path: 'middlegame', component: ComingSoon, data: { section: 'Mediogioco' } },
+  // Sezione Mediogioco (ISSUE-016): route strutturale senza componente, così i
+  // `data` con il contesto di sezione (fase attesa, base canonica, modalità
+  // posizione) sono ereditati da tutte le sotto-route. Lista e creazione sono
+  // pagine posizionali dedicate, riusabili dal Finale; studio, posizione ed
+  // editor riusano i componenti condivisi con le Aperture.
+  {
+    path: 'middlegame',
+    data: { [SECTION_CONTEXT_DATA]: MIDDLEGAME_SECTION_CONTEXT },
+    children: [
+      { path: '', component: PositionStudyList },
+      // Creazione manuale, senza il flusso Lichess di `StudyNew` (ISSUE-016).
+      // Dichiarata prima di `studies/:id`, così `new` non è letto come id.
+      { path: 'studies/new', component: PositionStudyNew },
+      { path: 'studies/:id', component: StudyDetail },
+      // Le route statiche precedono le dinamiche e `setup`/`edit` precedono il
+      // dettaglio della posizione: `new` non viene catturato come id e la route
+      // di consultazione non intercetta i due editor.
+      { path: 'positions/new', component: PositionEditor, canDeactivate: [canLeaveEditor] },
+      { path: 'positions/:id/setup', component: PositionEditor, canDeactivate: [canLeaveEditor] },
+      { path: 'positions/:id/edit', component: VariantEditor, canDeactivate: [canLeaveEditor] },
+      { path: 'positions/:id', component: VariantDetail },
+    ],
+  },
+  // Sezione Finale (ISSUE-021): ancora sul segnaposto riusabile, che riceve
+  // `section` come input dalla route. Arriva con `issue-016-endgame-section`.
   { path: 'endgame', component: ComingSoon, data: { section: 'Finale' } },
   { path: 'reviews', component: ReviewDue },
   { path: 'play', component: PlayVsComputer },

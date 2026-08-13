@@ -26,6 +26,7 @@ import { StockfishService } from '../core/stockfish.service';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
 import { CanComponentDeactivate } from './can-deactivate.guard';
+import { sectionContextFrom, sectionLabel, sectionPaths } from '../core/study-sections';
 import {
   CreateVariantRequest,
   MoveNode,
@@ -64,6 +65,15 @@ interface MoveAnnotationState {
   annotation: MoveAnnotation;
 }
 
+/**
+ * Editor dell'albero di mosse di una variante o di una posizione.
+ *
+ * Da R26 la stessa pagina serve la route `/middlegame/positions/:id/edit`
+ * (ISSUE-016): con il contesto nei `data` accetta soltanto posizioni di uno
+ * studio della fase attesa, resta dentro la sezione per sorelle, «Annulla» e
+ * redirect di salvataggio e non espone il comando di gioco (R28). Senza
+ * contesto restano comportamento e URL generici delle Aperture.
+ */
 @Component({
   selector: 'app-variant-editor',
   imports: [
@@ -99,6 +109,25 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
   protected readonly engineEval = this.stockfish.evaluation;
   protected readonly engineThinking = this.stockfish.thinking;
   protected readonly engineAvailable = this.stockfish.available;
+
+  /** Contesto di sezione dai `data` della route: `null` sulle route generiche. */
+  private readonly context = sectionContextFrom(this.route.snapshot.data);
+  /** Percorsi canonici della sezione (o generici senza contesto). */
+  private readonly paths = sectionPaths(this.context);
+  /** Etichetta del ritorno mostrato dall'errore di sezione. */
+  protected readonly parentLabel = this.context ? sectionLabel(this.context.section) : 'Studi';
+  protected readonly backLabel = this.context ? `torna a ${this.parentLabel}` : 'torna agli studi';
+  protected readonly listLink = this.paths.studyList;
+  /** La fase dello studio padre deve essere verificata prima di aprire l'editor. */
+  protected readonly sectionVerified = signal(!this.context);
+  protected readonly sectionChecking = computed(
+    () => this.context !== null && !this.sectionVerified(),
+  );
+  /**
+   * Errore di sezione (fase errata o studio padre non verificabile): l'editor
+   * non viene presentato affatto, così il contenuto non è modificabile.
+   */
+  protected readonly sectionError = signal<string | null>(null);
 
   /** Studio a cui agganciare la nuova variante (da query param ?studyId), se presente. */
   protected readonly studyId = signal<number | null>(null);
@@ -233,6 +262,8 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
     this.menuTrigger = null;
     this.studyVariants.set([]);
     this.error.set(null);
+    this.sectionError.set(null);
+    this.sectionVerified.set(!this.context);
     this.saving.set(false);
     this.dirty.set(false);
     this.tree.set([]);
@@ -240,7 +271,7 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
     // Finché la risposta corrente non arriva nessuna variante è caricata.
     this.loadedVariantId.set(null);
     this.editId.set(idParam ? Number(idParam) : null);
-    this.isOpening.set(true);
+    this.isOpening.set(!this.context);
     if (!idParam) {
       this.name.set('');
       this.color.set('WHITE');
@@ -255,27 +286,75 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
    */
   private load(id: number): Observable<unknown> {
     return this.service.getVariant(id).pipe(
-      tap((v) => this.apply(v)),
-      switchMap((v) =>
-        v.studyId != null
-          ? this.studyService.getStudy(v.studyId).pipe(
-              tap((s) => {
-                this.isOpening.set(s.phase === 'OPENING');
-                this.studyVariants.set(s.variants ?? []);
-              }),
-              catchError(() => {
-                this.isOpening.set(true);
-                this.studyVariants.set([]);
-                return EMPTY;
-              }),
-            )
-          : EMPTY,
-      ),
+      switchMap((v) => {
+        if (v.studyId == null) {
+          // Senza studio padre la fase non è verificabile: nella sezione il
+          // contenuto non viene aperto in modifica (ISSUE-016).
+          if (this.context) {
+            this.rejectSection('Questa posizione non appartiene a uno studio.');
+          } else {
+            this.apply(v);
+          }
+          return EMPTY;
+        }
+        // Le route generiche mantengono il caricamento pre-R26. In sezione la
+        // posizione resta invece privata finché la fase non è stata verificata.
+        if (!this.context) {
+          this.apply(v);
+        }
+        return this.studyService.getStudy(v.studyId).pipe(
+          tap((s) => {
+            // Controllo esatto della fase (ISSUE-016).
+            if (this.context && s.phase !== this.context.phase) {
+              this.rejectSection(
+                `Questa posizione non appartiene alla sezione ${this.parentLabel}.`,
+              );
+              return;
+            }
+            this.isOpening.set(s.phase === 'OPENING');
+            this.studyVariants.set(s.variants ?? []);
+            if (this.context) {
+              this.apply(v);
+              this.sectionVerified.set(true);
+            }
+          }),
+          catchError(() => {
+            if (this.context) {
+              this.rejectSection('Studio della posizione non trovato.');
+              return EMPTY;
+            }
+            this.isOpening.set(true);
+            this.studyVariants.set([]);
+            return EMPTY;
+          }),
+        );
+      }),
       catchError(() => {
-        this.error.set('Variante non trovata.');
+        if (this.context) {
+          this.rejectSection('Posizione non trovata.');
+        } else {
+          this.error.set('Variante non trovata.');
+        }
         return EMPTY;
       }),
     );
+  }
+
+  /**
+   * Rifiuta il contenuto nella sezione: l'editor non viene presentato e lo
+   * stato caricato viene svuotato, così non resta nulla da salvare.
+   */
+  private rejectSection(message: string): void {
+    this.sectionError.set(message);
+    this.sectionVerified.set(false);
+    this.studyVariants.set([]);
+    this.tree.set([]);
+    this.currentPath.set([]);
+    this.dirty.set(false);
+    this.loadedVariantId.set(null);
+    this.name.set('');
+    this.color.set('WHITE');
+    this.startingFen.set('');
   }
 
   /** Applica la variante arrivata dalla richiesta corrente. */
@@ -317,8 +396,15 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
     }
     this.dirty.set(false);
     this.variantsOpen.set(false);
-    this.router.navigate(['/variants', id, 'edit']);
+    // Le sorelle restano dentro la sezione (ISSUE-016).
+    void this.router.navigateByUrl(this.paths.positionEdit(id));
   }
+
+  /** Destinazione di «Annulla»: nella sezione il dettaglio della posizione. */
+  protected readonly cancelLink = computed(() => {
+    const id = this.editId();
+    return this.context && id !== null ? this.paths.position(id) : '/';
+  });
 
   protected toggleEngine(): void {
     const next = !this.engineOn();
@@ -583,6 +669,11 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
   }
 
   protected save(): void {
+    // Contenuto rifiutato o fase non ancora verificata: non c'è nulla da
+    // salvare, nemmeno tramite invocazione programmatica durante l'attesa.
+    if (this.sectionError() || (this.context && !this.sectionVerified())) {
+      return;
+    }
     const name = this.name().trim();
     if (!name) {
       this.error.set(`Inserisci un nome per la ${this.itemLabel()}.`);
@@ -619,7 +710,8 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
             ? (this.isEdit() ? 'Posizione aggiornata.' : 'Posizione salvata.')
             : (this.isEdit() ? 'Variante aggiornata.' : 'Variante salvata.'),
         );
-        this.router.navigate(['/variants', saved.id]);
+        // Dopo il salvataggio si apre il dettaglio canonico (ISSUE-016).
+        void this.router.navigateByUrl(this.paths.position(saved.id));
       },
       error: (err) => {
         const msg = validationMessage(err) ?? 'Salvataggio non riuscito.';

@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { BehaviorSubject, Subject, of } from 'rxjs';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { VariantDetail } from './variant-detail';
 import { VariantService } from '../core/variant.service';
 import { ReviewService } from '../core/review.service';
@@ -11,6 +11,7 @@ import { UciScore } from '../core/uci';
 import { Variant } from '../core/variant.model';
 import { Study } from '../core/study.model';
 import { ReviewSchedule } from '../core/review.model';
+import { MIDDLEGAME_SECTION_CONTEXT, SECTION_CONTEXT_DATA } from '../core/study-sections';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -92,6 +93,8 @@ function setup(
   engine = fakeEngine(),
   variantService: Partial<VariantService> = { getVariant: () => of(v) },
   reviewService: Partial<ReviewService> = { getForVariant: () => of(null) },
+  /** `data` della route: con il contesto il dettaglio è quello di sezione. */
+  data: Record<string, unknown> = {},
 ) {
   const paramMap = new BehaviorSubject(convertToParamMap({ id: String(v.id) }));
   TestBed.configureTestingModule({
@@ -104,7 +107,7 @@ function setup(
       { provide: StudyService, useValue: studyService },
       {
         provide: ActivatedRoute,
-        useValue: { paramMap, snapshot: { paramMap: paramMap.value } },
+        useValue: { paramMap, snapshot: { paramMap: paramMap.value, data } },
       },
     ],
   });
@@ -201,18 +204,23 @@ describe('VariantDetail', () => {
     expect(cmp.isOpening()).toBe(false);
   });
 
-  it('labels a non-opening child as a position and opens its FEN editor', () => {
+  it('labels a non-opening child as a position and splits its two editors', () => {
     const study: Study = { id: 6, name: 'Mediogioco', phase: 'MIDDLEGAME', variantCount: 1 };
     const { fixture } = setup(
       { ...linear, studyId: 6 },
       { getStudy: () => of(study) },
     );
     const element: HTMLElement = fixture.nativeElement;
-    const edit = element.querySelector('.detail-actions .edit-link') as HTMLAnchorElement;
+    const links = Array.from(
+      element.querySelectorAll<HTMLAnchorElement>('.detail-actions .edit-link'),
+    );
 
     expect(element.querySelector('.side-kicker')?.textContent?.trim()).toBe('Posizione');
-    expect(edit.textContent).toContain('Modifica posizione');
-    expect(edit.getAttribute('href')).toBe('/positions/1/edit');
+    // R25 distingue posizione iniziale e albero: due azioni non ambigue.
+    expect(links.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([
+      ['Configura posizione iniziale', '/positions/1/edit'],
+      ['Modifica mosse', '/variants/1/edit'],
+    ]);
   });
 
   // ISSUE-007: il toggle del motore governa da solo anche la barra.
@@ -434,8 +442,8 @@ describe('VariantDetail — pannello varianti', () => {
   it('navigates immediately to the selected variant and closes the drawer', () => {
     const { fixture, cmp } = withStudy(inStudy, siblings);
     const router = TestBed.inject(Router);
-    let navTarget: unknown[] | null = null;
-    router.navigate = ((c: unknown[]) => { navTarget = c; return Promise.resolve(true); }) as typeof router.navigate;
+    let navTarget: string | null = null;
+    router.navigateByUrl = ((url: string) => { navTarget = url; return Promise.resolve(true); }) as typeof router.navigateByUrl;
 
     cmp.toggleVariants();
     fixture.detectChanges();
@@ -443,7 +451,7 @@ describe('VariantDetail — pannello varianti', () => {
 
     cmp.goToVariant(2);
     fixture.detectChanges();
-    expect(navTarget).toEqual(['/variants', 2]);
+    expect(navTarget).toBe('/variants/2');
     expect(cmp.variantsOpen()).toBe(false);
     expect(fixture.nativeElement.querySelector('.variant-drawer')).toBeNull();
   });
@@ -452,7 +460,7 @@ describe('VariantDetail — pannello varianti', () => {
     const { cmp } = withStudy(inStudy, siblings);
     const router = TestBed.inject(Router);
     let calls = 0;
-    router.navigate = (() => { calls++; return Promise.resolve(true); }) as typeof router.navigate;
+    router.navigateByUrl = (() => { calls++; return Promise.resolve(true); }) as typeof router.navigateByUrl;
     cmp.toggleVariants();
     cmp.goToVariant(1);
     expect(calls).toBe(0);
@@ -659,5 +667,257 @@ describe('VariantDetail — risposte HTTP fuori ordine', () => {
 
     expect(s.cmp.error()).toBeNull();
     expect(s.cmp.variant().id).toBe(2);
+  });
+});
+
+describe('VariantDetail (Mediogioco, ISSUE-016)', () => {
+  const CUSTOM_FEN = '4k3/8/8/3pP3/8/8/8/4K3 w - - 0 1';
+
+  const position: Variant = {
+    id: 41,
+    name: 'Centro bloccato',
+    color: 'WHITE',
+    moves: ['Ke2'],
+    startingFen: CUSTOM_FEN,
+    studyId: 6,
+    tree: [{ san: 'Ke2', comment: 'Il re va al centro', nag: '!', children: [] }],
+  };
+
+  const sibling: Variant = {
+    id: 42,
+    name: 'Maggioranza in ala',
+    color: 'WHITE',
+    moves: [],
+    tree: [],
+    startingFen: CUSTOM_FEN,
+    studyId: 6,
+  };
+
+  function study(phase: Study['phase'], variants: Variant[] | null = [position, sibling]): Study {
+    return {
+      id: 6,
+      name: 'Strutture di pedoni',
+      phase,
+      variantCount: variants?.length ?? 0,
+      variants,
+    };
+  }
+
+  /** Dettaglio montato sotto `/middlegame/positions/:id`. */
+  function middlegame(
+    v: Variant,
+    studyService: Partial<StudyService> = { getStudy: () => of(study('MIDDLEGAME')) },
+    engine = fakeEngine(),
+    reviewService: Partial<ReviewService> = { getForVariant: () => of(null) },
+  ) {
+    const s = setup(v, studyService, engine, { getVariant: () => of(v) }, reviewService, {
+      [SECTION_CONTEXT_DATA]: MIDDLEGAME_SECTION_CONTEXT,
+    });
+    return { ...s, el: s.fixture.nativeElement as HTMLElement };
+  }
+
+  function hrefs(el: HTMLElement): string[] {
+    return Array.from(el.querySelectorAll('a')).map((a) => a.getAttribute('href') ?? '');
+  }
+
+  it('shows the position from its starting FEN with tree, comments and NAG', () => {
+    const { cmp, el } = middlegame(position);
+    expect(cmp.error()).toBeNull();
+    expect(cmp.currentFen()).toBe(CUSTOM_FEN);
+    expect(el.querySelector('.side-kicker')?.textContent?.trim()).toBe('Posizione');
+    expect(el.querySelector('.side-title')?.textContent).toContain('Centro bloccato');
+    expect(el.querySelector('.move')?.textContent).toContain('Ke2');
+    expect(el.querySelector('.move-nag')?.textContent).toContain('!');
+    expect(el.querySelector('.move-comment')?.textContent).toContain('Il re va al centro');
+    // Il lato non e' un dato della posizione: nessun badge di colore.
+    expect(el.querySelector('.side-head .badge')).toBeNull();
+  });
+
+  it('shows a canonical breadcrumb after the parent study is verified', () => {
+    const { el } = middlegame(position);
+    const crumbs = Array.from(el.querySelectorAll<HTMLAnchorElement>('.crumbs a'));
+    expect(crumbs.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([
+      ['Mediogioco', '/middlegame'],
+      ['Strutture di pedoni', '/middlegame/studies/6'],
+    ]);
+    expect(el.querySelector('.crumb-current')?.textContent?.trim()).toBe('Centro bloccato');
+  });
+
+  it('does not present the position while the parent phase is still pending', () => {
+    const pendingStudy = new Subject<Study>();
+    const { cmp, el, fixture } = middlegame(position, {
+      getStudy: () => pendingStudy.asObservable(),
+    });
+
+    expect(cmp.sectionChecking()).toBe(true);
+    expect(cmp.variant()).toBeNull();
+    expect(el.querySelector('.detail')).toBeNull();
+    expect(el.querySelector('app-chessboard')).toBeNull();
+    expect(el.querySelector('.engine-sub')).toBeNull();
+    expect(el.querySelector('.train-cta')).toBeNull();
+    expect(el.textContent).toContain('Verifica della sezione');
+
+    pendingStudy.next(study('MIDDLEGAME'));
+    pendingStudy.complete();
+    fixture.detectChanges();
+
+    expect(cmp.sectionChecking()).toBe(false);
+    expect(cmp.variant()?.id).toBe(41);
+    expect(el.querySelector('.detail')).not.toBeNull();
+  });
+
+  it('never presents a delayed response belonging to the wrong phase', () => {
+    const pendingStudy = new Subject<Study>();
+    const { cmp, el, fixture } = middlegame(position, {
+      getStudy: () => pendingStudy.asObservable(),
+    });
+
+    expect(el.querySelector('.detail')).toBeNull();
+    pendingStudy.next(study('OPENING'));
+    pendingStudy.complete();
+    fixture.detectChanges();
+
+    expect(cmp.variant()).toBeNull();
+    expect(cmp.sectionVerified()).toBe(false);
+    expect(el.querySelector('.detail')).toBeNull();
+    expect(el.querySelector('.detail-error')?.textContent).toContain(
+      'non appartiene alla sezione Mediogioco',
+    );
+  });
+
+  it('stays usable with an empty tree, on its own starting FEN', () => {
+    const { cmp, el } = middlegame(sibling);
+    expect(cmp.error()).toBeNull();
+    expect(cmp.currentFen()).toBe(CUSTOM_FEN);
+    expect(cmp.tokens().length).toBe(0);
+    expect(el.querySelector('.panel-note')?.textContent).toContain('Nessuna mossa');
+  });
+
+  it('offers the two distinct editors on canonical routes', () => {
+    const { el } = middlegame(position);
+    const links = Array.from(el.querySelectorAll<HTMLAnchorElement>('.detail-actions .edit-link'));
+    expect(links.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([
+      ['Configura posizione iniziale', '/middlegame/positions/41/setup'],
+      ['Modifica mosse', '/middlegame/positions/41/edit'],
+    ]);
+  });
+
+  it('returns to its study inside the section', () => {
+    const { el } = middlegame(position);
+    const back = el.querySelector<HTMLAnchorElement>('.back-link');
+    expect(back?.textContent).toContain('Torna allo studio');
+    expect(back?.getAttribute('href')).toBe('/middlegame/studies/6');
+    expect(
+      hrefs(el).every((h) => h === '/middlegame' || h.startsWith('/middlegame/')),
+    ).toBe(true);
+  });
+
+  it('navigates to a sibling position without leaving the section', () => {
+    const { cmp } = middlegame(position);
+    const router = TestBed.inject(Router);
+    let navTarget: string | null = null;
+    router.navigateByUrl = ((url: string) => {
+      navTarget = url;
+      return Promise.resolve(true);
+    }) as typeof router.navigateByUrl;
+
+    expect(cmp.hasVariantNav()).toBe(true);
+    cmp.goToVariant(42);
+    expect(navTarget).toBe('/middlegame/positions/42');
+  });
+
+  it('refuses a variant of an opening study', () => {
+    const { cmp, el } = middlegame({ ...position, studyId: 5 }, {
+      getStudy: () => of(study('OPENING')),
+    });
+    expect(cmp.variant()).toBeNull();
+    expect(el.querySelector('.detail-error')?.textContent).toContain(
+      'non appartiene alla sezione Mediogioco',
+    );
+    expect(el.querySelector('app-chessboard')).toBeNull();
+    expect(el.querySelector<HTMLAnchorElement>('.detail-error a')?.getAttribute('href')).toBe(
+      '/middlegame',
+    );
+  });
+
+  it('refuses a position of an endgame study', () => {
+    const { cmp, el } = middlegame(position, { getStudy: () => of(study('ENDGAME')) });
+    expect(cmp.variant()).toBeNull();
+    expect(el.querySelector('.detail-error')?.textContent).toContain(
+      'non appartiene alla sezione Mediogioco',
+    );
+  });
+
+  it('refuses a position without a parent study', () => {
+    const { cmp, el } = middlegame({ ...position, studyId: null });
+    expect(cmp.variant()).toBeNull();
+    expect(el.querySelector('.detail-error')?.textContent).toContain('non appartiene a uno studio');
+  });
+
+  it('refuses the position when its study cannot be read', () => {
+    const { cmp } = middlegame(position, { getStudy: () => throwError(() => new Error('500')) });
+    expect(cmp.variant()).toBeNull();
+    expect(cmp.error()).toContain('Studio della posizione non trovato');
+  });
+
+  it('has no training, review, stats or play command (ISSUE-016)', () => {
+    let reviewCalls = 0;
+    const { el } = middlegame(position, undefined, fakeEngine(), {
+      getForVariant: () => {
+        reviewCalls++;
+        return of(null);
+      },
+    });
+    const text = el.textContent ?? '';
+    expect(text).not.toContain('Allena');
+    expect(text).not.toContain('Statistiche');
+    expect(text).not.toContain('Ripeti');
+    expect(text).not.toContain('Gioca contro il computer');
+    expect(el.querySelector('.train-cta')).toBeNull();
+    expect(el.querySelector('.review-hint')).toBeNull();
+    expect(el.querySelector('.engine-sub')).toBeNull();
+    // Una posizione non si ripete: nessuna richiesta di schedule (R26).
+    expect(reviewCalls).toBe(0);
+  });
+
+  it('keeps the Stockfish analysis, bar and best line', () => {
+    const engine = fakeEngine();
+    const { cmp, el, fixture } = middlegame(position, undefined, engine);
+    expect(el.querySelector('.engine-toggle')).not.toBeNull();
+
+    cmp.toggleEngine();
+    fixture.detectChanges();
+    expect(engine.analysed).toEqual([CUSTOM_FEN]);
+    expect(el.querySelector('app-eval-bar')).not.toBeNull();
+    expect(el.querySelector('.engine-line')).not.toBeNull();
+  });
+
+  it('keeps play, training, review and stats for an opening variant', () => {
+    const openingStudy: Study = { id: 5, name: 'Repertorio', phase: 'OPENING', variantCount: 1 };
+    const schedule: ReviewSchedule = {
+      variantId: 1,
+      easeFactor: 2.5,
+      intervalDays: 3,
+      repetitions: 2,
+      nextReviewDate: '2099-01-01',
+      due: false,
+    };
+    const { fixture } = setup(
+      { ...linear, studyId: 5 },
+      { getStudy: () => of(openingStudy) },
+      fakeEngine(),
+      { getVariant: () => of({ ...linear, studyId: 5 }) },
+      { getForVariant: () => of(schedule) },
+    );
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.engine-sub')?.textContent).toContain('Gioca contro il computer');
+    expect(el.querySelector('.train-cta')?.getAttribute('href')).toBe('/variants/1/train');
+    expect(el.querySelector('.review-hint')).not.toBeNull();
+    const actions = Array.from(el.querySelectorAll<HTMLAnchorElement>('.detail-actions .edit-link'));
+    expect(actions.map((a) => a.getAttribute('href'))).toEqual([
+      '/variants/1/edit',
+      '/variants/1/stats',
+    ]);
+    expect(el.querySelector('.back-link')?.getAttribute('href')).toBe('/studies/5');
   });
 });

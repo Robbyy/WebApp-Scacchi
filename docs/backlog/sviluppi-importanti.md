@@ -12,7 +12,7 @@
 
 | ID | Titolo | Impatto | Stato pre-OpenSpec |
 |----|--------|:-------:|--------------------|
-| 016 | Tutte le fasi del gioco (mediogioco/finale) | alto | spezzata in change OpenSpec incrementali |
+| 016 | Tutte le fasi del gioco (mediogioco/finale) | alto | R26 implementata; restano Finale e gioco da posizione |
 | 017 | Menu "Impostazioni" (hub) + parametrizzazione SM-2 | medio-alto | richiede OpenSpec |
 | 014 | Personalizzazione parametri motore Stockfish (UCI) | medio | richiede audit + OpenSpec |
 
@@ -23,9 +23,9 @@
 **mediogioco** e **finale**, mantenendo l'organizzazione già nota delle aperture:
 studi con capitoli/posizioni.
 **What (obiettivo):**
-- Tre sezioni in topbar — **Aperture** (esistente), **Mediogioco**, **Finale** — la cui
-  *navigazione/scaffold* è stata realizzata da **ISSUE-021 (R20)**; i segnaposto sono
-  pronti per essere sostituiti dalle sezioni reali.
+- Tre sezioni in topbar — **Aperture**, **Mediogioco**, **Finale** — la cui
+  *navigazione/scaffold* è stata realizzata da **ISSUE-021 (R20)**. R26 ha sostituito
+  il segnaposto del Mediogioco con la sezione reale; quello del Finale resta fino a R27.
 - Mediogioco e Finale: **studi con capitoli/posizioni**, sullo stesso paradigma utente già
   adottato per le aperture. In queste sezioni non serve l'importazione da Lichess: le
   posizioni vengono create manualmente.
@@ -57,19 +57,20 @@ studi con capitoli/posizioni.
 - **Niente training loop** e **niente spaced repetition (SM-2)** per mediogioco/finale: le
   posizioni si studiano e si giocano, non si "ripetono" come linee da memorizzare.
 **Impatto modello dati & API:**
-- Nuovo concetto "posizione" dentro una struttura **studio -> capitoli/posizioni**
-  analoga alle aperture (riuso/estensione di `Study`/`Variant` con un campo "fase",
-  oppure entità separate — **da decidere in analisi**).
-- `MoveNode` oggi **non** ha un campo `comment` → modifica al modello (changeset Liquibase).
+- Il modello è deciso e implementato: `Study.phase` distingue `OPENING`, `MIDDLEGAME` ed
+  `ENDGAME` ed è immutabile; `Variant` resta l'elemento figlio comune, chiamato posizione
+  nelle sezioni posizionali. Non sono state introdotte entità dedicate.
+- `MoveNode` supporta `comment` e `nag` opzionali nello stesso JSON `tree` in modo
+  retrocompatibile; R24 non ha richiesto una migration relazionale.
 - UI dedicata di composizione posizione: editor scacchiera, generazione/validazione del
   `startingFen`, gestione colore al tratto e orientamento scacchiera se salvato come dato
   della posizione o preferenza UI. La validazione deve bloccare il salvataggio delle
   posizioni impossibili lato UI e deve essere confermata anche lato backend/API.
 - Import Lichess: resta legato alle aperture; per Mediogioco/Finale non è richiesto.
-**Prerequisiti:** Liquibase (✅), **artefatti OpenSpec**, decisione struttura DB; ISSUE-021
-(scaffold) **✅ completato con R20**.
-**Criteri d'ingresso (prima di implementare):** esiste una proposta OpenSpec approvata con
-specifiche funzionali, contratti API, modello dati e criteri di accettazione.
+**Prerequisiti:** Liquibase (✅), decisione struttura DB (✅), ISSUE-021/scaffold (✅ R20),
+editor posizione/FEN (✅ R25) e artefatti OpenSpec della slice interessata.
+**Criteri d'ingresso (prima di implementare):** proposta, design, specifiche e task OpenSpec
+approvati con contratti, confini funzionali e criteri di accettazione; soddisfatto per R26.
 **Note:** è la visione strategica del prodotto; va spezzata in più change OpenSpec
 incrementali (non una singola sessione). Materiale di supporto per l'editor posizione:
 [`assets/ISSUE-016/position-editor/`](assets/ISSUE-016/position-editor/).
@@ -85,18 +86,19 @@ OpenSpec piccole, ordinate e revisionabili:
 | `issue-016-navigation-scaffold` ✅ | Navigazione Aperture/Mediogioco/Finale e segnaposto, già realizzati come lavoro diretto in **ISSUE-021 / R20**. | Nessuna | Route `/`, `/middlegame`, `/endgame`, topbar accessibile e segnaposto `sections/coming-soon`. Non richiede una change OpenSpec separata. |
 | `issue-016-custom-starting-fen` ✅ *(rilasciata 2026-08-13)* | Consentire la creazione manuale della posizione iniziale tramite editor scacchiera; il FEN è il formato tecnico salvato/validato, non il flusso primario. | `issue-016-phase-domain-model` | Implementazione verificata: editor visuale, palette e piazzamento/rimozione pezzi, lato al tratto, arrocco, en-passant, FEN canonica, associazione allo studio, validazione backend della posizione/albero e flussi E2E 49–52 su H2 temporaneo. |
 | `issue-016-move-comments` ✅ | Aggiungere commenti e annotazioni alle mosse (`!`, `?`, `!!`, `??`, `!?`, `?!`). | `issue-016-phase-domain-model` | Estensione retrocompatibile di `MoveNode` nel JSON `tree`, senza migration relazionale, e UI di lettura/modifica. Completata in R24 con mini-spec. |
-| `issue-016-middlegame-section` | Rendere reale la sezione Mediogioco: studi con capitoli/posizioni navigabili, senza import Lichess, training né SM-2. | Modello deciso + editor posizione/FEN minimo. | Vista lista/dettaglio/editor per studi e posizioni di mediogioco. |
+| `issue-016-middlegame-section` ✅ *(implementata e verificata 2026-08-13)* | Rendere reale la sezione Mediogioco: studi con capitoli/posizioni navigabili, senza import Lichess, training né SM-2. | Modello deciso + editor posizione/FEN minimo. | Lista e CRUD studi, dettaglio e CRUD posizioni, setup/editor/dettaglio/navigazione canonici, controllo esatto della fase; 446 test frontend, 120 backend e flussi E2E 53–58 verdi. |
 | `issue-016-endgame-section` | Rendere reale la sezione Finale riusando il modello e le componenti definite per Mediogioco. | `issue-016-middlegame-section` o componenti condivise già estratte. | Vista lista/dettaglio/editor per studi e posizioni di finale, senza import Lichess. |
 | `issue-016-play-position-vs-engine` | Avviare il gioco contro Stockfish dalla posizione salvata. | FEN custom + sezioni reali. | Integrazione con `/play?fen=...` o flusso equivalente, senza introdurre training/review. |
 
 La prima change `issue-016-phase-domain-model` è stata completata il 2026-07-04 e ha
 fissato il modello di dominio prima della UI definitiva. `issue-016-custom-starting-fen` è
-stata implementata e rilasciata dopo la verifica dei flussi E2E 49–52; `issue-016-move-comments` è stata
-completata in R24 come estensione limitata del tree, insieme a ISSUE-013 e regolata dalla
-relativa mini-spec. Gli slice successivi non devono ridecidere il dominio, ma applicare
-la decisione presa lì. La navigazione iniziale è già stata consegnata con ISSUE-021/R20.
+stata implementata e rilasciata dopo la verifica dei flussi E2E 49–52; `issue-016-move-comments`
+è stata completata in R24 come estensione limitata del tree. R26 ha applicato queste
+decisioni alla prima sezione reale e ha verificato il riuso con i flussi E2E 53–58.
+Le slice successive non devono ridecidere il dominio. La navigazione iniziale è stata
+consegnata con ISSUE-021/R20.
 
-**`issue-016-phase-domain-model` implementata (2026-07-04):** `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`, immutabile), `Variant` riusata come elemento figlio comune, import/sync Lichess e training/review/statistiche limitati alle Aperture. **`issue-016-navigation-scaffold` è stata soddisfatta da ISSUE-021/R20 (2026-08-05).** Decisione e alternative in [ADR 0014](../adr/decisioni-tecniche.md). `issue-016-move-comments` è stata completata in R24. `issue-016-custom-starting-fen` è implementata, integrata in `master` e verificata; le slice funzionali ancora da realizzare sono `issue-016-middlegame-section`, `issue-016-endgame-section` e `issue-016-play-position-vs-engine`, ciascuna con la propria change OpenSpec.
+**`issue-016-phase-domain-model` implementata (2026-07-04):** `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`, immutabile), `Variant` riusata come elemento figlio comune, import/sync Lichess e training/review/statistiche limitati alle Aperture. **`issue-016-navigation-scaffold` è stata soddisfatta da ISSUE-021/R20 (2026-08-05).** Decisione e alternative in [ADR 0014](../adr/decisioni-tecniche.md). `issue-016-move-comments` è stata completata in R24; `issue-016-custom-starting-fen` è integrata e verificata; `issue-016-middlegame-section` è implementata, verificata e archiviata in R26. Le slice funzionali residue sono `issue-016-endgame-section` e `issue-016-play-position-vs-engine`, ciascuna con la propria change OpenSpec.
 
 ## ISSUE-017 — Menu "Impostazioni" (hub) + parametrizzazione SM-2
 **Why (problema):** non esiste un punto centrale di configurazione; i parametri

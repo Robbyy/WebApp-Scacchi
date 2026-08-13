@@ -8,6 +8,7 @@ import { ToastService } from '../core/toast.service';
 import { VariantService } from '../core/variant.service';
 import { CreateVariantRequest, MoveNode, Variant, validationMessage } from '../core/variant.model';
 import { fromLine } from '../core/move-tree';
+import { sectionContextFrom, sectionLabel, sectionPaths } from '../core/study-sections';
 import { CanComponentDeactivate } from '../variants/can-deactivate.guard';
 
 type PieceCode = 'wK' | 'wQ' | 'wR' | 'wB' | 'wN' | 'wP' | 'bK' | 'bQ' | 'bR' | 'bB' | 'bN' | 'bP';
@@ -26,7 +27,16 @@ const PIECE_CODES = new Set<PieceCode>([
   'wK', 'wQ', 'wR', 'wB', 'wN', 'wP', 'bK', 'bQ', 'bR', 'bB', 'bN', 'bP',
 ]);
 
-/** Editor visuale della FEN iniziale per studi di mediogioco e finale (R25). */
+/**
+ * Editor visuale della FEN iniziale per studi di mediogioco e finale (R25).
+ *
+ * Da R26 la stessa pagina serve le route di sezione `positions/new` e
+ * `positions/:id/setup` (ISSUE-016): con il contesto nei `data` della route
+ * accetta soltanto studi della fase attesa e costruisce breadcrumb, «Annulla» e
+ * redirect dentro la sezione. Senza contesto restano il comportamento e gli URL
+ * generici di R25. Composizione visuale, FEN canonica, albero esistente, guard
+ * delle modifiche e validazioni non cambiano.
+ */
 @Component({
   selector: 'app-position-editor',
   imports: [FormsModule, RouterLink],
@@ -41,6 +51,17 @@ export class PositionEditor implements CanComponentDeactivate {
   private readonly variants = inject(VariantService);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
+
+  /** Contesto di sezione dai `data` della route: `null` sulle route generiche. */
+  private readonly context = sectionContextFrom(this.route.snapshot.data);
+  /** Percorsi canonici della sezione (o generici R25 senza contesto). */
+  private readonly paths = sectionPaths(this.context);
+  /** Antenato nei breadcrumb: «Studi» fuori sezione, il nome della sezione dentro. */
+  protected readonly parentLabel = this.context ? sectionLabel(this.context.section) : 'Studi';
+  /** Ritorno mostrato dall'errore, invariato fuori sezione. */
+  protected readonly backLabel = this.context ? `torna a ${this.parentLabel}` : 'torna agli studi';
+  /** Lista degli studi della sezione, per breadcrumb ed errore. */
+  protected readonly listLink = this.paths.studyList;
 
   protected readonly studyId = signal<number | null>(null);
   protected readonly editId = signal<number | null>(null);
@@ -64,6 +85,26 @@ export class PositionEditor implements CanComponentDeactivate {
   private readonly tree = signal<MoveNode[]>([]);
 
   protected readonly isEdit = computed(() => this.editId() !== null);
+
+  /** Link allo studio padre nei breadcrumb. */
+  protected readonly studyLink = computed(() => {
+    const id = this.studyId();
+    return id === null ? this.paths.studyList : this.paths.study(id);
+  });
+
+  /**
+   * Destinazione di «Annulla»: nella sezione il setup torna al dettaglio della
+   * posizione e la creazione allo studio padre; fuori sezione resta lo studio
+   * padre in entrambi i casi, come in R25.
+   */
+  protected readonly cancelLink = computed(() => {
+    const positionId = this.editId();
+    if (this.context && positionId !== null) {
+      return this.paths.position(positionId);
+    }
+    return this.studyLink();
+  });
+
   protected readonly piecesPalette = [
     { code: 'wK' as const, label: 'Re bianco' },
     { code: 'wQ' as const, label: 'Donna bianca' },
@@ -197,6 +238,11 @@ export class PositionEditor implements CanComponentDeactivate {
   }
 
   protected save(): void {
+    // L'editor non è mai presentato per una fase non attesa: senza `ready` non
+    // esiste nemmeno un percorso di modifica (ISSUE-016).
+    if (!this.ready()) {
+      return;
+    }
     const name = this.name().trim();
     const localError = this.validate(name);
     if (localError) {
@@ -225,8 +271,9 @@ export class PositionEditor implements CanComponentDeactivate {
         this.saving.set(false);
         this.toast.success(this.isEdit() ? 'Posizione aggiornata.' : 'Posizione salvata.');
         // Dopo il setup della FEN l'utente può completare o correggere
-        // l'albero delle mosse nell'editor esistente (task R25 6.2).
-        this.router.navigate(['/variants', saved.id, 'edit']);
+        // l'albero delle mosse nell'editor esistente (task R25 6.2), che nella
+        // sezione è `/middlegame/positions/{id}/edit` (ISSUE-016).
+        void this.router.navigateByUrl(this.paths.positionEdit(saved.id));
       },
       error: (err) => {
         const message = validationMessage(err) ?? 'Salvataggio non riuscito.';
@@ -262,8 +309,11 @@ export class PositionEditor implements CanComponentDeactivate {
     this.studies.getStudy(id).subscribe({
       next: (study) => {
         this.loading.set(false);
-        if (study.phase === 'OPENING') {
-          this.error.set('Le posizioni personalizzate sono disponibili solo negli studi di mediogioco o finale.');
+        // Nella sezione la fase deve corrispondere esattamente (ISSUE-016):
+        // un id valido di un'altra fase non apre l'editor. Fuori sezione resta
+        // il confine R25 fra Aperture e studi posizionali.
+        if (this.context ? study.phase !== this.context.phase : study.phase === 'OPENING') {
+          this.error.set(this.phaseError());
           return;
         }
         this.studyName.set(study.name);
@@ -274,6 +324,15 @@ export class PositionEditor implements CanComponentDeactivate {
         this.error.set('Studio non trovato.');
       },
     });
+  }
+
+  /** Messaggio di fase errata: di sezione dentro `/middlegame`, R25 fuori. */
+  private phaseError(): string {
+    if (!this.context) {
+      return 'Le posizioni personalizzate sono disponibili solo negli studi di mediogioco o finale.';
+    }
+    const subject = this.isEdit() ? 'Questa posizione' : 'Questo studio';
+    return `${subject} non appartiene alla sezione ${this.parentLabel}.`;
   }
 
   private applyFen(fen: string): void {

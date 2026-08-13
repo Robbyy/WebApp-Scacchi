@@ -23,6 +23,7 @@ import { StudyService } from '../core/study.service';
 import { numberedPv } from '../core/uci';
 import { MoveNode, Variant } from '../core/variant.model';
 import { ReviewSchedule } from '../core/review.model';
+import { sectionContextFrom, sectionLabel, sectionPaths } from '../core/study-sections';
 import { formatReviewDate, reviewLabel } from '../reviews/review-format';
 import {
   buildTokens,
@@ -33,6 +34,15 @@ import {
   pathsEqual,
 } from '../core/move-tree';
 
+/**
+ * Dettaglio in consultazione di una variante o di una posizione.
+ *
+ * Da R26 la stessa pagina serve la route `/middlegame/positions/:id`
+ * (ISSUE-016): con il contesto nei `data` accetta soltanto posizioni di uno
+ * studio della fase attesa, genera link e navigazione fra sorelle dentro la
+ * sezione e non interroga le ripetizioni, che per una posizione non esistono.
+ * Senza contesto restano comportamento e URL generici.
+ */
 @Component({
   selector: 'app-variant-detail',
   imports: [RouterLink, Chessboard, EvalBar, StudyVariantNav],
@@ -62,6 +72,23 @@ export class VariantDetail implements OnDestroy {
   protected readonly engineLine = computed(() =>
     numberedPv(this.currentFen(), this.stockfish.bestLine()),
   );
+
+  /** Contesto di sezione dai `data` della route: `null` sulle route generiche. */
+  private readonly context = sectionContextFrom(this.route.snapshot.data);
+  /** Percorsi canonici della sezione (o generici senza contesto). */
+  protected readonly paths = sectionPaths(this.context);
+  /** Etichetta del ritorno: «Studi» fuori sezione, il nome della sezione dentro. */
+  protected readonly parentLabel = this.context ? sectionLabel(this.context.section) : 'Studi';
+  protected readonly backLabel = this.context ? `torna a ${this.parentLabel}` : 'torna agli studi';
+  /** Il breadcrumb di sezione viene mostrato solo sulle route canoniche R26. */
+  protected readonly hasSectionContext = this.context !== null;
+  /** Lo studio padre deve essere verificato prima di presentare la posizione. */
+  protected readonly sectionVerified = signal(!this.context);
+  protected readonly sectionChecking = computed(
+    () => this.hasSectionContext && !this.sectionVerified(),
+  );
+  /** Nome dello studio padre, disponibile dopo la verifica della fase. */
+  protected readonly studyName = signal('');
 
   protected readonly variant = signal<Variant | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -161,6 +188,8 @@ export class VariantDetail implements OnDestroy {
     this.isOpening.set(true);
     this.studyVariants.set([]);
     this.variantsOpen.set(false);
+    this.studyName.set('');
+    this.sectionVerified.set(!this.context);
   }
 
   /**
@@ -170,35 +199,80 @@ export class VariantDetail implements OnDestroy {
    */
   private load(id: number): Observable<unknown> {
     const variant$ = this.service.getVariant(id).pipe(
-      tap((v) => this.variant.set(v)),
-      switchMap((v) => (v.studyId != null ? this.loadStudy(v.studyId) : EMPTY)),
+      switchMap((v) => {
+        if (v.studyId != null) {
+          // Sulle route generiche il comportamento resta quello storico: la
+          // variante è disponibile subito e la fase viene risolta dopo.
+          if (!this.context) {
+            this.variant.set(v);
+          }
+          return this.loadStudy(v.studyId, v);
+        }
+        // Nella sezione una posizione senza studio padre non è verificabile:
+        // non viene presentata come contenuto della sezione (ISSUE-016).
+        if (this.context) {
+          this.rejectSection('Questa posizione non appartiene a uno studio.');
+        } else {
+          this.variant.set(v);
+        }
+        return EMPTY;
+      }),
       catchError(() => {
         this.error.set('Variante non trovata.');
         return EMPTY;
       }),
     );
     // Schedule di ripetizione (P19): best-effort, l'assenza non è un errore.
-    const review$ = this.reviews.getForVariant(id).pipe(
-      tap((r) => this.review.set(r)),
-      catchError(() => {
-        this.review.set(null);
-        return EMPTY;
-      }),
-    );
+    // Una sezione posizionale non allena e non ripete: la richiesta non serve.
+    const review$ = this.context
+      ? EMPTY
+      : this.reviews.getForVariant(id).pipe(
+          tap((r) => this.review.set(r)),
+          catchError(() => {
+            this.review.set(null);
+            return EMPTY;
+          }),
+        );
     return merge(variant$, review$);
+  }
+
+  /** Rifiuta il contenuto nella sezione: niente consultazione né modifica. */
+  private rejectSection(message: string): void {
+    this.variant.set(null);
+    this.studyVariants.set([]);
+    this.studyName.set('');
+    this.sectionVerified.set(false);
+    this.error.set(message);
   }
 
   /**
    * Fase e varianti sorelle derivate dallo studio padre (ISSUE-016/010):
    * niente denormalizzazione su Variant, nessuna nuova API.
    */
-  private loadStudy(studyId: number): Observable<unknown> {
+  private loadStudy(studyId: number, pendingVariant: Variant): Observable<unknown> {
     return this.studyService.getStudy(studyId).pipe(
       tap((s) => {
+        // Controllo esatto della fase (ISSUE-016): un id valido di un'altra
+        // sezione non viene presentato come contenuto di questa.
+        if (this.context && s.phase !== this.context.phase) {
+          this.rejectSection(`Questa posizione non appartiene alla sezione ${this.parentLabel}.`);
+          return;
+        }
         this.isOpening.set(s.phase === 'OPENING');
         this.studyVariants.set(s.variants ?? []);
+        this.studyName.set(s.name);
+        if (this.context) {
+          // Solo ora la posizione diventa presentabile: prima di questo punto
+          // fase, contenuto e azioni restano in stato di caricamento.
+          this.variant.set(pendingVariant);
+          this.sectionVerified.set(true);
+        }
       }),
       catchError(() => {
+        if (this.context) {
+          this.rejectSection('Studio della posizione non trovato.');
+          return EMPTY;
+        }
         this.isOpening.set(true);
         this.studyVariants.set([]);
         return EMPTY;
@@ -237,7 +311,8 @@ export class VariantDetail implements OnDestroy {
     if (id === this.variant()?.id) {
       return;
     }
-    this.router.navigate(['/variants', id]);
+    // Le sorelle restano dentro la sezione (ISSUE-016).
+    void this.router.navigateByUrl(this.paths.position(id));
   }
 
   protected isCurrent(path: number[] | undefined): boolean {

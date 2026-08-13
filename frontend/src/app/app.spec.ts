@@ -16,7 +16,19 @@ import { ComingSoon } from './sections/coming-soon';
 const testRoutes: Routes = [
   { path: '', component: ComingSoon, data: { section: 'Aperture' } },
   { path: 'studies/:id', component: ComingSoon, data: { section: 'Aperture' } },
-  { path: 'middlegame', component: ComingSoon, data: { section: 'Mediogioco' } },
+  { path: 'variants/:id', component: ComingSoon, data: { section: 'Aperture' } },
+  // Sotto-route canoniche di Mediogioco (ISSUE-016): stessa forma di
+  // `app.routes.ts`, così il tab attivo è verificabile anche nei dettagli.
+  {
+    path: 'middlegame',
+    children: [
+      { path: '', component: ComingSoon, data: { section: 'Mediogioco' } },
+      { path: 'studies/:id', component: ComingSoon, data: { section: 'Mediogioco' } },
+      { path: 'positions/:id', component: ComingSoon, data: { section: 'Mediogioco' } },
+      { path: 'positions/:id/setup', component: ComingSoon, data: { section: 'Mediogioco' } },
+      { path: 'positions/:id/edit', component: ComingSoon, data: { section: 'Mediogioco' } },
+    ],
+  },
   { path: 'endgame', component: ComingSoon, data: { section: 'Finale' } },
 ];
 
@@ -148,9 +160,43 @@ describe('App', () => {
     expect(compiled.querySelector('.soon-title')?.textContent).toContain('Finale');
   });
 
+  it('keeps Mediogioco as the current section inside its sub-routes (ISSUE-016)', async () => {
+    const fixture = createApp();
+    const router = TestBed.inject(Router);
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    for (const url of [
+      '/middlegame/studies/3',
+      '/middlegame/positions/4',
+      '/middlegame/positions/4/setup',
+      '/middlegame/positions/4/edit',
+    ]) {
+      await router.navigateByUrl(url);
+      fixture.detectChanges();
+
+      const [aperture, middlegame, endgame] = tabs(compiled);
+      expect(middlegame.getAttribute('aria-current')).toBe('page');
+      expect(middlegame.classList).toContain('section-tab--active');
+      expect(aperture.getAttribute('aria-current')).toBeNull();
+      expect(endgame.getAttribute('aria-current')).toBeNull();
+    }
+  });
+
   it('keeps Aperture as the current section inside the opening pages', async () => {
     const fixture = createApp();
     await TestBed.inject(Router).navigateByUrl('/studies/7');
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const [aperture, middlegame, endgame] = tabs(compiled);
+    expect(aperture.getAttribute('aria-current')).toBe('page');
+    expect(middlegame.getAttribute('aria-current')).toBeNull();
+    expect(endgame.getAttribute('aria-current')).toBeNull();
+  });
+
+  it('keeps Aperture as the current section on the generic position routes (ISSUE-016)', async () => {
+    const fixture = createApp();
+    await TestBed.inject(Router).navigateByUrl('/variants/4');
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;

@@ -1,7 +1,8 @@
 # Piano progressivo dei rilasci evolutivi
 
-> **Aggiornato:** 2026-08-13 · **Stato:** in corso — **R20, R21, R22, R23 e R24 rilasciati**;
-> **R25 rilasciata e verificata il 2026-08-13**; i rilasci successivi restano pianificazione.
+> **Aggiornato:** 2026-08-13 · **Stato:** in corso — **R20–R25 rilasciati**;
+> **R26 implementata, verificata e archiviata in OpenSpec il 2026-08-13**;
+> i rilasci da R27 in poi restano pianificazione.
 >
 > **Perimetro:** sole issue evolutive ancora aperte. I difetti registrati su GitHub,
 > gli audit e l'infrastruttura non fanno parte di questa sequenza. La storia dei
@@ -56,7 +57,7 @@ Riferimenti: [backlog](backlog.md),
 | **010** ✅ | Permette di passare tra varianti senza tornare allo studio | dettaglio variante, editor, layout responsivo | rilasciata con R23 (2026-08-10) |
 | **008** ✅ | Rimuove l'auto-play non necessario | controlli del dettaglio variante | rilasciata con R23 (2026-08-10) |
 | **013** ✅ | Operazioni rapide sull'albero di mosse | editor, menu contestuale, conferma | rilasciata con R24 (2026-08-10); mini-spec completata |
-| **016** | Estende l'app a Mediogioco e Finale | modello, editor, API, sezioni UI | modello a fasi e R25 completati; restano R26–R28 |
+| **016** | Estende l'app a Mediogioco e Finale | modello, editor, API, sezioni UI | modello a fasi, R25 e R26 completati; restano R27–R28 |
 | **015** | Espone identità e versioni dell'app | topbar, contratto versione FE/BE | da consolidare con l'hub Impostazioni |
 | **017** | Centralizza le impostazioni e parametrizza SM-2 | topbar, persistenza, `ReviewScheduler` | richiede OpenSpec e scelta DB/localStorage |
 | **014** | Configura i parametri UCI del motore | worker Stockfish, Impostazioni | richiede audit UCI e ISSUE-017 |
@@ -69,15 +70,16 @@ rimangono intenzionalmente limitati alle Aperture.
 
 `issue-016-move-comments` è stata completata con R24. `issue-016-custom-starting-fen` è stata
 implementata, integrata in `master` e verificata manualmente con i flussi E2E 49–52.
-Restano da realizzare, in ordine di
-dipendenza OpenSpec,
-`issue-016-middlegame-section`, `issue-016-endgame-section` e
+`issue-016-middlegame-section` è implementata, verificata con i flussi E2E 53–58 e
+archiviata in OpenSpec. Restano da realizzare,
+in ordine di dipendenza, `issue-016-endgame-section` e
 `issue-016-play-position-vs-engine`.
 
 R25 è una vera slice di dominio, non una semplice UI: comprende il contratto API,
 la validazione backend della FEN e dell'albero dalla posizione scelta, la derivazione
 del colore tecnico e l'editor visuale. Le verifiche automatiche e manuali sono verdi;
-la change è chiusa per R25. Le sezioni reali Mediogioco/Finale restano nelle slice R26–R27.
+la change è chiusa per R25. R26 ha reso reale Mediogioco riusando lo stesso contratto;
+Finale resta nella slice R27.
 
 ---
 
@@ -91,7 +93,7 @@ la change è chiusa per R25. Le sezioni reali Mediogioco/Finale restano nelle sl
 | **R23 — Navigazione tra varianti** ✅ | **010**, **008** | Completa il flusso di consultazione della variante e affronta insieme i controlli della stessa schermata, dopo che R21 ne ha fissato il pannello motore. | ✅ Rilasciato il 2026-08-10: rail/drawer, guard editor e rimozione Auto-play; corretti i P1 su risposte HTTP fuori ordine e riavvio motore a FEN invariata. 288 test, build e checklist live a 1600/1440/1024/768/375/320px verdi. Dettagli nell'[esito R23](backlog/manutenzione-evolutiva.md#esito-r23--issue-010--issue-008-2026-08-10). |
 | **R24 — Editor più espressivo** ✅ | **013**, `issue-016-move-comments` | Entrambi agiscono sul tree editor: una sola revisione dell'interazione sulle mosse riduce duplicazioni e rende l'editor utile anche prima delle nuove sezioni. | ✅ Rilasciato il 2026-08-10: menu azioni accessibile, commento/NAG nel tree JSON retrocompatibile, promozione ed eliminazione verificate; frontend 338 e backend 103 test verdi. «Elimina continuazioni» e annotazioni importate da PGN restano fuori scope. |
 | **R25 — Posizioni manuali** ✅ | `issue-016-custom-starting-fen` | È il vero sblocco funzionale di Mediogioco/Finale e merita un rilascio isolato per il rischio scacchistico e di persistenza. | ✅ Rilasciata il 2026-08-13: OpenSpec valida, 120 test backend e 346 frontend verdi, task 6.1–6.3 chiusi e flussi E2E 49–52 verificati su H2 temporaneo. |
-| **R26 — Mediogioco reale** | `issue-016-middlegame-section` | Trasforma il segnaposto di R20 nella prima sezione posizionale utilizzabile; riusa modello e editor stabilizzati in R25. | Lista, studio, posizioni e dettaglio di Mediogioco; assenza esplicita di import Lichess, training, statistiche e SM-2. |
+| **R26 — Mediogioco reale** ✅ | `issue-016-middlegame-section` | Trasforma il segnaposto di R20 nella prima sezione posizionale utilizzabile; riusa modello e editor stabilizzati in R25. | ✅ Implementata e verificata il 2026-08-13: lista/CRUD studi `MIDDLEGAME`, dettaglio e CRUD posizioni, setup FEN, editor/dettaglio/navigazione canonici e controllo esatto della fase; import Lichess, training, statistiche, review/SM-2 e gioco da posizione esclusi. 120 test backend, 446 frontend, build e flussi E2E 53–58 verdi. |
 | **R27 — Finale reale** | `issue-016-endgame-section` | Replica il paradigma del Mediogioco solo dopo averne validato il riuso, evitando di sviluppare due sezioni divergenti in parallelo. | Lista, studio, posizioni e dettaglio Finale riusano i componenti comuni; regressione Aperture/Mediogioco verde. |
 | **R28 — Gioco da posizione** | `issue-016-play-position-vs-engine` | Aggiunge il confronto con Stockfish solo quando esistono posizioni salvate affidabili da passare al motore. | Avvio di `/play` dalla FEN della posizione salvata; lato al tratto e posizione iniziale corretti; nessun training/review introdotto nelle sezioni posizionali. |
 | **R29 — Informazioni e preferenze** | **015**, **017** | Chiude in modo coerente il cluster topbar dopo 021/011 e introduce le impostazioni solo con una scelta di persistenza esplicita. | OpenSpec 017; pagina Info con versioni FE/BE; decisione documentata DB vs `localStorage`; parametri SM-2 validati e applicati solo alle sessioni future. |
@@ -124,14 +126,16 @@ esplicitamente `localStorage` oppure un modello già associabile a utente.
 | R23 | ✅ [Mini-spec R23 — ISSUE-010 + ISSUE-008](backlog/manutenzione-evolutiva.md#mini-specifica-r23--issue-010--issue-008) formalizzata: rail da 1500px, drawer sotto soglia, navigazione esplicita nell'editor e rimozione Auto-play. | ✅ Eseguita (2026-08-10): P1 corretti con pipeline cancellabile e identità della variante caricata; frontend 288 verdi, build ok e checklist live 41–44 su app reale a 1600/1440/1024/768/375/320px. |
 | R24 | ✅ [Mini-specifica R24](backlog/manutenzione-evolutiva.md#mini-specifica-r24--issue-013--issue-016-move-comments) formalizzata il 2026-08-10: NAG singolo, commento testuale limitato, JSON retrocompatibile, menu azioni accessibile; «Elimina continuazioni» resta fuori scope e tra i punti aperti. | ✅ Eseguita (2026-08-10, [esito R24](backlog/manutenzione-evolutiva.md#esito-r24--issue-013--issue-016-move-comments-2026-08-10)): backend 103 verdi e frontend 338 verdi, build ok e checklist live 45–48 a 1600/1440/1024/768/375/320px su una copia del DB H2; nessuna perdita di mosse o annotazioni, parser PGN/Lichess invariato. |
 | R25 | ✅ OpenSpec completa; implementazione e test eseguiti (120 backend, 346 frontend). | ✅ Eseguita il 2026-08-13: flussi manuali 49–52 verificati su H2 temporaneo, con controllo di atomicità, compatibilità Aperture e terminologia posizionale. |
-| R26–R28 | OpenSpec completa per ogni slice di ISSUE-016, senza ridecidere il modello a fasi già approvato. | Test API/validazione, frontend e checklist manuale della fase interessata. |
+| R26 | ✅ OpenSpec completa; implementazione e test eseguiti senza ridecidere il modello a fasi. | ✅ Eseguita il 2026-08-13: 120 test backend, 446 frontend, build Angular riuscita e flussi manuali 53–58 su H2 temporaneo a 1600/1440/1024/768/375/320px; database condiviso invariato. |
+| R27–R28 | OpenSpec completa per ogni slice residua di ISSUE-016, riusando il modello e i componenti posizionali approvati. | Test API/validazione, frontend e checklist manuale della fase interessata. |
 | R29 | Decisione di persistenza delle preferenze e contratto versione backend. | Test di `ReviewScheduler` con parametri e verifica che le schedule esistenti non vengano ricalcolate. |
 | R30 | Audit reale delle opzioni UCI emesse dal worker Stockfish asm.js. | Test del mapping opzioni/comandi UCI e verifica live del motore. |
 
 ## Lavoro preparatorio che può procedere senza cambiare il prodotto
 
-- R20, R21, R22, R23, R24 e **R25 sono chiusi**. R26 può iniziare sul flusso posizionale
-  perché il contratto FEN, il salvataggio e la navigazione di R25 sono stati verificati.
+- R20–R26 sono chiusi; **R26 è implementata, verificata e archiviata in OpenSpec**.
+  R27 può riusare il contesto di sezione, il routing canonico e i
+  componenti posizionali consolidati dal Mediogioco.
 - R23 ha preservato la catena consegnata da R21
   (`parseInfoLine` → `StockfishService.bestLine` → `.engine-line` in `.engine-panel`):
   il riassetto ha riguardato layout e ciclo di cambio variante, non la logica UCI. Resta

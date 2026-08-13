@@ -53,7 +53,7 @@ Aree principali sotto `src/app`:
 | `stats` | Viste statistiche per variante e studio |
 | `reviews` | Vista «Ripeti oggi» (spaced repetition) |
 | `play` | Gioca contro il computer (Stockfish client-side) |
-| `sections` | Segnaposto riusabile delle sezioni non ancora sviluppate (Mediogioco, Finale) |
+| `sections` | Lista/creazione degli studi Mediogioco e segnaposto riusabile per la sezione Finale |
 | `core` | Servizi e modelli condivisi |
 
 ---

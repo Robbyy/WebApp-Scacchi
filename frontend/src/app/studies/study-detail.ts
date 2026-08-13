@@ -13,6 +13,7 @@ import { Study, StudyColor } from '../core/study.model';
 import { Variant, validationMessage } from '../core/variant.model';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
+import { sectionContextFrom, sectionLabel, sectionPaths } from '../core/study-sections';
 import { StudyFormFields } from './study-form-fields';
 
 /**
@@ -21,6 +22,12 @@ import { StudyFormFields } from './study-form-fields';
  * studio (a cascata). Sul modello degli *studies* di Lichess. Da R22 i metadati
  * (nome/descrizione/colore) sono modificabili con un form inline espandibile
  * (ISSUE-012) che riusa i campi condivisi con la pagina di creazione.
+ *
+ * Da R26 la stessa pagina serve anche le sezioni posizionali (ISSUE-016):
+ * montata sotto una route di sezione riceve nei `data` il contesto con la fase
+ * attesa e la base canonica, accetta soltanto studi di quella fase e genera
+ * link e redirect dentro la sezione. Senza contesto — le route generiche delle
+ * Aperture — comportamento, URL e terminologia restano quelli pre-R26.
  */
 @Component({
   selector: 'app-study-detail',
@@ -36,6 +43,15 @@ export class StudyDetail {
   private readonly variantService = inject(VariantService);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
+
+  /** Contesto di sezione dai `data` della route: `null` sulle Aperture. */
+  private readonly context = sectionContextFrom(this.route.snapshot.data);
+  /** Percorsi canonici della sezione (o generici pre-R26 senza contesto). */
+  protected readonly paths = sectionPaths(this.context);
+  /** Antenato nei breadcrumb: «Studi» sulle Aperture, la sezione altrimenti. */
+  protected readonly parentLabel = this.context ? sectionLabel(this.context.section) : 'Studi';
+  /** Ritorno mostrato dall'errore, invariato per le Aperture. */
+  protected readonly backLabel = this.context ? `torna a ${this.parentLabel}` : 'torna agli studi';
 
   protected readonly study = signal<Study | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -56,8 +72,17 @@ export class StudyDetail {
 
   constructor() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
+    const expected = this.context?.phase;
     this.service.getStudy(id).subscribe({
-      next: (s) => this.study.set(s),
+      next: (s) => {
+        // Controllo esatto della fase (ISSUE-016): un id valido di un'altra
+        // sezione non deve essere presentato come contenuto di questa.
+        if (expected && s.phase !== expected) {
+          this.error.set(`Questo studio non appartiene alla sezione ${this.parentLabel}.`);
+          return;
+        }
+        this.study.set(s);
+      },
       error: () => this.error.set('Studio non trovato.'),
     });
   }
@@ -168,7 +193,8 @@ export class StudyDetail {
     this.service.deleteStudy(s.id).subscribe({
       next: () => {
         this.toast.success('Studio eliminato.');
-        this.router.navigate(['/']);
+        // Ritorno alla lista della sezione: `/` per le Aperture (ISSUE-016).
+        this.router.navigate([this.paths.studyList]);
       },
       error: () => {
         this.deletingStudy.set(false);

@@ -1,7 +1,7 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { CreateStudyRequest, ImportStudyRequest, Study } from './study.model';
+import { CreateStudyRequest, GamePhase, ImportStudyRequest, Study } from './study.model';
 import { CreateVariantRequest, Variant } from './variant.model';
 
 /** Accesso alle API degli studi (/api/studies) - Prototipo 11. */
@@ -13,6 +13,18 @@ export class StudyService {
   /** Lista studi con il solo conteggio varianti. */
   getStudies(): Observable<Study[]> {
     return this.http.get<Study[]>(this.baseUrl);
+  }
+
+  /**
+   * Lista degli studi della sola fase indicata (ISSUE-016): usa il filtro già
+   * offerto dal backend (`GET /api/studies?phase=…`), così una sezione
+   * posizionale non riceve mai studi di un'altra fase. La home Aperture
+   * continua a usare `getStudies()` senza parametri.
+   */
+  getStudiesByPhase(phase: GamePhase): Observable<Study[]> {
+    return this.http.get<Study[]>(this.baseUrl, {
+      params: new HttpParams().set('phase', phase),
+    });
   }
 
   /** Dettaglio di uno studio con l'elenco completo delle varianti. */

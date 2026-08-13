@@ -42,7 +42,7 @@
 | 010 | Pannello varianti adattivo nel dettaglio | manutenzione | mini-spec R23 | ✅ fatto (R23) |
 | 011 | Unifica creazione studio + import Lichess | manutenzione | mini-spec R22 | ✅ fatto (R22) |
 | 013 | Menu contestuale editor | manutenzione | diretto — mini-spec R24 | ✅ fatto (R24) |
-| 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | spezzata in change incrementali |
+| 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | R26 implementata; restano R27–R28 |
 | 017 | Menu "Impostazioni" + SM-2 | sviluppo | OpenSpec | da fare |
 | 014 | Parametri motore Stockfish (UCI) | sviluppo | OpenSpec | da fare |
 | 018 | Revisione di sicurezza | audit | a sé | da fare |
@@ -60,9 +60,10 @@ La sequenza dettagliata dei soli incrementi evolutivi è nel
 3. ~~**R22:** ISSUE-011 + ISSUE-012 + ISSUE-009 (ciclo di vita dello studio e home).~~ ✅ fatto (2026-08-06).
 4. ~~**R23:** ISSUE-010 + ISSUE-008 (navigazione e controlli del dettaglio variante).~~ ✅ fatto (2026-08-10).
 5. ~~**R24:** ISSUE-013 + `issue-016-move-comments` (editor).~~ ✅ fatto (2026-08-10).
-6. **R25:** posizione FEN custom. ✅ Implementata, integrata in `master` e verificata manualmente (flussi E2E 49–52, 2026-08-13).
-7. **R26–R28:** slice residue di ISSUE-016: Mediogioco → Finale → gioco da posizione.
-8. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
+6. ~~**R25:** posizione FEN custom.~~ ✅ Implementata, integrata in `master` e verificata manualmente (flussi E2E 49–52, 2026-08-13).
+7. ~~**R26:** Mediogioco reale.~~ ✅ Implementata, verificata e archiviata in OpenSpec (446 test frontend, 120 backend, flussi E2E 53–58, 2026-08-13).
+8. **R27–R28:** slice residue di ISSUE-016: Finale → gioco da posizione.
+9. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
 
 I bug GitHub e l'audit di sicurezza seguono le proprie priorità e **non** fanno parte
 di questa cadenza di rilasci evolutivi.
@@ -72,7 +73,7 @@ di questa cadenza di rilasci evolutivi.
 ## Dipendenze trasversali
 
 - **ISSUE-019 (Liquibase, ✅)** ha sbloccato la catena dati: ISSUE-016, ISSUE-017 (`app_settings`), ISSUE-014 (se persistenza su DB).
-- **ISSUE-021 ✅ → abilita →** ISSUE-016 (scaffold di navigazione + segnaposto; 016 poi li sostituisce con le sezioni reali).
+- **ISSUE-021 ✅ → abilita →** ISSUE-016 (scaffold di navigazione + segnaposto; R26 ha sostituito quello del Mediogioco, R27 sostituirà quello del Finale).
 - **ISSUE-017 → ospita →** ISSUE-014 (sezione "Motore"); **→ affianca →** ISSUE-015 (cluster topbar); **→ tocca →** `ReviewScheduler`.
 - **ISSUE-013 ✅ → ha riusato →** `promoteToMainline` (`move-tree.ts`) e la conferma di
   cancellazione già presente nell'editor; le annotazioni di R24 passano da `setAnnotation`
@@ -88,7 +89,7 @@ di questa cadenza di rilasci evolutivi.
 
 ## Rischi principali
 
-1. **ISSUE-016** — scope ampio, modello dati nuovo; senza OpenSpec rischio di sovra-ingegnerizzazione. Mitigazione: partire da `issue-016-phase-domain-model`, poi procedere con slice piccoli.
+1. **ISSUE-016** — scope ampio; senza OpenSpec rischio di sovra-ingegnerizzazione. Mitigazione applicata: modello fissato in `issue-016-phase-domain-model`, poi slice piccoli; R26 ha validato il riuso per il Mediogioco e R27 deve mantenerlo per il Finale.
 2. **ISSUE-014** — incertezza sulle opzioni UCI realmente esposte dalla build asm.js. Mitigazione: audit prima della UI.
 3. **ISSUE-017** — refactor di `ReviewScheduler` da statico a parametrizzato tocca logica testata (120 test BE): rischio regressione SM-2.
 4. **ISSUE-004** — `AudioContext` browser-dipendente, difficile da coprire in headless.
@@ -97,6 +98,15 @@ di questa cadenza di rilasci evolutivi.
 ---
 
 ## Completati
+
+- **`issue-016-middlegame-section` — Mediogioco reale** ✅ (R26, implementata e verificata
+  il 2026-08-13). `/middlegame` offre lista e CRUD degli studi `MIDDLEGAME`, dettaglio e
+  CRUD delle posizioni, setup FEN, editor/dettaglio e navigazione canonici; il controllo
+  esatto della fase impedisce di presentare o modificare contenuti di altre sezioni.
+  Import/sync Lichess, training, statistiche, review/SM-2 e gioco da posizione restano
+  esclusi. Verifica: 120 test backend, 446 frontend, build Angular e flussi E2E 53–58
+  verdi su H2 temporaneo; database condiviso invariato. Change OpenSpec archiviata in
+  `openspec/changes/archive/2026-08-13-issue-016-middlegame-section/`.
 
 - **ISSUE-013 + `issue-016-move-comments` — Azioni e annotazioni per mossa** ✅ (R24,
   2026-08-10). Menu `⋮` (anche col tasto destro) su ogni mossa del pannello «Mosse & varianti»

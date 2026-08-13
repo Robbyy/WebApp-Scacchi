@@ -30,9 +30,10 @@
 
 ## ISSUE-021 — Scaffold navigazione tre sezioni (Aperture/Mediogioco/Finale) ✅
 **OpenSpec:** no · **Effort:** basso · **Rischio:** basso · **Stato: ✅ completata (R20, 2026-08-05).**
-**Scope:** tre tab di navigazione nella topbar, subito dopo il brand "WebApp Scacchi":
-**Aperture**, **Mediogioco**, **Finale**. Predispone subito la struttura a tre fasi del
-gioco anche se due sezioni non sono ancora implementate.
+**Scope storico R20:** tre tab di navigazione nella topbar, subito dopo il brand "WebApp Scacchi":
+**Aperture**, **Mediogioco**, **Finale**. Ha predisposto la struttura a tre fasi del
+gioco prima dell'implementazione delle sezioni posizionali; R26 ha poi reso reale il
+Mediogioco e R27 è prevista per il Finale.
 
 **Decisioni UI e routing confermate (2026-08-05):**
 - i controlli sono **tab visivi**, implementati semanticamente come link dentro una
@@ -42,8 +43,9 @@ gioco anche se due sezioni non sono ancora implementate.
 - Aperture → home studi (`/`); Mediogioco → `/middlegame`; Finale → `/endgame`.
   I nomi inglesi e minuscoli seguono le route tecniche già esistenti (`/studies`,
   `/variants`, `/reviews`, `/play`) e i valori di dominio `MIDDLEGAME`/`ENDGAME`;
-- Mediogioco e Finale montano un unico componente segnaposto riusabile (es.
-  `coming-soon`) che riceve il nome della sezione e mostra «In fase di implementazione».
+- Al rilascio R20 Mediogioco e Finale montavano un unico componente segnaposto riusabile
+  (es. `coming-soon`) che riceveva il nome della sezione e mostrava «In fase di
+  implementazione»; oggi il segnaposto resta soltanto per Finale.
 
 **Responsive definito:**
 - da **768px** in su, brand, tab e controlli di servizio restano su una sola riga;
@@ -54,24 +56,26 @@ gioco anche se due sezioni non sono ancora implementate.
   44px (compresi viewport molto stretti o zoom elevato), il solo gruppo tab scorre
   orizzontalmente senza tagliare testo né comprimere i controlli della prima riga.
 
-**Accettazione:** i tre tab sono presenti e funzionanti; Aperture apre gli studi; le
+**Accettazione R20:** i tre tab sono presenti e funzionanti; Aperture apre gli studi; le
 altre due route aprono il segnaposto; la sezione attiva è evidenziata e annunciata da
 `aria-current`; la topbar non genera overflow orizzontale né sovrapposizioni a desktop,
 tablet o mobile.
-**Relazione:** è il **primo slice navigazionale di ISSUE-016** (sviluppi importanti), ma
-indipendente e a basso costo; ISSUE-016 in seguito sostituisce i segnaposto con le sezioni
-vere.
+**Relazione:** è stato il **primo slice navigazionale di ISSUE-016** (sviluppi importanti),
+indipendente e a basso costo; R26 ha sostituito il segnaposto Mediogioco con la sezione
+reale e R27 completerà il Finale.
 **Fuori scope:** contenuti reali di Mediogioco/Finale, filtri dati per fase, editor
 posizione/FEN, commenti, gioco contro il motore e import Lichess per le sezioni non
 Aperture (restano in ISSUE-016); ridisegno dei controlli di servizio della topbar, che
 sarà gestito dalle issue dedicate 011/015/017.
 
-**Esito (R20, 2026-08-05):** tab-link in `app.html` dentro `<nav aria-label="Sezione di
+**Esito storico R20 (2026-08-05):** tab-link in `app.html` dentro `<nav aria-label="Sezione di
 studio">`, con `aria-current="page"` e stato attivo derivato dall'URL
 (`core/study-sections.ts`): le pagine di dettaglio delle Aperture (`/studies/:id`,
 `/variants/:id`, `/reviews`, `/play`) mantengono evidenziato il tab Aperture. Route
-`/middlegame` e `/endgame` montano il segnaposto riusabile `sections/coming-soon`, che
-riceve il nome della sezione dalla `data` della route (`withComponentInputBinding`).
+`/middlegame` e `/endgame` montavano il segnaposto riusabile `sections/coming-soon`, che
+riceveva il nome della sezione dalla `data` della route (`withComponentInputBinding`).
+Da R26 `/middlegame` monta la lista reale degli studi posizionali; `/endgame` conserva
+il segnaposto in attesa di R27.
 Responsive verificato a 1440/1024/768 (una riga) e 767/375/320 (due righe, target 44px);
 sotto ~315px scorre orizzontalmente il solo gruppo tab (verificato a 280px), senza
 troncare le etichette né comprimere i controlli di servizio, e la topbar non genera mai

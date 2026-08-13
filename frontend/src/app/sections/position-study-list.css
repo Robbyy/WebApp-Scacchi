@@ -1,0 +1,13 @@
+/* Stato vuoto della sezione: messaggio e azione di creazione, senza le CTA di
+   review/import proprie della home Aperture. Il resto della presentazione
+   (intestazione, card, badge, griglia) arriva da `studies/study-list.css`. */
+.list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.list-empty .list-muted {
+  margin: 0;
+}

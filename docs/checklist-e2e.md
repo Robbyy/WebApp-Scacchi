@@ -1,7 +1,7 @@
 # Checklist E2E manuale - WebApp Scacchi
 
 > Checklist ripetibile per la validazione manuale end-to-end, verificata fino alla release
-> evolutiva R25 (2026-08-13), con i flussi R25 verificati.
+> evolutiva R26 (2026-08-13), con i flussi R25 e R26 verificati.
 > Eseguibile in pochi minuti dopo ogni rilascio significativo, prima di dichiararlo completato.
 > Complementare ai test automatici (vedi sezione "Copertura automatica" in fondo).
 
@@ -105,6 +105,33 @@
 
 ---
 
+## Flussi aggiunti (evolutiva R26 — verificata)
+
+- [x] **53. Lista e creazione degli studi di Mediogioco (R26)** — verificato il 2026-08-13 su H2 temporaneo: `/middlegame` mostra esclusivamente gli studi `MIDDLEGAME`, passa correttamente da stato vuoto a lista popolata ed elimina uno studio dopo conferma. Da `/middlegame/studies/new` la fase è fissata a Mediogioco, non è modificabile e non sono presenti import o sync Lichess; nome, descrizione e colore restano compilabili.
+- [x] **54. Dettaglio studio e CRUD delle posizioni (R26)** — verificati breadcrumb e percorsi canonici `/middlegame/...`, modifica dei metadati senza cambio di fase, elenco vuoto e popolato, creazione ed eliminazione delle posizioni e rientro alla lista di Mediogioco. Un ID appartenente a uno studio di un'altra fase, richiesto tramite una route Mediogioco, viene rifiutato e non espone contenuti o azioni.
+- [x] **55. Setup FEN ed editor dell'albero nella sezione (R26)** — verificati creazione della posizione, setup successivo, salvataggio di una FEN personalizzata, aggiunta e persistenza di una mossa e passaggio fra `/middlegame/positions/{id}/setup`, `/edit` e dettaglio. Le funzioni R25 di validazione, orientamento, arrocco, en-passant e conservazione dell'albero restano operative.
+- [x] **56. Consultazione e navigazione delle posizioni (R26)** — verificati dettaglio con albero completo e senza mosse, FEN iniziale, replay e navigazione fra posizioni sorelle dal rail/drawer. Breadcrumb, ritorni, annullamento e redirect restano sempre nella sezione `/middlegame`.
+- [x] **57. Confini funzionali del Mediogioco (R26)** — verificati il rifiuto di un contenuto di fase errata e l'assenza in UI di import Lichess, training, statistiche, review/SM-2 e gioco contro Stockfish dalla posizione. L'analisi Stockfish nel dettaglio/editor resta disponibile. I casi asincroni e l'assenza di chiamate review sono coperti dalla suite automatica.
+- [x] **58. Responsive e regressioni delle altre sezioni (R26)** — verificato a **1600/1440/1024/768/375/320px**: tab Mediogioco attivo su tutte le route figlie, lista/dettaglio/editor senza overflow orizzontale e console senza errori. Le Aperture conservano route e azioni pre-R26, inclusi import, training, statistiche, review e gioco contro il computer; `/endgame` resta sul segnaposto previsto per R27.
+
+> Audit conclusivo del 2026-08-13: flussi 53–58 verificati con backend su H2 file temporaneo
+> isolato e frontend su `http://localhost:4200`; creati, modificati ed eliminati studi e posizioni
+> di prova, inclusi albero vuoto/completo, FEN custom e navigazione sorelle. Suite automatica
+> verde (120 backend, 446 frontend), build Angular riuscita e console browser senza errori.
+> Durante l'audit R26 il database persistente `backend/data/scacchi.mv.db` non è stato
+> avviato, modificato, ripristinato né incluso nel lavoro R26. Prima e dopo test/preview
+> risultavano invariati:
+> SHA-256 `447AEE231196E578EF4654B8F46E6DB6E93ECA57D1DE4B4D40FFF15F23883DAA`,
+> dimensione `241664` byte e timestamp `2026-08-13 09:41:49`.
+>
+> Verifica post-audit: un processo Spring Boot avviato separatamente ha poi aperto la
+> risorsa versionata e il working tree la segnala modificata (90112 byte, SHA-256
+> `9AECC00B8E0E7539FFB27C9311D968F80DD0458FF393F6F3871170CA4C8F5FBD`). Il file è stato
+> escluso dallo staging R26; il ripristino al contenuto versionato resta sospeso in attesa
+> di autorizzazione esplicita.
+
+---
+
 ## Pulizia
 
 - [x] Studi e varianti di test eliminati dal database temporaneo; i seed del database persistente sono invariati.
@@ -116,7 +143,7 @@
 Questi flussi sono coperti anche da test automatici (da eseguire prima della checklist manuale):
 
 - **Backend** (`mvnw.cmd test` — **120 test**): CRUD varianti, validazione legalità (mainline e albero, `400` strutturato), FEN custom R25 (normalizzazione, FEN mancante/vuota, re, pedoni, arrocco, en-passant, lato che ha appena mosso, mosse dalla FEN e aggiornamento atomico), round-trip albero `tree → DB → DTO`, annotazioni R24 (`MoveNodeTest` costruttore a due argomenti e normalizzazione del commento, `TreeConverterTest` lettura di JSON legacy e assenza dei campi per un albero non annotato, `VariantValidatorTest`/`VariantControllerTest` limite del commento e insieme dei NAG), `MoveNode`/mainline, CRUD studi (creazione variante nello studio, cancellazione a cascata, import bulk e upsert Lichess), sessioni di allenamento (`TrainingSessionControllerTest`), statistiche (`StatsControllerTest`), spaced repetition (`ReviewSchedulerTest` SM-2 puro + `ReviewControllerTest`).
-- **Frontend** (`npm test -- --watch=false` — **346 test**): scacchiera (click, drag, promozione, hide-on-drag, audio), editor posizione R25 (setup visuale, FEN, arrocco, en-passant, salvataggio senza mosse, accesso all'editor dell'albero, errori backend e guard di fase), editor varianti (mosse, varianti, promuovi a mainline, conferma cancellazione, guard, creazione in studio), navigazione posizionale R25 (etichette «Posizioni», assenza dei badge Bianco/Nero e del lato da allenare, regressione Aperture), terminologia fase-aware nella home, training (mosse corrette/errate, rami, completamento, audio, submit sessione), studi (lista/dettaglio/eliminazione, CTA e modifica inline R22), pagina unica creazione/import R22 (`study-new` — creazione locale, anteprima e suggerimenti, upsert con metadati locali, `?studyId` valido/inesistente/non-Aperture, errore di import parziale, bozza `sessionStorage`; redirect della route storica in `app.routes`), import PGN (anche in studio) e parser `pgn`, import/auth Lichess (`lichess`, `lichess-auth`), comando Lichess in topbar (`app`), motore (`uci` — parsing PV completa, `pvToSan`, `numberedPv` —, `play`, `stockfish.service` — ciclo spegnimento/riaccensione con worker finto e righe `info` tardive), linea migliore e toggle unico del pannello motore R21 (`variant-detail`, `variant-editor`), pannello varianti R23 (`study-variant-nav` — incluso il caricamento cancellabile, le risposte fuori ordine, il riavvio a FEN identica, drawer/editor e assenza di Auto-play), azioni e annotazioni per mossa R24 (`move-actions-menu`, incluso il ciclo ↑/↓/`Home`/`End`, `move-annotation-dialog`, il blocco «menu azioni e annotazioni» di `variant-editor` e la lettura in sola lettura in `variant-detail`), statistiche (`stats-format`, `stats.service`, `variant-stats`, `study-stats`), ripetizione (`review-format`, `review.service`, `review-due`), navigazione R20 (`app`, `app.routes`, `study-sections`, `coming-soon`), più i servizi `StudyService`/`MoveSoundService` e le utilità `move-tree`.
+- **Frontend** (`npm test -- --watch=false` — **446 test**): scacchiera (click, drag, promozione, hide-on-drag, audio), editor posizione R25 (setup visuale, FEN, arrocco, en-passant, salvataggio senza mosse, accesso all'editor dell'albero, errori backend e guard di fase), sezione Mediogioco R26 (routing canonico e tab attivo, filtro `MIDDLEGAME`, lista/creazione/modifica/eliminazione studi, CRUD posizioni, setup/albero/dettaglio e navigazione sorelle, rifiuto di fase errata anche con risposte ritardate o fuori ordine, assenza delle azioni riservate alle Aperture), editor varianti (mosse, varianti, promuovi a mainline, conferma cancellazione, guard, creazione in studio), navigazione posizionale R25 (etichette «Posizioni», assenza dei badge Bianco/Nero e del lato da allenare, regressione Aperture), terminologia fase-aware nella home, training (mosse corrette/errate, rami, completamento, audio, submit sessione), studi (lista/dettaglio/eliminazione, CTA e modifica inline R22), pagina unica creazione/import R22 (`study-new` — creazione locale, anteprima e suggerimenti, upsert con metadati locali, `?studyId` valido/inesistente/non-Aperture, errore di import parziale, bozza `sessionStorage`; redirect della route storica in `app.routes`), import PGN (anche in studio) e parser `pgn`, import/auth Lichess (`lichess`, `lichess-auth`), comando Lichess in topbar (`app`), motore (`uci` — parsing PV completa, `pvToSan`, `numberedPv` —, `play`, `stockfish.service` — ciclo spegnimento/riaccensione con worker finto e righe `info` tardive), linea migliore e toggle unico del pannello motore R21 (`variant-detail`, `variant-editor`), pannello varianti R23 (`study-variant-nav` — incluso il caricamento cancellabile, le risposte fuori ordine, il riavvio a FEN identica, drawer/editor e assenza di Auto-play), azioni e annotazioni per mossa R24 (`move-actions-menu`, incluso il ciclo ↑/↓/`Home`/`End`, `move-annotation-dialog`, il blocco «menu azioni e annotazioni» di `variant-editor` e la lettura in sola lettura in `variant-detail`), statistiche (`stats-format`, `stats.service`, `variant-stats`, `study-stats`), ripetizione (`review-format`, `review.service`, `review-due`), navigazione R20 (`app`, `app.routes`, `study-sections`, `coming-soon`), più i servizi `StudyService`/`MoveSoundService` e le utilità `move-tree`.
 
 ### Runner E2E browser (rinviato)
 Un runner E2E completo (Playwright/Cypress) è **rinviato**: richiede tooling e download aggiuntivi non prioritari in questa fase. La combinazione *test unit/integrazione + questa checklist + verifica live nel preview* copre i percorsi critici. Da rivalutare quando l'app si avvicina all'uso reale o all'integrazione CI/CD (terza tornata).

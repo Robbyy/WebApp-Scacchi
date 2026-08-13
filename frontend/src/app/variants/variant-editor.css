@@ -425,6 +425,10 @@
   font-size: 0.95rem;
 }
 
+.list-muted {
+  color: var(--text-muted);
+}
+
 .list-error {
   margin: 0;
   color: oklch(0.45 0.16 25);

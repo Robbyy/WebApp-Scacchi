@@ -1,19 +1,19 @@
 # WebApp Scacchi
 
-Webapp personale per l'allenamento delle aperture di scacchi: gestione di studi e varianti,
-allenamento su scacchiera con controllo errori, import PGN e studi Lichess,
-registrazione sessioni, statistiche e spaced repetition SM-2.
+Webapp personale per lo studio degli scacchi: allenamento delle aperture con studi e varianti,
+import PGN/Lichess, sessioni, statistiche e spaced repetition SM-2; sezione Mediogioco con
+studi e posizioni manuali basate su FEN e albero di mosse.
 
 ## Stato
 
 Parte 1 e Parte 2 (P0–P19) completate e verificate in locale.
-Backend: 120 test verdi. Frontend: 346 test verdi.
+Backend: 120 test verdi. Frontend: 446 test verdi.
 Terza tornata (infrastruttura) avviata: **schema gestito da Liquibase** (ISSUE-019, fatto).
 OpenSpec è installato e lo scaffold `openspec/` è pronto per le change di maggiore impatto.
 ISSUE-003 (header home: titolo e pulsanti a capo) risolta e verificata a Full HD
 (commit `aa5048b`). Evolutiva **R22 completata** (2026-08-06): pagina unica
 creazione/import studio, modifica inline dei metadati e griglia home a due colonne
-ISSUE-011 + ISSUE-012 + ISSUE-009). Evolutiva **R23 completata** (2026-08-10): pannello
+(ISSUE-011 + ISSUE-012 + ISSUE-009). Evolutiva **R23 completata** (2026-08-10): pannello
 varianti adattivo nel dettaglio e nell'editor (rail da 1500px, drawer alle altre larghezze),
 rimozione di Auto-play e correzioni P1 al cambio variante (ISSUE-010 + ISSUE-008).
 Evolutiva **R24 completata** (2026-08-10): menu azioni per mossa nell'editor e annotazioni
@@ -21,8 +21,17 @@ Evolutiva **R24 completata** (2026-08-10): menu azioni per mossa nell'editor e a
 `issue-016-move-comments`).
 Evolutiva **R25 rilasciata** (2026-08-13): posizioni iniziali manuali con editor visuale,
 FEN custom validata e albero mosse verificato dalla posizione iniziale (OpenSpec
-`issue-016-custom-starting-fen`). Segue R26 (`issue-016-middlegame-section`), i bug ISSUE-004/005/006/020,
+`issue-016-custom-starting-fen`). Evolutiva **R26 implementata e verificata** (2026-08-13):
+sezione `/middlegame` reale con lista e CRUD studi, dettaglio e CRUD posizioni, setup FEN,
+editor/dettaglio e navigazione canonici; import Lichess, training, statistiche, review/SM-2
+e gioco da posizione restano esclusi. Suite 120 backend/446 frontend, build Angular e
+flussi E2E 53–58 verdi; la change `issue-016-middlegame-section` è archiviata in
+`openspec/changes/archive/2026-08-13-issue-016-middlegame-section/`. Segue R27
+(`issue-016-endgame-section`), insieme ai bug ISSUE-004/005/006/020,
 Supabase PostgreSQL, Supabase Auth, Docker e CI/CD.
+Nota operativa: dopo l'audit R26 un processo Spring Boot ha aperto il database H2
+versionato, che ora risulta modificato e resta escluso dallo staging; il ripristino al
+contenuto versionato è sospeso in attesa di autorizzazione esplicita.
 
 ## Stack
 

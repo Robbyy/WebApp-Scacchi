@@ -1,0 +1,67 @@
+<section class="list">
+  <header class="list-head">
+    <div>
+      <p class="list-kicker">{{ label() }}</p>
+      <h2 class="list-title">I tuoi studi</h2>
+    </div>
+    <div class="head-actions">
+      <a class="new-cta" [routerLink]="paths().newStudy">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" /></svg>
+        Nuovo studio
+      </a>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p class="list-muted">Caricamento&#8230;</p>
+  } @else if (error()) {
+    <p class="list-error">{{ error() }}</p>
+  } @else if (studies().length === 0) {
+    <div class="list-empty">
+      <p class="list-muted">
+        Nessuno studio di {{ label() }}. Crea il primo studio per raccogliere le tue posizioni.
+      </p>
+      <a class="new-cta" [routerLink]="paths().newStudy">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" /></svg>
+        Nuovo studio
+      </a>
+    </div>
+  } @else {
+    <ul class="study-cards">
+      @for (s of studies(); track s.id) {
+        <li class="study-card">
+          <a class="study-main" [routerLink]="paths().study(s.id)">
+            <span class="study-name">{{ s.name }}</span>
+            @if (s.description) {
+              <span class="study-desc">{{ s.description }}</span>
+            }
+            <span class="study-meta">
+              @if (s.color) {
+                <span
+                  class="badge"
+                  [class.badge--white]="s.color === 'WHITE'"
+                  [class.badge--black]="s.color === 'BLACK'"
+                  [class.badge--mixed]="s.color === 'MIXED'"
+                  >{{ colorLabel(s.color) }}</span
+                >
+              }
+              <span class="study-count">{{ s.variantCount }} {{ itemLabel(s.variantCount) }}</span>
+            </span>
+          </a>
+          <button
+            class="delete-btn"
+            type="button"
+            (click)="remove(s)"
+            [disabled]="deletingId() === s.id"
+            [attr.aria-label]="'Elimina ' + s.name"
+            title="Elimina studio"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 3v1H4v2h16V4h-5V3H9zM6 8l1 12h10l1-12H6z" />
+            </svg>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>

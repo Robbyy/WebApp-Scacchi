@@ -23,8 +23,8 @@ proposti da **R20** (navigazione a tre sezioni) a **R30** (parametri UCI del mot
 Il piano esclude volutamente bug, audit e infrastruttura.
 
 > ✅ **R20 — Fondazione di navigazione** — fatto (ISSUE-021, 2026-08-05): tab
-> Aperture/Mediogioco/Finale nella topbar e segnaposto riusabile per le due sezioni non
-> ancora sviluppate.
+> Aperture/Mediogioco/Finale nella topbar e segnaposto riusabile per le due sezioni che
+> allora non erano ancora sviluppate; R26 ha poi reso reale il Mediogioco.
 >
 > ✅ **R21 — Motore leggibile** — fatto (ISSUE-022 + ISSUE-007, 2026-08-05): linea
 > migliore di Stockfish in SAN nel pannello motore del dettaglio variante e toggle
@@ -45,11 +45,17 @@ Il piano esclude volutamente bug, audit e infrastruttura.
 > Vedi l'[esito R24](backlog/manutenzione-evolutiva.md#esito-r24--issue-013--issue-016-move-comments-2026-08-10).
 >
 > ✅ **R25 — Posizioni manuali** — rilasciata il 2026-08-13 dopo la verifica
-> manuale dei flussi E2E 49–52. La prossima slice dopo la
-> chiusura di R25 è **R26** (`issue-016-middlegame-section`).
+> manuale dei flussi E2E 49–52.
+>
+> ✅ **R26 — Mediogioco reale** — implementata e verificata il 2026-08-13:
+> `/middlegame` offre lista e CRUD studi, dettaglio e CRUD posizioni, setup FEN,
+> editor/dettaglio e navigazione canonici, senza le funzioni riservate alle Aperture.
+> Suite 120 backend/446 frontend, build e flussi E2E 53–58 verdi; la change
+> `issue-016-middlegame-section` è archiviata in OpenSpec.
+> La prossima slice è **R27** (`issue-016-endgame-section`).
 
 In sintesi: navigazione → linea migliore del motore → gestione studi → flusso
-varianti/editor → Mediogioco e Finale a slice → impostazioni → parametri motore.
+varianti/editor → Mediogioco ✅ → Finale → gioco da posizione → impostazioni → parametri motore.
 
 ---
 

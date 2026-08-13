@@ -1,12 +1,12 @@
 @if (error() && !ready()) {
-  <p class="editor-error">{{ error() }} — <a routerLink="/">torna agli studi</a></p>
+  <p class="editor-error">{{ error() }} — <a [routerLink]="listLink">{{ backLabel }}</a></p>
 } @else if (loading()) {
   <p class="editor-muted">Caricamento editor…</p>
 } @else if (ready()) {
   <section class="position-editor">
     <nav class="crumbs">
-      <a routerLink="/">Studi</a><span>/</span>
-      <a [routerLink]="['/studies', studyId()]">{{ studyName() }}</a><span>/</span>
+      <a [routerLink]="listLink">{{ parentLabel }}</a><span>/</span>
+      <a [routerLink]="studyLink()">{{ studyName() }}</a><span>/</span>
       <span>{{ isEdit() ? 'Modifica posizione' : 'Nuova posizione' }}</span>
     </nav>
 
@@ -90,7 +90,7 @@
         @if (error()) { <p class="editor-error">{{ error() }}</p> }
 
         <div class="form-actions">
-          <a class="btn btn--ghost" [routerLink]="['/studies', studyId()]">Annulla</a>
+          <a class="btn btn--ghost" [routerLink]="cancelLink()">Annulla</a>
           <button class="btn" type="submit" [disabled]="saving()">{{ saving() ? 'Salvataggio…' : (isEdit() ? 'Salva posizione' : 'Crea posizione') }}</button>
         </div>
       </form>

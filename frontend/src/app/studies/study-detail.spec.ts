@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { StudyDetail } from './study-detail';
 import { StudyService } from '../core/study.service';
 import { VariantService } from '../core/variant.service';
@@ -8,15 +8,29 @@ import { Study } from '../core/study.model';
 import { Variant } from '../core/variant.model';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
+import { MIDDLEGAME_SECTION_CONTEXT, SECTION_CONTEXT_DATA } from '../core/study-sections';
 
 const v1: Variant = { id: 11, name: 'Italiana', color: 'WHITE', moves: ['e4', 'e5'], startingFen: '', studyId: 1 };
 const v2: Variant = { id: 12, name: 'Spagnola', color: 'WHITE', moves: ['e4'], startingFen: '', studyId: 1 };
 const study: Study = { id: 1, name: 'Repertorio', phase: 'OPENING', variantCount: 2, variants: [v1, v2] };
 
+/** Studio Mediogioco con le stesse due schede, usate qui come posizioni. */
+function middlegameStudy(variants: Variant[] = [v1, v2]): Study {
+  return {
+    id: 1,
+    name: 'Strutture di pedoni',
+    phase: 'MIDDLEGAME',
+    variantCount: variants.length,
+    variants: structuredClone(variants),
+  };
+}
+
 function setup(
   studyService: Partial<StudyService>,
   variantService: Partial<VariantService> = {},
   confirmResult = true,
+  /** `data` della route: con il contesto di sezione il dettaglio è Mediogioco. */
+  data: Record<string, unknown> = {},
 ) {
   TestBed.configureTestingModule({
     imports: [StudyDetail],
@@ -28,7 +42,7 @@ function setup(
       { provide: ToastService, useValue: { success() {}, error() {}, info() {} } },
       {
         provide: ActivatedRoute,
-        useValue: { snapshot: { paramMap: convertToParamMap({ id: '1' }) } },
+        useValue: { snapshot: { paramMap: convertToParamMap({ id: '1' }), data } },
       },
     ],
   });
@@ -37,11 +51,48 @@ function setup(
   return { fixture, cmp: fixture.componentInstance as any };
 }
 
+/** Come `setup`, ma montando il dettaglio sotto le route `/middlegame`. */
+function setupMiddlegame(
+  studyService: Partial<StudyService>,
+  variantService: Partial<VariantService> = {},
+  confirmResult = true,
+) {
+  const { fixture, cmp } = setup(studyService, variantService, confirmResult, {
+    [SECTION_CONTEXT_DATA]: MIDDLEGAME_SECTION_CONTEXT,
+  });
+  return { fixture, cmp, el: fixture.nativeElement as HTMLElement };
+}
+
+function hrefs(el: HTMLElement): string[] {
+  return Array.from(el.querySelectorAll('a')).map((a) => a.getAttribute('href') ?? '');
+}
+
 describe('StudyDetail', () => {
   it('loads the study with its variants', () => {
     const { cmp } = setup({ getStudy: () => of(study) });
     expect(cmp.study()?.name).toBe('Repertorio');
     expect(cmp.variants().length).toBe(2);
+  });
+
+  it('keeps the generic breadcrumb and variant links (ISSUE-016)', () => {
+    const { fixture } = setup({ getStudy: () => of(study) });
+    const el = fixture.nativeElement as HTMLElement;
+    const crumb = el.querySelector<HTMLAnchorElement>('.crumbs a');
+    expect(crumb?.textContent?.trim()).toBe('Studi');
+    expect(crumb?.getAttribute('href')).toBe('/');
+    expect(
+      Array.from(el.querySelectorAll<HTMLAnchorElement>('a.variant-main')).map((a) =>
+        a.getAttribute('href'),
+      ),
+    ).toEqual(['/variants/11', '/variants/12']);
+  });
+
+  it('keeps the generic position CTA for a non-opening study opened outside a section', () => {
+    const { fixture } = setup({ getStudy: () => of(middlegameStudy()) });
+    const el = fixture.nativeElement as HTMLElement;
+    const cta = el.querySelector<HTMLAnchorElement>('a.new-cta');
+    expect(cta?.textContent).toContain('Nuova posizione');
+    expect(cta?.getAttribute('href')).toBe('/positions/new?studyId=1');
   });
 
   it('shows the Lichess import and stats links for an opening study', () => {
@@ -172,5 +223,162 @@ describe('StudyDetail', () => {
     );
     await cmp.removeStudy();
     expect(deletedStudy).toBeNull();
+  });
+});
+
+describe('StudyDetail (Mediogioco, ISSUE-016)', () => {
+  it('presents a middlegame study with positional metadata', () => {
+    const { cmp, el } = setupMiddlegame({ getStudy: () => of(middlegameStudy()) });
+    expect(cmp.study()?.name).toBe('Strutture di pedoni');
+    expect(el.querySelector('.study-title')?.textContent).toContain('Strutture di pedoni');
+    expect(el.querySelector('.study-count')?.textContent?.trim()).toBe('2 posizioni');
+    expect(el.querySelector('.detail-error')).toBeNull();
+  });
+
+  it('refuses an opening study id with a section error', () => {
+    const { cmp, el } = setupMiddlegame({ getStudy: () => of(structuredClone(study)) });
+    expect(cmp.study()).toBeNull();
+    expect(el.querySelector('.detail-error')?.textContent).toContain(
+      'non appartiene alla sezione Mediogioco',
+    );
+    expect(el.querySelector('section.study')).toBeNull();
+    expect(el.textContent).not.toContain('Repertorio');
+  });
+
+  it('refuses an endgame study id with a section error', () => {
+    const endgame: Study = { ...middlegameStudy(), phase: 'ENDGAME', name: 'Finali di torre' };
+    const { cmp, el } = setupMiddlegame({ getStudy: () => of(endgame) });
+    expect(cmp.study()).toBeNull();
+    expect(el.querySelector('.detail-error')?.textContent).toContain(
+      'non appartiene alla sezione Mediogioco',
+    );
+    expect(el.textContent).not.toContain('Finali di torre');
+  });
+
+  it('returns to the section from the error of a wrong phase', () => {
+    const { el } = setupMiddlegame({ getStudy: () => of(structuredClone(study)) });
+    const back = el.querySelector<HTMLAnchorElement>('.detail-error a');
+    expect(back?.textContent).toContain('torna a Mediogioco');
+    expect(back?.getAttribute('href')).toBe('/middlegame');
+  });
+
+  it('shows the canonical breadcrumb of the section', () => {
+    const { el } = setupMiddlegame({ getStudy: () => of(middlegameStudy()) });
+    const crumb = el.querySelector<HTMLAnchorElement>('.crumbs a');
+    expect(crumb?.textContent?.trim()).toBe('Mediogioco');
+    expect(crumb?.getAttribute('href')).toBe('/middlegame');
+    expect(el.querySelector('.crumb-current')?.textContent).toContain('Strutture di pedoni');
+  });
+
+  it('opens each position through its canonical route', () => {
+    const { el } = setupMiddlegame({ getStudy: () => of(middlegameStudy()) });
+    const links = Array.from(el.querySelectorAll<HTMLAnchorElement>('a.variant-main'));
+    expect(links.map((a) => a.getAttribute('href'))).toEqual([
+      '/middlegame/positions/11',
+      '/middlegame/positions/12',
+    ]);
+    expect(links[0].textContent).toContain('Italiana');
+    expect(el.textContent).toContain('2 mosse');
+  });
+
+  it('creates a new position keeping the parent study', () => {
+    const { el } = setupMiddlegame({ getStudy: () => of(middlegameStudy()) });
+    const cta = el.querySelector<HTMLAnchorElement>('a.new-cta');
+    expect(cta?.textContent).toContain('Nuova posizione');
+    expect(cta?.getAttribute('href')).toBe('/middlegame/positions/new?studyId=1');
+  });
+
+  it('shows an empty state with the creation action', () => {
+    const { el } = setupMiddlegame({ getStudy: () => of(middlegameStudy([])) });
+    expect(el.querySelector('.list-muted')?.textContent).toContain('Nessuna posizione in questo studio');
+    expect(el.querySelector('.variant-cards')).toBeNull();
+    expect(el.querySelector<HTMLAnchorElement>('a.new-cta')?.getAttribute('href')).toBe(
+      '/middlegame/positions/new?studyId=1',
+    );
+  });
+
+  it('keeps every generated link inside the section', () => {
+    const { el } = setupMiddlegame({ getStudy: () => of(middlegameStudy()) });
+    expect(hrefs(el).every((h) => h === '/middlegame' || h.startsWith('/middlegame/'))).toBe(true);
+  });
+
+  it('has none of the opening-only actions (ISSUE-016)', () => {
+    const { el } = setupMiddlegame({ getStudy: () => of(middlegameStudy()) });
+    const text = el.textContent ?? '';
+    expect(text).not.toContain('Statistiche dello studio');
+    expect(text).not.toContain('Lichess');
+    expect(text).not.toContain('Importa PGN');
+    expect(text).not.toContain('Nuova variante');
+    expect(text).not.toContain('Allena');
+    expect(text).not.toContain('variant');
+    expect(el.querySelector('.study-subnav')).toBeNull();
+    // Nessun badge di colore sulle posizioni: il lato deriva dalla FEN (R25).
+    expect(el.querySelector('.variant-meta .badge')).toBeNull();
+  });
+
+  it('still edits the metadata with the existing contract', () => {
+    let captured: any = null;
+    const { cmp, el } = setupMiddlegame({
+      getStudy: () => of(middlegameStudy()),
+      updateStudy: (_id: number, req: unknown) => {
+        captured = req;
+        return of({ ...middlegameStudy(), name: 'Rinominato', description: 'Nota', color: null });
+      },
+    });
+
+    cmp.openEdit();
+    cmp.editName.set('Rinominato');
+    cmp.editDescription.set('Nota');
+    cmp.saveEdit();
+
+    // La fase non viaggia mai nell'aggiornamento (ISSUE-016).
+    expect(captured).toEqual({ name: 'Rinominato', description: 'Nota', color: null });
+    expect(cmp.study()?.name).toBe('Rinominato');
+    expect(cmp.study()?.phase).toBe('MIDDLEGAME');
+    expect(el.querySelector('app-study-form-fields')).toBeNull();
+  });
+
+  it('deletes a position with the existing API and updates the count', async () => {
+    let deletedId: number | null = null;
+    const { cmp } = setupMiddlegame(
+      { getStudy: () => of(middlegameStudy()) },
+      {
+        deleteVariant: (id: number) => {
+          deletedId = id;
+          return of(void 0);
+        },
+      },
+    );
+
+    await cmp.removeVariant(v1);
+    expect(deletedId).toBe(11);
+    expect(cmp.variants().map((v: Variant) => v.id)).toEqual([12]);
+    expect(cmp.study()?.variantCount).toBe(1);
+  });
+
+  it('deletes the study and returns to the section list', async () => {
+    let deletedStudy: number | null = null;
+    const { cmp } = setupMiddlegame({
+      getStudy: () => of(middlegameStudy()),
+      deleteStudy: (id: number) => {
+        deletedStudy = id;
+        return of(void 0);
+      },
+    });
+    const router = TestBed.inject(Router);
+    let navTarget: unknown[] | null = null;
+    router.navigate = ((c: unknown[]) => {
+      navTarget = c;
+      return Promise.resolve(true);
+    }) as typeof router.navigate;
+
+    await cmp.removeStudy();
+    expect(deletedStudy).toBe(1);
+    expect(navTarget).toEqual(['/middlegame']);
+  });
+
+  it('reports a missing study without claiming a wrong section', () => {
+    const { el } = setupMiddlegame({ getStudy: () => throwError(() => new Error('404')) });
+    expect(el.querySelector('.detail-error')?.textContent).toContain('Studio non trovato');
   });
 });

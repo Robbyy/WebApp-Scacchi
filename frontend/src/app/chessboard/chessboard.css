@@ -56,7 +56,10 @@
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  width: min(90vw, 720px);
+  /* Sui viewport stretti 90vw non basta: coordinate, cornice e scrollbar si
+     sommano alla griglia. Il secondo limite mantiene l'intero componente nel
+     viewport senza cambiare la dimensione usata da tablet e desktop. */
+  width: min(90vw, calc(100vw - 3.5rem), 720px);
   aspect-ratio: 1 / 1;
   border-radius: 2px;
   overflow: hidden;

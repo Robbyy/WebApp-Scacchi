@@ -1,0 +1,31 @@
+<section class="new-study">
+  <nav class="crumbs">
+    <a [routerLink]="paths().studyList">{{ label() }}</a>
+    <span class="crumb-sep">/</span>
+    <span class="crumb-current">Nuovo studio</span>
+  </nav>
+
+  <header class="page-head">
+    <p class="page-kicker">{{ label() }}</p>
+    <h2 class="page-title">Nuovo studio</h2>
+    <p class="page-sub">
+      Crea uno studio in cui raccogliere le tue posizioni. Il nome è obbligatorio;
+      descrizione e colore sono facoltativi.
+    </p>
+  </header>
+
+  <form class="study-form" (ngSubmit)="submit()">
+    <app-study-form-fields [(name)]="name" [(description)]="description" [(color)]="color" [disabled]="saving()" />
+
+    @if (error()) {
+      <p class="page-error">{{ error() }}</p>
+    }
+
+    <div class="form-actions">
+      <a class="btn btn--ghost" [routerLink]="paths().studyList">Annulla</a>
+      <button class="btn btn--primary" type="submit" [disabled]="saving()">
+        {{ saving() ? 'Salvataggio…' : 'Crea studio' }}
+      </button>
+    </div>
+  </form>
+</section>
