@@ -12,6 +12,13 @@ public record CreateVariantRequest(
     String color,         // "WHITE" | "BLACK"
     List<String> moves,   // linea principale (usata se tree è assente)
     List<MoveNode> tree,  // albero completo (opzionale)
-    String sourcePgn
+    String sourcePgn,
+    /** FEN iniziale visuale: ammessa solo per posizioni di Mediogioco/Finale. */
+    String startingFen
 ) {
+    /** Compatibilità con i chiamanti esistenti che non conoscono ancora la FEN custom. */
+    public CreateVariantRequest(
+        String name, String color, List<String> moves, List<MoveNode> tree, String sourcePgn) {
+        this(name, color, moves, tree, sourcePgn, null);
+    }
 }

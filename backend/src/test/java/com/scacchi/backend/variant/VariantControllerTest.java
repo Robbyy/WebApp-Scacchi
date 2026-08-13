@@ -68,6 +68,17 @@ class VariantControllerTest {
     }
 
     @Test
+    void createOutsideAStudyRejectsACustomStartingFen() throws Exception {
+        String body = """
+            {"name":"FEN fuori contesto","color":"WHITE","moves":["e4"],
+             "startingFen":"4k3/8/8/8/8/8/8/4K3 w - - 0 1"}""";
+
+        mockMvc.perform(post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("startingFen"));
+    }
+
+    @Test
     void createRejectsInvalidPayload() throws Exception {
         String body = """
             {"name":"","color":"WHITE","moves":["e4"]}""";

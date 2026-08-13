@@ -72,6 +72,7 @@ export class VariantDetail implements OnDestroy {
    * fase dello studio non è stata risolta (evita un lampeggio dei controlli).
    */
   protected readonly isOpening = signal(true);
+  protected readonly isPosition = computed(() => !this.isOpening());
   /** Schedule di ripetizione della variante (P19), null se mai allenata. */
   protected readonly review = signal<ReviewSchedule | null>(null);
   protected readonly reviewLabel = computed(() => {

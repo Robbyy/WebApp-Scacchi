@@ -590,6 +590,10 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
       color: this.color(),
       moves: mainline(this.tree()),
       tree: this.tree(),
+      // Conserva la FEN della posizione quando si modifica una voce esistente.
+      // Per le aperture resta la FEN standard e il backend continua a trattarla
+      // con il contratto legacy; per R25 evita di sovrascrivere una FEN custom.
+      startingFen: this.isEdit() && this.startingFen() ? this.startingFen() : undefined,
     };
     const id = this.editId();
     const studyId = this.studyId();

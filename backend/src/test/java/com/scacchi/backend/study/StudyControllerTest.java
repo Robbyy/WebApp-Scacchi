@@ -239,6 +239,78 @@ class StudyControllerTest {
     }
 
     @Test
+    void createsAnEmptyPositionWithCustomFenAndDerivedColor() throws Exception {
+        int studyId = createStudyWithPhase("Posizioni di finale", "ENDGAME");
+        String body = """
+            {"name":"Re e pedone","moves":[],"tree":[],
+             "startingFen":"4k3/8/8/8/8/8/8/4K3 b - - 17 42"}""";
+
+        mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("Re e pedone"))
+            .andExpect(jsonPath("$.studyId").value(studyId))
+            .andExpect(jsonPath("$.color").value("BLACK"))
+            .andExpect(jsonPath("$.startingFen").value("4k3/8/8/8/8/8/8/4K3 b - - 0 1"))
+            .andExpect(jsonPath("$.moves.length()").value(0))
+            .andExpect(jsonPath("$.tree.length()").value(0));
+    }
+
+    @Test
+    void rejectsAnIllegalCustomStartingFenWithoutSavingThePosition() throws Exception {
+        int studyId = createStudyWithPhase("Posizioni", "MIDDLEGAME");
+        String body = """
+            {"name":"Re mancanti","moves":[],"startingFen":"8/8/8/8/8/8/8/8 w - - 0 1"}""";
+
+        mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("startingFen"));
+
+        mockMvc.perform(get("/api/studies/" + studyId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.variantCount").value(0));
+    }
+
+    @Test
+    void rejectsACustomFenForAnOpeningVariant() throws Exception {
+        int studyId = createStudy("""
+            {"name":"Aperture"}""");
+        String body = """
+            {"name":"Non consentita","color":"WHITE","moves":["e4"],
+             "startingFen":"4k3/8/8/8/8/8/8/4K3 w - - 0 1"}""";
+
+        mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("startingFen"));
+    }
+
+    @Test
+    void changingAStartingFenRejectsAnIncompatibleExistingTreeAtomically() throws Exception {
+        int studyId = createStudyWithPhase("Posizioni", "MIDDLEGAME");
+        String originalFen = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
+        String create = """
+            {"name":"Re in movimento","moves":["Ke2"],"startingFen":"%s"}""".formatted(originalFen);
+        int variantId = JsonPath.read(mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(create))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.id");
+
+        String update = """
+            {"name":"Non deve salvarsi","moves":["Ke2"],
+             "startingFen":"4k3/8/8/8/8/8/8/4K3 b - - 0 1"}""";
+        mockMvc.perform(put("/api/variants/" + variantId)
+                .contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("moves"));
+
+        mockMvc.perform(get("/api/variants/" + variantId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Re in movimento"))
+            .andExpect(jsonPath("$.startingFen").value(originalFen));
+    }
+
+    @Test
     void importsAStudyWithMultipleVariants() throws Exception {
         String body = """
             {"name":"Repertorio Lichess","description":"importato","color":"WHITE","variants":[

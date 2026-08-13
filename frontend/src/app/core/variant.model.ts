@@ -37,10 +37,16 @@ export interface Variant {
 /** Payload per la creazione/aggiornamento di una variante. */
 export interface CreateVariantRequest {
   name: string;
-  color: VariantColor;
+  /**
+   * Le varianti di apertura mantengono esplicitamente il lato da allenare.
+   * Per una posizione di mediogioco/finale il backend lo ricava dalla FEN.
+   */
+  color?: VariantColor;
   moves: string[];
   tree?: MoveNode[];
   sourcePgn?: string | null;
+  /** FEN iniziale opzionale; ammessa dal backend solo fuori dagli studi OPENING. */
+  startingFen?: string;
 }
 
 /** Errore di validazione restituito dal backend con stato 400 (Prototipo 7). */

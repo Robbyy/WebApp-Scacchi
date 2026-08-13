@@ -57,15 +57,16 @@ describe('StudyDetail', () => {
     expect(lichessLink?.getAttribute('href')).toBe('/studies/new?studyId=1');
   });
 
-  it('hides the Lichess import and stats links for a non-opening study (ISSUE-016)', () => {
+  it('offers the visual position editor only for a non-opening study (R25)', () => {
     const middlegameStudy: Study = { ...structuredClone(study), phase: 'MIDDLEGAME' };
     const { fixture } = setup({ getStudy: () => of(middlegameStudy) });
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).not.toContain('Importa da Lichess');
     expect(text).not.toContain('Statistiche dello studio');
-    // Le posizioni restano creabili manualmente (P16-016): "Nuova variante"/"Importa PGN" restano visibili.
-    expect(text).toContain('Nuova variante');
-    expect(text).toContain('Importa PGN');
+    expect(text).toContain('Nuova posizione');
+    expect(text).not.toContain('Nuova variante');
+    expect(text).not.toContain('Importa PGN');
+    expect(text).toContain('posizioni');
   });
 
   it('opens the inline edit form prefilled with the study metadata (ISSUE-012)', () => {

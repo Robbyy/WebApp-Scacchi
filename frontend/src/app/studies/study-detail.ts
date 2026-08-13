@@ -43,6 +43,9 @@ export class StudyDetail {
   protected readonly deletingStudy = signal(false);
 
   protected readonly variants = computed<Variant[]>(() => this.study()?.variants ?? []);
+  protected readonly isOpening = computed(() => this.study()?.phase === 'OPENING');
+  protected readonly itemLabel = computed(() => (this.isOpening() ? 'variante' : 'posizione'));
+  protected readonly itemLabelPlural = computed(() => (this.isOpening() ? 'varianti' : 'posizioni'));
 
   /** Form inline di modifica dei metadati (ISSUE-012). */
   protected readonly editing = signal(false);
@@ -109,8 +112,9 @@ export class StudyDetail {
   }
 
   protected async removeVariant(variant: Variant): Promise<void> {
+    const label = this.itemLabel();
     const ok = await this.confirm.ask({
-      title: 'Elimina variante',
+      title: `Elimina ${label}`,
       message: `Eliminare definitivamente «${variant.name}»? L'operazione non è reversibile.`,
       confirmLabel: 'Elimina',
       danger: true,
@@ -131,7 +135,7 @@ export class StudyDetail {
             : s,
         );
         this.deletingId.set(null);
-        this.toast.success('Variante eliminata.');
+        this.toast.success(`${label[0].toUpperCase()}${label.slice(1)} eliminata.`);
       },
       error: () => {
         this.deletingId.set(null);
@@ -146,9 +150,10 @@ export class StudyDetail {
       return;
     }
     const count = s.variantCount;
+    const label = this.itemLabel();
     const warning =
       count > 0
-        ? ` Verranno eliminate anche le sue ${count} variant${count === 1 ? 'e' : 'i'}.`
+        ? ` Verranno eliminate anche le sue ${count} ${count === 1 ? label : this.itemLabelPlural()}.`
         : '';
     const ok = await this.confirm.ask({
       title: 'Elimina studio',

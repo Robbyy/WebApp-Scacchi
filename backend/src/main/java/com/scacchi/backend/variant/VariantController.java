@@ -23,11 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class VariantController {
 
     private final VariantService service;
-    private final VariantValidator validator;
-
-    public VariantController(VariantService service, VariantValidator validator) {
+    public VariantController(VariantService service) {
         this.service = service;
-        this.validator = validator;
     }
 
     @GetMapping
@@ -44,7 +41,6 @@ public class VariantController {
 
     @PostMapping
     public ResponseEntity<VariantDto> create(@RequestBody CreateVariantRequest request) {
-        validator.validate(request);
         VariantDto created = service.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -52,7 +48,6 @@ public class VariantController {
     @PutMapping("/{id}")
     public ResponseEntity<VariantDto> update(
         @PathVariable Long id, @RequestBody CreateVariantRequest request) {
-        validator.validate(request);
         return service.update(id, request)
             .map(ResponseEntity::ok)
             .orElseGet(() -> ResponseEntity.notFound().build());

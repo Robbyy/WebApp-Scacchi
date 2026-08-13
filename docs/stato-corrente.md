@@ -90,7 +90,7 @@ Nella versione rilasciata non risultano bug bloccanti attivi. R23 ha chiuso i du
 - Spostamento varianti tra studi.
 - Sync Lichess periodica.
 - Runner E2E browser (Playwright/Cypress) — rinviato alla terza tornata.
-- Editor manuale di posizione e input/UI per FEN custom (Mediogioco/Finale) — prossima change `issue-016-custom-starting-fen`.
+- Editor manuale di posizione e input/UI per FEN custom (Mediogioco/Finale) — implementazione R25 presente sul branch di lavoro e in verifica; la chiusura del rilascio resta subordinata ai tre punti aperti tracciati in `openspec/changes/issue-016-custom-starting-fen/tasks.md`.
 - Conservazione di commenti e NAG **presenti in un PGN importato** (o da Lichess): R24 annota solo dall'editor, l'import continua a scartare `{...}`, `; ...` e `$n` — evolutiva distinta.
 - Comando «Elimina continuazioni» (mantenere la mossa ed eliminarne i soli figli): esplicitamente fuori da R24, resta un punto aperto da decidere.
 - Viste/sezioni complete Mediogioco e Finale (oggi solo il segnaposto di ISSUE-021), gioco contro il motore da una posizione salvata, tag/categorie — change successive a ISSUE-016 (vedi `docs/roadmap.md`).
@@ -104,7 +104,11 @@ Nella versione rilasciata non risultano bug bloccanti attivi. R23 ha chiuso i du
 [esito R24](backlog/manutenzione-evolutiva.md#esito-r24--issue-013--issue-016-move-comments-2026-08-10).
 Restano fuori dal rilascio, come punti aperti, la possibile azione «Elimina continuazioni» e la
 conservazione delle annotazioni già presenti in un PGN importato.
-Il prossimo incremento evolutivo è **R25** (`issue-016-custom-starting-fen`).
+**R25** (`issue-016-custom-starting-fen`) è implementata e in verifica manuale. Le suite
+automatiche risultano verdi (117 test backend e 343 frontend), ma il rilascio non è ancora
+chiuso: restano da verificare il comportamento senza `startingFen`, il flusso UI per l'albero
+delle mosse e la terminologia/navigazione delle posizioni, come dettagliato nei task aperti
+6.1–6.3 della change.
 
 La terza tornata infrastrutturale prosegue poi in quest'ordine:
 

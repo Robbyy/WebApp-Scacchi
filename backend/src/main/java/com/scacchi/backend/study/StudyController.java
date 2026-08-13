@@ -84,7 +84,7 @@ public class StudyController {
             throw new InvalidStudyException(
                 new ValidationError("variants", null, null, "Nessun capitolo da importare."));
         }
-        request.variants().forEach(variantValidator::validate);
+        request.variants().forEach(variantValidator::validateOpening);
         StudyDto created = service.importStudy(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -100,7 +100,7 @@ public class StudyController {
             throw new InvalidStudyException(
                 new ValidationError("variants", null, null, "Nessun capitolo da importare."));
         }
-        request.variants().forEach(variantValidator::validate);
+        request.variants().forEach(variantValidator::validateOpening);
         StudyService.ImportResult result = service.importLichess(request);
         HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
         return ResponseEntity.status(status).body(result.study());
@@ -110,7 +110,6 @@ public class StudyController {
     @PostMapping("/{id}/variants")
     public ResponseEntity<VariantDto> createVariant(
         @PathVariable Long id, @RequestBody CreateVariantRequest request) {
-        variantValidator.validate(request);
         return service.createVariant(id, request)
             .map(dto -> ResponseEntity.status(HttpStatus.CREATED).body(dto))
             .orElseGet(() -> ResponseEntity.notFound().build());

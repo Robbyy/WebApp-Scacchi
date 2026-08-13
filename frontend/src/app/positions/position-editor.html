@@ -1,0 +1,99 @@
+@if (error() && !ready()) {
+  <p class="editor-error">{{ error() }} — <a routerLink="/">torna agli studi</a></p>
+} @else if (loading()) {
+  <p class="editor-muted">Caricamento editor…</p>
+} @else if (ready()) {
+  <section class="position-editor">
+    <nav class="crumbs">
+      <a routerLink="/">Studi</a><span>/</span>
+      <a [routerLink]="['/studies', studyId()]">{{ studyName() }}</a><span>/</span>
+      <span>{{ isEdit() ? 'Modifica posizione' : 'Nuova posizione' }}</span>
+    </nav>
+
+    <header>
+      <p class="kicker">{{ isEdit() ? 'Modifica posizione' : 'Nuova posizione' }}</p>
+      <h2>Configura la posizione iniziale</h2>
+      <p>Posiziona i pezzi, indica chi muove e configura arrocco ed en passant. La FEN viene generata automaticamente.</p>
+    </header>
+
+    <div class="editor-layout">
+      <div class="board-column">
+        <div class="setup-board" aria-label="Scacchiera per la configurazione della posizione">
+          @for (cell of squares(); track cell.square) {
+            <button
+              type="button"
+              class="setup-square"
+              [class.setup-square--dark]="cell.dark"
+              [attr.aria-label]="cell.square + (cell.piece ? ': ' + cell.piece : ', vuota')"
+              (click)="placeOn(cell.square)"
+            >
+              @if (cell.rankLabel) { <span class="rank-label">{{ cell.rankLabel }}</span> }
+              @if (cell.piece) {
+                <img class="piece" [src]="'/pieces/' + cell.piece + '.svg'" [alt]="cell.piece" draggable="false" />
+              }
+              @if (cell.fileLabel) { <span class="file-label">{{ cell.fileLabel }}</span> }
+            </button>
+          }
+        </div>
+        <div class="board-actions">
+          <button type="button" class="btn btn--ghost" (click)="useStandardPosition()">Posizione standard</button>
+          <button type="button" class="btn btn--ghost" (click)="clearBoard()">Svuota scacchiera</button>
+        </div>
+      </div>
+
+      <form class="setup-form" (ngSubmit)="save()">
+        <label>
+          Titolo
+          <input name="name" [ngModel]="name()" (ngModelChange)="onNameChange($event)" maxlength="120" required />
+        </label>
+
+        <fieldset>
+          <legend>Pezzo da collocare</legend>
+          <div class="palette">
+            @for (piece of piecesPalette; track piece.code) {
+              <button type="button" class="palette-piece" [class.palette-piece--selected]="selectedPiece() === piece.code" [attr.aria-pressed]="selectedPiece() === piece.code" [title]="piece.label" (click)="selectPiece(piece.code)">
+                <img [src]="'/pieces/' + piece.code + '.svg'" [alt]="piece.label" />
+              </button>
+            }
+            <button type="button" class="palette-eraser" [class.palette-piece--selected]="selectedPiece() === null" [attr.aria-pressed]="selectedPiece() === null" (click)="selectPiece(null)">Rimuovi</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Lato a muovere</legend>
+          <label class="choice"><input type="radio" name="turn" [checked]="sideToMove() === 'w'" (change)="onSideChange('w')" /> Bianco</label>
+          <label class="choice"><input type="radio" name="turn" [checked]="sideToMove() === 'b'" (change)="onSideChange('b')" /> Nero</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Diritti di arrocco</legend>
+          <label class="choice"><input type="checkbox" [checked]="whiteKingSide()" (change)="onRightsChange('K', $any($event.target).checked)" /> Bianco corto</label>
+          <label class="choice"><input type="checkbox" [checked]="whiteQueenSide()" (change)="onRightsChange('Q', $any($event.target).checked)" /> Bianco lungo</label>
+          <label class="choice"><input type="checkbox" [checked]="blackKingSide()" (change)="onRightsChange('k', $any($event.target).checked)" /> Nero corto</label>
+          <label class="choice"><input type="checkbox" [checked]="blackQueenSide()" (change)="onRightsChange('q', $any($event.target).checked)" /> Nero lungo</label>
+        </fieldset>
+
+        <label>
+          Bersaglio en passant
+          <select name="enPassant" [ngModel]="enPassant()" (ngModelChange)="onEnPassantChange($event)">
+            @for (target of enPassantOptions; track target) { <option [value]="target">{{ target }}</option> }
+          </select>
+          <small>Disponibile solo dopo una doppia mossa immediata e se un pedone avversario può catturare.</small>
+        </label>
+
+        <label>
+          FEN generata
+          <textarea readonly rows="3" [value]="startingFen()"></textarea>
+          <small>I contatori vengono sempre salvati come 0 e 1.</small>
+        </label>
+
+        @if (error()) { <p class="editor-error">{{ error() }}</p> }
+
+        <div class="form-actions">
+          <a class="btn btn--ghost" [routerLink]="['/studies', studyId()]">Annulla</a>
+          <button class="btn" type="submit" [disabled]="saving()">{{ saving() ? 'Salvataggio…' : (isEdit() ? 'Salva posizione' : 'Crea posizione') }}</button>
+        </div>
+      </form>
+    </div>
+  </section>
+}

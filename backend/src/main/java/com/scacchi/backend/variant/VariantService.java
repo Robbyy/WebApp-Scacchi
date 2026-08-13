@@ -2,6 +2,9 @@ package com.scacchi.backend.variant;
 
 import java.util.List;
 import java.util.Optional;
+import com.scacchi.backend.study.GamePhase;
+import com.scacchi.backend.study.Study;
+import com.scacchi.backend.study.StudyRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -17,9 +20,14 @@ public class VariantService {
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     private final VariantRepository repository;
+    private final StudyRepository studyRepository;
+    private final VariantValidator validator;
 
-    public VariantService(VariantRepository repository) {
+    public VariantService(
+        VariantRepository repository, StudyRepository studyRepository, VariantValidator validator) {
         this.repository = repository;
+        this.studyRepository = studyRepository;
+        this.validator = validator;
     }
 
     public List<VariantDto> findAll() {
@@ -42,27 +50,29 @@ public class VariantService {
     }
 
     private VariantDto create(CreateVariantRequest request, Long studyId) {
+        PreparedVariant prepared = prepare(request, phaseFor(studyId));
         Variant entity = new Variant();
-        entity.setName(request.name().trim());
-        entity.setColor(Color.valueOf(request.color()));
-        List<MoveNode> tree = resolveTree(request);
+        entity.setName(prepared.request().name().trim());
+        entity.setColor(prepared.color());
+        List<MoveNode> tree = resolveTree(prepared.request());
         entity.setTree(tree);
         entity.setMoves(MoveNode.mainline(tree));
-        entity.setStartingFen(START_FEN);
-        entity.setSourcePgn(request.sourcePgn());
+        entity.setStartingFen(prepared.startingFen());
+        entity.setSourcePgn(prepared.request().sourcePgn());
         entity.setStudyId(studyId);
         return toDto(repository.save(entity));
     }
 
     public Optional<VariantDto> update(Long id, CreateVariantRequest request) {
         return repository.findById(id).map(entity -> {
-            entity.setName(request.name().trim());
-            entity.setColor(Color.valueOf(request.color()));
-            List<MoveNode> tree = resolveTree(request);
+            PreparedVariant prepared = prepare(request, phaseFor(entity.getStudyId()));
+            entity.setName(prepared.request().name().trim());
+            entity.setColor(prepared.color());
+            List<MoveNode> tree = resolveTree(prepared.request());
             entity.setTree(tree);
             entity.setMoves(MoveNode.mainline(tree));
-            entity.setSourcePgn(request.sourcePgn());
-            // startingFen e createdAt restano invariati
+            entity.setSourcePgn(prepared.request().sourcePgn());
+            entity.setStartingFen(prepared.startingFen());
             return toDto(repository.save(entity));
         });
     }
@@ -72,7 +82,7 @@ public class VariantService {
         if (request.tree() != null && !request.tree().isEmpty()) {
             return request.tree();
         }
-        return MoveNode.fromLine(request.moves());
+        return request.moves() == null ? List.of() : MoveNode.fromLine(request.moves());
     }
 
     public boolean delete(Long id) {
@@ -116,5 +126,42 @@ public class VariantService {
             v.getStudyId(),
             v.getCreatedAt() == null ? null : v.getCreatedAt().toString()
         );
+    }
+
+    private GamePhase phaseFor(Long studyId) {
+        if (studyId == null) {
+            return GamePhase.OPENING;
+        }
+        return studyRepository.findById(studyId)
+            .map(Study::getPhase)
+            .orElse(GamePhase.OPENING);
+    }
+
+    private PreparedVariant prepare(CreateVariantRequest request, GamePhase phase) {
+        boolean nonOpening = phase == GamePhase.MIDDLEGAME || phase == GamePhase.ENDGAME;
+        if (!nonOpening) {
+            validator.validateOpening(request);
+            return new PreparedVariant(request, Color.valueOf(request.color()), START_FEN);
+        }
+
+        if (request == null) {
+            validator.validate(request, START_FEN, true, false);
+        }
+        if (request.startingFen() == null || request.startingFen().isBlank()) {
+            // Compatibilità con i client e le posizioni create prima dell'editor R25.
+            CreateVariantRequest legacyPosition = new CreateVariantRequest(
+                request.name(), Color.WHITE.name(), request.moves(), request.tree(), null, START_FEN);
+            validator.validate(legacyPosition, START_FEN, true, false);
+            return new PreparedVariant(legacyPosition, Color.WHITE, START_FEN);
+        }
+        String startingFen = validator.validateAndNormalizeStartingFen(request.startingFen());
+        Color color = startingFen.split(" ")[1].equals("w") ? Color.WHITE : Color.BLACK;
+        CreateVariantRequest normalized = new CreateVariantRequest(
+            request.name(), color.name(), request.moves(), request.tree(), null, startingFen);
+        validator.validate(normalized, startingFen, true, false);
+        return new PreparedVariant(normalized, color, startingFen);
+    }
+
+    private record PreparedVariant(CreateVariantRequest request, Color color, String startingFen) {
     }
 }

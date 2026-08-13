@@ -201,6 +201,20 @@ describe('VariantDetail', () => {
     expect(cmp.isOpening()).toBe(false);
   });
 
+  it('labels a non-opening child as a position and opens its FEN editor', () => {
+    const study: Study = { id: 6, name: 'Mediogioco', phase: 'MIDDLEGAME', variantCount: 1 };
+    const { fixture } = setup(
+      { ...linear, studyId: 6 },
+      { getStudy: () => of(study) },
+    );
+    const element: HTMLElement = fixture.nativeElement;
+    const edit = element.querySelector('.detail-actions .edit-link') as HTMLAnchorElement;
+
+    expect(element.querySelector('.side-kicker')?.textContent?.trim()).toBe('Posizione');
+    expect(edit.textContent).toContain('Modifica posizione');
+    expect(edit.getAttribute('href')).toBe('/positions/1/edit');
+  });
+
   // ISSUE-007: il toggle del motore governa da solo anche la barra.
   it('has no separate show/hide button for the evaluation bar', () => {
     const { fixture, cmp } = setup(linear);

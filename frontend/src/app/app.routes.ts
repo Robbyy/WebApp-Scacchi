@@ -14,6 +14,7 @@ import { ReviewDue } from './reviews/review-due';
 import { PlayVsComputer } from './play/play';
 import { ComingSoon } from './sections/coming-soon';
 import { canLeaveEditor } from './variants/can-deactivate.guard';
+import { PositionEditor } from './positions/position-editor';
 
 export const routes: Routes = [
   { path: '', component: StudyList },
@@ -34,6 +35,8 @@ export const routes: Routes = [
   { path: 'studies/:id/stats', component: StudyStats },
   { path: 'studies/:id', component: StudyDetail },
   { path: 'variants', component: VariantList },
+  { path: 'positions/new', component: PositionEditor, canDeactivate: [canLeaveEditor] },
+  { path: 'positions/:id/edit', component: PositionEditor, canDeactivate: [canLeaveEditor] },
   { path: 'variants/new', component: VariantEditor, canDeactivate: [canLeaveEditor] },
   { path: 'variants/import', component: PgnImport },
   { path: 'variants/:id', component: VariantDetail },
