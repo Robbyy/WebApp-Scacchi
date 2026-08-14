@@ -4,14 +4,18 @@
   <p class="editor-muted">Caricamento editor…</p>
 } @else if (ready()) {
   <section class="position-editor">
-    <nav class="crumbs">
-      <a [routerLink]="listLink">{{ parentLabel }}</a><span>/</span>
-      <a [routerLink]="studyLink()">{{ studyName() }}</a><span>/</span>
-      <span>{{ isEdit() ? 'Modifica posizione' : 'Nuova posizione' }}</span>
-    </nav>
+    <!-- Traccia di posizione, non navigazione: nell'editor i due antenati restano
+         testo, così un clic involontario non porta fuori dalla pagina prima del
+         salvataggio. L'uscita voluta passa da «Annulla», che attraversa la guard. -->
+    <p class="crumbs">
+      <span class="crumb">{{ parentLabel }}</span><span>/</span>
+      <span class="crumb">{{ studyName() }}</span><span>/</span>
+      <span class="crumb">{{ isEdit() ? 'Modifica posizione' : 'Nuova posizione' }}</span>
+    </p>
 
+    <!-- Nessun kicker, come in R26.2 sull'altro editor posizionale: traccia,
+         route e titolo identificano già la modalità. -->
     <header>
-      <p class="kicker">{{ isEdit() ? 'Modifica posizione' : 'Nuova posizione' }}</p>
       <h2>Configura la posizione iniziale</h2>
       <p>Posiziona i pezzi, indica chi muove e configura arrocco ed en passant. La FEN viene generata automaticamente.</p>
     </header>
@@ -84,7 +88,6 @@
         <label>
           FEN generata
           <textarea readonly rows="3" [value]="startingFen()"></textarea>
-          <small>I contatori vengono sempre salvati come 0 e 1.</small>
         </label>
 
         @if (error()) { <p class="editor-error">{{ error() }}</p> }

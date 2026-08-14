@@ -186,13 +186,29 @@ describe('PositionEditor', () => {
   });
 
   it('keeps the generic breadcrumb and cancel target outside a section (R25)', () => {
-    const { el } = setup();
-    const crumbs = Array.from(el.querySelectorAll<HTMLAnchorElement>('.crumbs a'));
-    expect(crumbs.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([
-      ['Studi', '/'],
-      ['Finali pratici', '/studies/7'],
-    ]);
+    const { el, cmp } = setup();
+    const crumbs = Array.from(el.querySelectorAll('.crumb')).map((c) => c.textContent?.trim());
+    expect(crumbs).toEqual(['Studi', 'Finali pratici', 'Nuova posizione']);
+    // La traccia non è navigabile, ma i percorsi generici R25 restano quelli.
+    expect(el.querySelectorAll('.crumbs a').length).toBe(0);
+    expect(cmp.listLink).toBe('/');
+    expect(cmp.studyLink()).toBe('/studies/7');
     expect(link(el, 'Annulla')?.getAttribute('href')).toBe('/studies/7');
+  });
+
+  it('drops the kicker and the FEN counters note', () => {
+    const { el } = setup({ positionId: 31 });
+    // Come in R26.2 sull'altro editor posizionale: traccia, route e titolo
+    // identificano già la modalità, quindi il kicker sarebbe ridondante.
+    expect(el.querySelector('.kicker')).toBeNull();
+    const text = el.textContent ?? '';
+    // Resta la sola occorrenza della traccia: non è più duplicata sopra il titolo.
+    expect((text.match(/Modifica posizione/g) ?? []).length).toBe(1);
+    expect(text).not.toContain('I contatori');
+    // Titolo, FEN generata e la nota sull'en passant restano al loro posto.
+    expect(el.querySelector('h2')?.textContent?.trim()).toBe('Configura la posizione iniziale');
+    expect(el.querySelector('textarea')).not.toBeNull();
+    expect(text).toContain('Disponibile solo dopo una doppia mossa');
   });
 
   it('keeps the generic cancel target while editing an existing position (R25)', () => {
@@ -278,13 +294,13 @@ describe('PositionEditor (Mediogioco, ISSUE-016)', () => {
   });
 
   it('shows the canonical breadcrumb of the section', () => {
-    const { el } = setupMiddlegame();
-    const crumbs = Array.from(el.querySelectorAll<HTMLAnchorElement>('.crumbs a'));
-    expect(crumbs.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([
-      ['Mediogioco', '/middlegame'],
-      ['Finali pratici', '/middlegame/studies/7'],
-    ]);
-    expect(el.querySelector('.crumbs')?.textContent).toContain('Nuova posizione');
+    const { el, cmp } = setupMiddlegame();
+    const crumbs = Array.from(el.querySelectorAll('.crumb')).map((c) => c.textContent?.trim());
+    expect(crumbs).toEqual(['Mediogioco', 'Finali pratici', 'Nuova posizione']);
+    // Inerte come nell'editor generico, ma i percorsi di sezione restano canonici.
+    expect(el.querySelectorAll('.crumbs a').length).toBe(0);
+    expect(cmp.listLink).toBe('/middlegame');
+    expect(cmp.studyLink()).toBe('/middlegame/studies/7');
   });
 
   it('cancels a creation back to the parent study', () => {
