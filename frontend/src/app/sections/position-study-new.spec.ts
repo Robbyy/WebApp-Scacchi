@@ -52,13 +52,14 @@ describe('PositionStudyNew (ISSUE-016)', () => {
 
     cmp.name.set('  Strutture di pedoni  ');
     cmp.description.set('Schemi tipici');
+    // Un valore residuo nel model non deve diventare un metadato posizionale.
     cmp.color.set('WHITE');
     cmp.submit();
 
     expect(captured).toEqual({
       name: 'Strutture di pedoni',
       description: 'Schemi tipici',
-      color: 'WHITE',
+      color: null,
       phase: 'MIDDLEGAME',
     });
     expect(nav.url()).toBe('/middlegame/studies/9');
@@ -158,7 +159,7 @@ describe('PositionStudyNew (ISSUE-016)', () => {
     const { el } = setup();
     expect(el.querySelector('app-study-form-fields')).not.toBeNull();
     expect(el.querySelector('input[name="name"]')).not.toBeNull();
-    expect(el.querySelector('select[name="color"]')).not.toBeNull();
+    expect(el.querySelector('select[name="color"]')).toBeNull();
     expect(el.querySelector('input[name="description"]')).not.toBeNull();
   });
 
@@ -185,7 +186,8 @@ describe('PositionStudyNew (ISSUE-016)', () => {
   it('never lets the user choose the phase', () => {
     const { el } = setup();
     const selects = Array.from(el.querySelectorAll('select')).map((s) => s.getAttribute('name'));
-    expect(selects).toEqual(['color']);
+    expect(selects).toEqual([]);
     expect(el.textContent).not.toContain('Fase');
+    expect(el.textContent).not.toContain('Colore');
   });
 });

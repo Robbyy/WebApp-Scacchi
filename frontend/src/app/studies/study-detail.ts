@@ -116,13 +116,18 @@ export class StudyDetail {
       .updateStudy(s.id, {
         name,
         description: this.editDescription().trim() || null,
-        color: this.editColor() || null,
+        color: this.isOpening() ? this.editColor() || null : null,
       })
       .subscribe({
         next: (updated) => {
           this.study.update((cur) =>
             cur
-              ? { ...cur, name: updated.name, description: updated.description, color: updated.color }
+              ? {
+                  ...cur,
+                  name: updated.name,
+                  description: updated.description,
+                  color: this.isOpening() ? updated.color : null,
+                }
               : cur,
           );
           this.savingEdit.set(false);

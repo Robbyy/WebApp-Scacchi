@@ -7,6 +7,8 @@ import { VariantService } from '../core/variant.service';
 import { ReviewService } from '../core/review.service';
 import { StockfishService } from '../core/stockfish.service';
 import { StudyService } from '../core/study.service';
+import { ConfirmService } from '../core/confirm.service';
+import { ToastService } from '../core/toast.service';
 import { UciScore } from '../core/uci';
 import { Variant } from '../core/variant.model';
 import { Study } from '../core/study.model';
@@ -95,6 +97,11 @@ function setup(
   reviewService: Partial<ReviewService> = { getForVariant: () => of(null) },
   /** `data` della route: con il contesto il dettaglio è quello di sezione. */
   data: Record<string, unknown> = {},
+  ui: {
+    confirmResult?: boolean;
+    success?: (text: string) => void;
+    error?: (text: string) => void;
+  } = {},
 ) {
   const paramMap = new BehaviorSubject(convertToParamMap({ id: String(v.id) }));
   TestBed.configureTestingModule({
@@ -105,6 +112,17 @@ function setup(
       { provide: ReviewService, useValue: reviewService },
       { provide: StockfishService, useValue: engine },
       { provide: StudyService, useValue: studyService },
+      {
+        provide: ConfirmService,
+        useValue: { ask: () => Promise.resolve(ui.confirmResult ?? true) },
+      },
+      {
+        provide: ToastService,
+        useValue: {
+          success: (text: string) => ui.success?.(text),
+          error: (text: string) => ui.error?.(text),
+        },
+      },
       {
         provide: ActivatedRoute,
         useValue: { paramMap, snapshot: { paramMap: paramMap.value, data } },
@@ -212,7 +230,7 @@ describe('VariantDetail', () => {
     );
     const element: HTMLElement = fixture.nativeElement;
     const links = Array.from(
-      element.querySelectorAll<HTMLAnchorElement>('.detail-actions .edit-link'),
+      element.querySelectorAll<HTMLAnchorElement>('.detail-actions a.edit-link'),
     );
 
     expect(element.querySelector('.side-kicker')?.textContent?.trim()).toBe('Posizione');
@@ -709,10 +727,22 @@ describe('VariantDetail (Mediogioco, ISSUE-016)', () => {
     studyService: Partial<StudyService> = { getStudy: () => of(study('MIDDLEGAME')) },
     engine = fakeEngine(),
     reviewService: Partial<ReviewService> = { getForVariant: () => of(null) },
+    variantService: Partial<VariantService> = { getVariant: () => of(v) },
+    ui: {
+      confirmResult?: boolean;
+      success?: (text: string) => void;
+      error?: (text: string) => void;
+    } = {},
   ) {
-    const s = setup(v, studyService, engine, { getVariant: () => of(v) }, reviewService, {
-      [SECTION_CONTEXT_DATA]: MIDDLEGAME_SECTION_CONTEXT,
-    });
+    const s = setup(
+      v,
+      studyService,
+      engine,
+      variantService,
+      reviewService,
+      { [SECTION_CONTEXT_DATA]: MIDDLEGAME_SECTION_CONTEXT },
+      ui,
+    );
     return { ...s, el: s.fixture.nativeElement as HTMLElement };
   }
 
@@ -720,12 +750,21 @@ describe('VariantDetail (Mediogioco, ISSUE-016)', () => {
     return Array.from(el.querySelectorAll('a')).map((a) => a.getAttribute('href') ?? '');
   }
 
-  it('shows the position from its starting FEN with tree, comments and NAG', () => {
-    const { cmp, el } = middlegame(position);
+  it('hides the saved analysis until the user explicitly reveals it', () => {
+    const { cmp, el, fixture } = middlegame(position);
     expect(cmp.error()).toBeNull();
     expect(cmp.currentFen()).toBe(CUSTOM_FEN);
     expect(el.querySelector('.side-kicker')?.textContent?.trim()).toBe('Posizione');
     expect(el.querySelector('.side-title')?.textContent).toContain('Centro bloccato');
+    expect(cmp.analysisVisible()).toBe(false);
+    expect(el.querySelector('.move')).toBeNull();
+    expect(el.querySelector('.controls')).toBeNull();
+    expect(el.querySelector('.reveal-analysis')?.textContent).toContain('Mostra analisi');
+
+    cmp.revealAnalysis();
+    fixture.detectChanges();
+
+    expect(cmp.analysisVisible()).toBe(true);
     expect(el.querySelector('.move')?.textContent).toContain('Ke2');
     expect(el.querySelector('.move-nag')?.textContent).toContain('!');
     expect(el.querySelector('.move-comment')?.textContent).toContain('Il re va al centro');
@@ -790,16 +829,130 @@ describe('VariantDetail (Mediogioco, ISSUE-016)', () => {
     expect(cmp.error()).toBeNull();
     expect(cmp.currentFen()).toBe(CUSTOM_FEN);
     expect(cmp.tokens().length).toBe(0);
-    expect(el.querySelector('.panel-note')?.textContent).toContain('Nessuna mossa');
+    expect(el.querySelector('.panel-note')?.textContent).toContain('Nessuna analisi salvata');
+    expect(el.querySelector('.reveal-analysis')).toBeNull();
+    expect(el.querySelector('.controls')).toBeNull();
+  });
+
+  it('hides the analysis again when a different route id is loaded', () => {
+    const { cmp, el, fixture, navigateTo } = middlegame(position);
+    cmp.revealAnalysis();
+    fixture.detectChanges();
+    expect(el.querySelector('.move')).not.toBeNull();
+
+    navigateTo(42);
+
+    expect(cmp.analysisVisible()).toBe(false);
+    expect(el.querySelector('.move')).toBeNull();
+    expect(el.querySelector('.reveal-analysis')).not.toBeNull();
+  });
+
+  it('does not let keyboard or navigation commands advance a hidden line', () => {
+    const { cmp } = middlegame(position);
+    cmp.next();
+    cmp.last();
+    cmp.goTo([0]);
+    cmp.onKey(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(cmp.currentPath()).toEqual([]);
   });
 
   it('offers the two distinct editors on canonical routes', () => {
     const { el } = middlegame(position);
-    const links = Array.from(el.querySelectorAll<HTMLAnchorElement>('.detail-actions .edit-link'));
+    const links = Array.from(
+      el.querySelectorAll<HTMLAnchorElement>('.detail-actions a.edit-link'),
+    );
     expect(links.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([
       ['Configura posizione iniziale', '/middlegame/positions/41/setup'],
       ['Modifica mosse', '/middlegame/positions/41/edit'],
     ]);
+    expect(el.querySelector('.edit-link--danger')?.textContent).toContain('Elimina posizione');
+  });
+
+  it('deletes the position and returns to its parent study only after success', async () => {
+    let deletedId: number | null = null;
+    let successMessage = '';
+    const { cmp } = middlegame(
+      position,
+      undefined,
+      undefined,
+      undefined,
+      {
+        getVariant: () => of(position),
+        deleteVariant: (id: number) => {
+          deletedId = id;
+          return of(void 0);
+        },
+      },
+      { success: (text) => (successMessage = text) },
+    );
+    const router = TestBed.inject(Router);
+    let navTarget: string | null = null;
+    router.navigateByUrl = ((url: string) => {
+      navTarget = url;
+      return Promise.resolve(true);
+    }) as typeof router.navigateByUrl;
+
+    await cmp.removePosition();
+
+    expect(deletedId).toBe(41);
+    expect(successMessage).toBe('Posizione eliminata.');
+    expect(navTarget).toBe('/middlegame/studies/6');
+  });
+
+  it('keeps the position when deletion is cancelled', async () => {
+    let deleteCalls = 0;
+    const { cmp } = middlegame(
+      position,
+      undefined,
+      undefined,
+      undefined,
+      {
+        getVariant: () => of(position),
+        deleteVariant: () => {
+          deleteCalls++;
+          return of(void 0);
+        },
+      },
+      { confirmResult: false },
+    );
+    const router = TestBed.inject(Router);
+    let navCalls = 0;
+    router.navigateByUrl = (() => {
+      navCalls++;
+      return Promise.resolve(true);
+    }) as typeof router.navigateByUrl;
+
+    await cmp.removePosition();
+
+    expect(deleteCalls).toBe(0);
+    expect(navCalls).toBe(0);
+  });
+
+  it('stays on the detail and reports an error when deletion fails', async () => {
+    let errorMessage = '';
+    const { cmp } = middlegame(
+      position,
+      undefined,
+      undefined,
+      undefined,
+      {
+        getVariant: () => of(position),
+        deleteVariant: () => throwError(() => new Error('500')),
+      },
+      { error: (text) => (errorMessage = text) },
+    );
+    const router = TestBed.inject(Router);
+    let navCalls = 0;
+    router.navigateByUrl = (() => {
+      navCalls++;
+      return Promise.resolve(true);
+    }) as typeof router.navigateByUrl;
+
+    await cmp.removePosition();
+
+    expect(cmp.deletingPosition()).toBe(false);
+    expect(errorMessage).toBe('Eliminazione non riuscita.');
+    expect(navCalls).toBe(0);
   });
 
   it('returns to its study inside the section', () => {
@@ -910,10 +1063,14 @@ describe('VariantDetail (Mediogioco, ISSUE-016)', () => {
       { getForVariant: () => of(schedule) },
     );
     const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.move')).not.toBeNull();
+    expect(el.querySelector('.reveal-analysis')).toBeNull();
     expect(el.querySelector('.engine-sub')?.textContent).toContain('Gioca contro il computer');
     expect(el.querySelector('.train-cta')?.getAttribute('href')).toBe('/variants/1/train');
     expect(el.querySelector('.review-hint')).not.toBeNull();
-    const actions = Array.from(el.querySelectorAll<HTMLAnchorElement>('.detail-actions .edit-link'));
+    const actions = Array.from(
+      el.querySelectorAll<HTMLAnchorElement>('.detail-actions a.edit-link'),
+    );
     expect(actions.map((a) => a.getAttribute('href'))).toEqual([
       '/variants/1/edit',
       '/variants/1/stats',

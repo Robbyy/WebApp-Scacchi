@@ -26,6 +26,16 @@
 > estensione contenuta del modello `MoveNode`. L'alternativa «Elimina continuazioni» non fa
 > parte di R24 ed è registrata tra i punti aperti.
 
+> **Consolidamento R26.1 (2026-08-14):** i correttivi UX/layout emersi dopo R26 e il
+> comportamento funzionale «analisi posizionale inizialmente nascosta» sono gestiti insieme
+> dalla change OpenSpec `issue-016-positional-study-consolidation`, perché attraversano
+> componenti condivisi e costituiscono il contratto di riuso per R27. Implementazione e test
+> automatici, verifica browser multi-viewport e gate DB sono completati; la change è archiviata in
+> `openspec/changes/archive/2026-08-14-issue-016-positional-study-consolidation/`. R27 dovrà
+> verificare ogni punto con fase `ENDGAME` e rotte `/endgame`, anche se non richiederà nuovo codice.
+> Dettagli in
+> [`stato-corrente.md`](../stato-corrente.md#correttivi-r26r27-verificati-in-r261).
+
 ---
 
 ## ISSUE-021 — Scaffold navigazione tre sezioni (Aperture/Mediogioco/Finale) ✅

@@ -693,12 +693,13 @@ describe('VariantEditor — pannello varianti', () => {
     return { ...s, asked, navTargets };
   }
 
-  it('offers the drawer, never a permanent third column', () => {
+  it('offers the drawer and reserves only a non-interactive alignment spacer', () => {
     const { fixture, cmp } = editorOn([italiana, siciliana]);
     expect(cmp.hasVariantNav()).toBe(true);
     expect(fixture.nativeElement.querySelector('.variants-toggle')).not.toBeNull();
-    // Nessun rail: il pannello esiste solo quando il drawer è aperto.
+    // Nessun rail interattivo: il pannello esiste solo quando il drawer è aperto.
     expect(fixture.nativeElement.querySelector('app-study-variant-nav')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.variant-rail-spacer')).not.toBeNull();
 
     cmp.toggleVariants();
     fixture.detectChanges();
@@ -1031,6 +1032,24 @@ describe('VariantEditor (Mediogioco, ISSUE-016)', () => {
     expect(el.querySelector('.move-comment')?.textContent).toContain('Il re va al centro');
     // Il lato da allenare non esiste per una posizione.
     expect(el.querySelector('#vcolor')).toBeNull();
+  });
+
+  it('shows the canonical breadcrumb and keeps every move control in the side column', () => {
+    const { el } = middlegame();
+    const crumbs = Array.from(el.querySelectorAll<HTMLAnchorElement>('.crumbs a'));
+    expect(crumbs.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([
+      ['Mediogioco', '/middlegame'],
+      ['Strutture di pedoni', '/middlegame/studies/6'],
+    ]);
+    expect(el.querySelector('.crumb-current')?.textContent?.trim()).toBe('Centro bloccato');
+    expect(el.querySelector('.side .engine-bar')).not.toBeNull();
+    expect(el.querySelector('.side .controls')).not.toBeNull();
+    expect(el.querySelector('.side .move-counter')).not.toBeNull();
+    expect(el.querySelector('.side .branch-info')).not.toBeNull();
+    expect(el.querySelector('.side .editor-controls')).not.toBeNull();
+    expect(el.querySelector('.board-col .engine-bar')).toBeNull();
+    expect(el.querySelector('.board-col .controls')).toBeNull();
+    expect(el.querySelector('.board-col .editor-controls')).toBeNull();
   });
 
   it('keeps the editor hidden and save inert while the parent phase is pending', () => {

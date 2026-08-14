@@ -303,7 +303,8 @@ describe('StudyDetail (Mediogioco, ISSUE-016)', () => {
   });
 
   it('has none of the opening-only actions (ISSUE-016)', () => {
-    const { el } = setupMiddlegame({ getStudy: () => of(middlegameStudy()) });
+    const positional = { ...middlegameStudy(), color: 'WHITE' as const };
+    const { el } = setupMiddlegame({ getStudy: () => of(positional) });
     const text = el.textContent ?? '';
     expect(text).not.toContain('Statistiche dello studio');
     expect(text).not.toContain('Lichess');
@@ -314,6 +315,20 @@ describe('StudyDetail (Mediogioco, ISSUE-016)', () => {
     expect(el.querySelector('.study-subnav')).toBeNull();
     // Nessun badge di colore sulle posizioni: il lato deriva dalla FEN (R25).
     expect(el.querySelector('.variant-meta .badge')).toBeNull();
+    expect(el.querySelector('.study-tags .badge')).toBeNull();
+  });
+
+  it('hides color and creation prompts while editing positional metadata', () => {
+    const positional = { ...middlegameStudy([]), color: 'WHITE' as const };
+    const { cmp, el, fixture } = setupMiddlegame({ getStudy: () => of(positional) });
+
+    cmp.openEdit();
+    fixture.detectChanges();
+
+    expect(el.querySelector('form.edit-form')).not.toBeNull();
+    expect(el.querySelector('select[name="color"]')).toBeNull();
+    expect(el.querySelector('a.new-cta')).toBeNull();
+    expect(el.querySelector('.list-muted')).toBeNull();
   });
 
   it('still edits the metadata with the existing contract', () => {
@@ -329,6 +344,7 @@ describe('StudyDetail (Mediogioco, ISSUE-016)', () => {
     cmp.openEdit();
     cmp.editName.set('Rinominato');
     cmp.editDescription.set('Nota');
+    cmp.editColor.set('WHITE');
     cmp.saveEdit();
 
     // La fase non viaggia mai nell'aggiornamento (ISSUE-016).

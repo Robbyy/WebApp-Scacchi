@@ -21,10 +21,6 @@
       <p class="list-muted">
         Nessuno studio di {{ label() }}. Crea il primo studio per raccogliere le tue posizioni.
       </p>
-      <a class="new-cta" [routerLink]="paths().newStudy">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" /></svg>
-        Nuovo studio
-      </a>
     </div>
   } @else {
     <ul class="study-cards">
@@ -36,15 +32,6 @@
               <span class="study-desc">{{ s.description }}</span>
             }
             <span class="study-meta">
-              @if (s.color) {
-                <span
-                  class="badge"
-                  [class.badge--white]="s.color === 'WHITE'"
-                  [class.badge--black]="s.color === 'BLACK'"
-                  [class.badge--mixed]="s.color === 'MIXED'"
-                  >{{ colorLabel(s.color) }}</span
-                >
-              }
               <span class="study-count">{{ s.variantCount }} {{ itemLabel(s.variantCount) }}</span>
             </span>
           </a>

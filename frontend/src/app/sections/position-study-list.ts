@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { ConfirmService } from '../core/confirm.service';
 import { StudyService } from '../core/study.service';
 import { ToastService } from '../core/toast.service';
-import { Study, StudyColor } from '../core/study.model';
+import { Study } from '../core/study.model';
 import { SectionRouteContext, sectionLabel, sectionPaths } from '../core/study-sections';
 
 /**
@@ -92,16 +92,4 @@ export class PositionStudyList implements OnInit {
     return position ? 'posizioni' : 'varianti';
   }
 
-  protected colorLabel(color: StudyColor | null | undefined): string {
-    switch (color) {
-      case 'WHITE':
-        return 'Bianco';
-      case 'BLACK':
-        return 'Nero';
-      case 'MIXED':
-        return 'Misto';
-      default:
-        return '';
-    }
-  }
 }

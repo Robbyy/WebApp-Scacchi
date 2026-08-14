@@ -18,8 +18,9 @@ export class StudyService {
   /**
    * Lista degli studi della sola fase indicata (ISSUE-016): usa il filtro già
    * offerto dal backend (`GET /api/studies?phase=…`), così una sezione
-   * posizionale non riceve mai studi di un'altra fase. La home Aperture
-   * continua a usare `getStudies()` senza parametri.
+   * non riceve mai studi di un'altra fase. Anche la home Aperture usa il
+   * filtro esplicito `OPENING`, perché la lista senza parametri comprende
+   * legittimamente tutte le fasi.
    */
   getStudiesByPhase(phase: GamePhase): Observable<Study[]> {
     return this.http.get<Study[]>(this.baseUrl, {

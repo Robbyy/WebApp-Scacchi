@@ -3,7 +3,19 @@
 } @else if (sectionChecking()) {
   <p class="list-muted">Verifica della sezione&#8230;</p>
 } @else {
-  <div class="detail">
+  @if (hasSectionContext && studyId()) {
+    <nav class="crumbs" aria-label="Percorso posizione">
+      <a [routerLink]="paths.studyList">{{ parentLabel }}</a>
+      <span class="crumb-sep">/</span>
+      <a [routerLink]="paths.study(studyId()!)">{{ studyName() }}</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb-current" aria-current="page">{{ name() }}</span>
+    </nav>
+  }
+  <div class="detail" [class.detail--rail]="hasVariantNav()">
+    @if (hasVariantNav()) {
+      <div class="variant-rail-spacer" aria-hidden="true"></div>
+    }
     <div class="board-col">
       <div class="board-with-eval">
         @if (engineOn()) {
@@ -17,6 +29,49 @@
           (moveMade)="onMove($event)"
         />
       </div>
+
+    </div>
+
+    <aside class="side">
+      <header class="side-head">
+        <p class="side-kicker">{{ isEdit() ? ('Modifica ' + itemLabel()) : ('Nuova ' + itemLabel()) }}</p>
+        <h2 class="side-title">{{ isEdit() ? 'Aggiorna la linea' : 'Crea dalla scacchiera' }}</h2>
+      </header>
+
+      @if (hasVariantNav()) {
+        <button
+          type="button"
+          class="variants-toggle"
+          (click)="toggleVariants()"
+          [attr.aria-expanded]="variantsOpen()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h16v2H4zM4 11h16v2H4zM4 16h16v2H4z" />
+          </svg>
+          {{ isPosition() ? 'Posizioni' : 'Varianti' }}
+        </button>
+      }
+
+      <div class="form-field">
+        <label for="vname">Nome</label>
+        <input
+          id="vname"
+          name="name"
+          [ngModel]="name()"
+          (ngModelChange)="onNameChange($event)"
+          placeholder="Es. Difesa Francese"
+        />
+      </div>
+
+      @if (!isPosition()) {
+        <div class="form-field">
+          <label for="vcolor">Lato da allenare</label>
+          <select id="vcolor" name="color" [ngModel]="color()" (ngModelChange)="onColorChange($event)">
+            <option value="WHITE">Bianco</option>
+            <option value="BLACK">Nero</option>
+          </select>
+        </div>
+      }
 
       <div class="engine-bar">
         <button
@@ -100,48 +155,6 @@
             </button>
             <button type="button" class="btn" (click)="cancelDelete()">Annulla</button>
           </div>
-        </div>
-      }
-    </div>
-
-    <aside class="side">
-      <header class="side-head">
-        <p class="side-kicker">{{ isEdit() ? ('Modifica ' + itemLabel()) : ('Nuova ' + itemLabel()) }}</p>
-        <h2 class="side-title">{{ isEdit() ? 'Aggiorna la linea' : 'Crea dalla scacchiera' }}</h2>
-      </header>
-
-      @if (hasVariantNav()) {
-        <button
-          type="button"
-          class="variants-toggle"
-          (click)="toggleVariants()"
-          [attr.aria-expanded]="variantsOpen()"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 6h16v2H4zM4 11h16v2H4zM4 16h16v2H4z" />
-          </svg>
-          {{ isPosition() ? 'Posizioni' : 'Varianti' }}
-        </button>
-      }
-
-      <div class="form-field">
-        <label for="vname">Nome</label>
-        <input
-          id="vname"
-          name="name"
-          [ngModel]="name()"
-          (ngModelChange)="onNameChange($event)"
-          placeholder="Es. Difesa Francese"
-        />
-      </div>
-
-      @if (!isPosition()) {
-        <div class="form-field">
-          <label for="vcolor">Lato da allenare</label>
-          <select id="vcolor" name="color" [ngModel]="color()" (ngModelChange)="onColorChange($event)">
-            <option value="WHITE">Bianco</option>
-            <option value="BLACK">Nero</option>
-          </select>
         </div>
       }
 

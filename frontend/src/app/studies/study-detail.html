@@ -15,7 +15,7 @@
           <p class="study-desc">{{ s.description }}</p>
         }
         <div class="study-tags">
-          @if (s.color) {
+          @if (isOpening() && s.color) {
             <span
               class="badge"
               [class.badge--white]="s.color === 'WHITE'"
@@ -61,6 +61,7 @@
           [(name)]="editName"
           [(description)]="editDescription"
           [(color)]="editColor"
+          [showColor]="isOpening()"
           [disabled]="savingEdit()"
         />
         <div class="edit-actions">
@@ -81,8 +82,9 @@
       </nav>
     }
 
-    <div class="actions">
-      @if (isOpening()) {
+    @if (!editing()) {
+      <div class="actions">
+        @if (isOpening()) {
         <a class="new-cta" [routerLink]="['/variants', 'new']" [queryParams]="{ studyId: s.id }">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" /></svg>
           Nuova variante
@@ -107,16 +109,19 @@
           </svg>
           Importa da Lichess
         </a>
-      } @else {
-        <a class="new-cta" [routerLink]="paths.newPosition" [queryParams]="{ studyId: s.id }">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" /></svg>
-          Nuova posizione
-        </a>
-      }
-    </div>
+        } @else {
+          <a class="new-cta" [routerLink]="paths.newPosition" [queryParams]="{ studyId: s.id }">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" /></svg>
+            Nuova posizione
+          </a>
+        }
+      </div>
+    }
 
     @if (variants().length === 0) {
-      <p class="list-muted">Nessuna {{ itemLabel() }} in questo studio. Aggiungine una con &laquo;Nuova {{ itemLabel() }}&raquo;.</p>
+      @if (!editing()) {
+        <p class="list-muted">Nessuna {{ itemLabel() }} in questo studio. Aggiungine una con &laquo;Nuova {{ itemLabel() }}&raquo;.</p>
+      }
     } @else {
       <ul class="variant-cards">
         @for (v of variants(); track v.id) {

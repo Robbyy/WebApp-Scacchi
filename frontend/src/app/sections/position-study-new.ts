@@ -10,7 +10,7 @@ import { StudyFormFields } from '../studies/study-form-fields';
 
 /**
  * Creazione manuale di uno studio posizionale (ISSUE-016): nome obbligatorio,
- * descrizione e colore facoltativi, fase presa dal contesto di route e mai
+ * descrizione facoltativa, fase presa dal contesto di route e mai
  * scelta dall'utente. La pagina è riusabile dal Finale (R27) senza modifiche.
  *
  * Riusa `StudyFormFields` — il confine già condiviso dei metadati — ma non la
@@ -62,7 +62,8 @@ export class PositionStudyNew {
       .createStudy({
         name,
         description: this.description().trim() || null,
-        color: this.color() || null,
+        // Il colore è un metadato delle Aperture e non viene scelto qui.
+        color: null,
         // Fase imposta dalla sezione e non modificabile in seguito (ISSUE-016).
         phase: this.sectionContext().phase,
       })

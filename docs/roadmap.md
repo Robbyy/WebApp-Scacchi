@@ -52,7 +52,16 @@ Il piano esclude volutamente bug, audit e infrastruttura.
 > editor/dettaglio e navigazione canonici, senza le funzioni riservate alle Aperture.
 > Suite 120 backend/446 frontend, build e flussi E2E 53–58 verdi; la change
 > `issue-016-middlegame-section` è archiviata in OpenSpec.
-> La prossima slice è **R27** (`issue-016-endgame-section`).
+>
+> ✅ **R26.1 — Consolidamento delle posizioni di studio** — implementazione e verifica
+> completate il 2026-08-14 (120 backend, 455 frontend, build Angular e flussi 59–63): UX degli
+> studi posizionali, modalità analisi nascosta, eliminazione dal dettaglio e layout stabile
+> condiviso con R27. Il gate browser/DB è chiuso e la change
+> `issue-016-positional-study-consolidation` è archiviata.
+> La prossima slice di prodotto resta **R27** (`issue-016-endgame-section`). R27 dovrà riusare
+> i componenti comuni e, insieme, verificare uno per uno tutti
+> i correttivi R26.1 con fase `ENDGAME`, rotte `/endgame`, sei viewport e regressioni
+> Aperture/Mediogioco: la condivisione del codice non vale come accettazione implicita.
 
 In sintesi: navigazione → linea migliore del motore → gestione studi → flusso
 varianti/editor → Mediogioco ✅ → Finale → gioco da posizione → impostazioni → parametri motore.

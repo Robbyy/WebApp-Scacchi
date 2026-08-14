@@ -113,11 +113,12 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
   /** Contesto di sezione dai `data` della route: `null` sulle route generiche. */
   private readonly context = sectionContextFrom(this.route.snapshot.data);
   /** Percorsi canonici della sezione (o generici senza contesto). */
-  private readonly paths = sectionPaths(this.context);
+  protected readonly paths = sectionPaths(this.context);
   /** Etichetta del ritorno mostrato dall'errore di sezione. */
   protected readonly parentLabel = this.context ? sectionLabel(this.context.section) : 'Studi';
   protected readonly backLabel = this.context ? `torna a ${this.parentLabel}` : 'torna agli studi';
   protected readonly listLink = this.paths.studyList;
+  protected readonly hasSectionContext = this.context !== null;
   /** La fase dello studio padre deve essere verificata prima di aprire l'editor. */
   protected readonly sectionVerified = signal(!this.context);
   protected readonly sectionChecking = computed(
@@ -131,6 +132,8 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
 
   /** Studio a cui agganciare la nuova variante (da query param ?studyId), se presente. */
   protected readonly studyId = signal<number | null>(null);
+  /** Nome dello studio padre, usato dal breadcrumb canonico in modifica. */
+  protected readonly studyName = signal('');
 
   /** true se ci sono modifiche non salvate (per il guard di uscita). */
   protected readonly dirty = signal(false);
@@ -261,6 +264,7 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
     this.annotating.set(null);
     this.menuTrigger = null;
     this.studyVariants.set([]);
+    this.studyName.set('');
     this.error.set(null);
     this.sectionError.set(null);
     this.sectionVerified.set(!this.context);
@@ -313,6 +317,7 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
             }
             this.isOpening.set(s.phase === 'OPENING');
             this.studyVariants.set(s.variants ?? []);
+            this.studyName.set(s.name);
             if (this.context) {
               this.apply(v);
               this.sectionVerified.set(true);
@@ -348,6 +353,8 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
     this.sectionError.set(message);
     this.sectionVerified.set(false);
     this.studyVariants.set([]);
+    this.studyName.set('');
+    this.studyId.set(null);
     this.tree.set([]);
     this.currentPath.set([]);
     this.dirty.set(false);
@@ -359,6 +366,7 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
 
   /** Applica la variante arrivata dalla richiesta corrente. */
   private apply(v: Variant): void {
+    this.studyId.set(v.studyId ?? null);
     this.name.set(v.name);
     this.color.set(v.color);
     this.startingFen.set(v.startingFen ?? '');

@@ -20,6 +20,8 @@ import { MoveSoundService } from '../core/move-sound.service';
 import { StockfishService } from '../core/stockfish.service';
 import { ReviewService } from '../core/review.service';
 import { StudyService } from '../core/study.service';
+import { ConfirmService } from '../core/confirm.service';
+import { ToastService } from '../core/toast.service';
 import { numberedPv } from '../core/uci';
 import { MoveNode, Variant } from '../core/variant.model';
 import { ReviewSchedule } from '../core/review.model';
@@ -58,6 +60,8 @@ export class VariantDetail implements OnDestroy {
   private readonly stockfish = inject(StockfishService);
   private readonly reviews = inject(ReviewService);
   private readonly studyService = inject(StudyService);
+  private readonly confirm = inject(ConfirmService);
+  private readonly toast = inject(ToastService);
 
   /**
    * Stato del motore Stockfish (Prototipo 16): solo aiuto allo studio, mai in
@@ -100,6 +104,12 @@ export class VariantDetail implements OnDestroy {
    */
   protected readonly isOpening = signal(true);
   protected readonly isPosition = computed(() => !this.isOpening());
+  /** Nelle sezioni posizionali l'analisi salvata parte nascosta per lo studio attivo. */
+  protected readonly analysisRevealed = signal(false);
+  protected readonly analysisVisible = computed(
+    () => this.isOpening() || this.analysisRevealed(),
+  );
+  protected readonly deletingPosition = signal(false);
   /** Schedule di ripetizione della variante (P19), null se mai allenata. */
   protected readonly review = signal<ReviewSchedule | null>(null);
   protected readonly reviewLabel = computed(() => {
@@ -135,6 +145,7 @@ export class VariantDetail implements OnDestroy {
     }
     return v.tree && v.tree.length ? v.tree : fromLine(v.moves);
   });
+  protected readonly hasSavedAnalysis = computed(() => this.tree().length > 0);
 
   protected readonly tokens = computed(() => buildTokens(this.tree()));
   protected readonly mainlineLength = computed(() => mainline(this.tree()).length);
@@ -186,6 +197,8 @@ export class VariantDetail implements OnDestroy {
     this.review.set(null);
     this.currentPath.set([]);
     this.isOpening.set(true);
+    this.analysisRevealed.set(false);
+    this.deletingPosition.set(false);
     this.studyVariants.set([]);
     this.variantsOpen.set(false);
     this.studyName.set('');
@@ -320,21 +333,30 @@ export class VariantDetail implements OnDestroy {
   }
 
   protected goTo(path: number[] | undefined): void {
-    if (!path) {
+    if (!this.analysisVisible() || !path) {
       return;
     }
     this.currentPath.set([...path]);
   }
 
   protected first(): void {
+    if (!this.analysisVisible()) {
+      return;
+    }
     this.currentPath.set([]);
   }
 
   protected prev(): void {
+    if (!this.analysisVisible()) {
+      return;
+    }
     this.currentPath.update((p) => p.slice(0, -1));
   }
 
   protected next(): void {
+    if (!this.analysisVisible()) {
+      return;
+    }
     const kids = childrenAt(this.tree(), this.currentPath());
     if (kids.length > 0) {
       this.currentPath.update((p) => [...p, 0]);
@@ -343,6 +365,9 @@ export class VariantDetail implements OnDestroy {
   }
 
   protected last(): void {
+    if (!this.analysisVisible()) {
+      return;
+    }
     let path = [...this.currentPath()];
     let kids = childrenAt(this.tree(), path);
     while (kids.length > 0) {
@@ -354,6 +379,9 @@ export class VariantDetail implements OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   protected onKey(event: KeyboardEvent): void {
+    if (!this.analysisVisible()) {
+      return;
+    }
     if (event.key === 'ArrowLeft') {
       this.prev();
       event.preventDefault();
@@ -361,6 +389,43 @@ export class VariantDetail implements OnDestroy {
       this.next();
       event.preventDefault();
     }
+  }
+
+  /** Rivela esplicitamente la linea salvata senza persistere stato o progressi. */
+  protected revealAnalysis(): void {
+    if (this.isPosition() && this.hasSavedAnalysis()) {
+      this.currentPath.set([]);
+      this.analysisRevealed.set(true);
+    }
+  }
+
+  /** Elimina la posizione corrente e, solo dopo il successo, torna allo studio padre. */
+  protected async removePosition(): Promise<void> {
+    const v = this.variant();
+    if (!this.isPosition() || !v || v.studyId == null || this.deletingPosition()) {
+      return;
+    }
+    const ok = await this.confirm.ask({
+      title: 'Elimina posizione',
+      message: `Eliminare definitivamente «${v.name}»? L'operazione non è reversibile.`,
+      confirmLabel: 'Elimina',
+      danger: true,
+    });
+    if (!ok) {
+      return;
+    }
+    this.deletingPosition.set(true);
+    this.service.deleteVariant(v.id).subscribe({
+      next: () => {
+        this.deletingPosition.set(false);
+        this.toast.success('Posizione eliminata.');
+        void this.router.navigateByUrl(this.paths.study(v.studyId!));
+      },
+      error: () => {
+        this.deletingPosition.set(false);
+        this.toast.error('Eliminazione non riuscita.');
+      },
+    });
   }
 
   ngOnDestroy(): void {

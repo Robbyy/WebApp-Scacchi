@@ -43,14 +43,16 @@
 
 /* Scacchiera con barra di valutazione affiancata (Prototipo 16) */
 .board-with-eval {
-  display: flex;
-  align-items: stretch;
-  gap: 0.6rem;
+  display: block;
+  position: relative;
 }
 
 .board-with-eval app-eval-bar {
   display: block;
-  flex: 0 0 auto;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: calc(100% + 0.25rem);
 }
 
 /* Controlli motore nel pannello laterale (ISSUE-002): non più sotto la board,
@@ -347,6 +349,31 @@
   color: var(--text-muted);
 }
 
+.study-gate {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.study-gate .panel-title {
+  margin-bottom: 0;
+}
+
+.reveal-analysis {
+  justify-self: start;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--wood-dark);
+  border-radius: 0.6rem;
+  background: var(--wood-dark);
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reveal-analysis:hover {
+  filter: brightness(1.08);
+}
+
 .moves {
   list-style: none;
   margin: 0;
@@ -459,7 +486,9 @@
   background: oklch(0.965 0.018 80);
   color: var(--wood-dark);
   font-weight: 600;
+  font-family: inherit;
   text-decoration: none;
+  cursor: pointer;
   transition: background 0.12s ease;
 }
 
@@ -471,6 +500,21 @@
 
 .edit-link:hover {
   background: var(--wood-light);
+}
+
+.edit-link--danger {
+  color: oklch(0.48 0.18 25);
+  border-color: oklch(0.75 0.09 25);
+  background: oklch(0.975 0.015 25);
+}
+
+.edit-link--danger:hover {
+  background: oklch(0.93 0.04 25);
+}
+
+.edit-link:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .back-link {

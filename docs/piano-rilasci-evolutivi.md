@@ -1,7 +1,8 @@
 # Piano progressivo dei rilasci evolutivi
 
-> **Aggiornato:** 2026-08-13 · **Stato:** in corso — **R20–R25 rilasciati**;
+> **Aggiornato:** 2026-08-14 · **Stato:** in corso — **R20–R25 rilasciati**;
 > **R26 implementata, verificata e archiviata in OpenSpec il 2026-08-13**;
+> **R26.1 implementata, verificata e archiviata in OpenSpec il 2026-08-14**;
 > i rilasci da R27 in poi restano pianificazione.
 >
 > **Perimetro:** sole issue evolutive ancora aperte. I difetti registrati su GitHub,
@@ -94,7 +95,8 @@ Finale resta nella slice R27.
 | **R24 — Editor più espressivo** ✅ | **013**, `issue-016-move-comments` | Entrambi agiscono sul tree editor: una sola revisione dell'interazione sulle mosse riduce duplicazioni e rende l'editor utile anche prima delle nuove sezioni. | ✅ Rilasciato il 2026-08-10: menu azioni accessibile, commento/NAG nel tree JSON retrocompatibile, promozione ed eliminazione verificate; frontend 338 e backend 103 test verdi. «Elimina continuazioni» e annotazioni importate da PGN restano fuori scope. |
 | **R25 — Posizioni manuali** ✅ | `issue-016-custom-starting-fen` | È il vero sblocco funzionale di Mediogioco/Finale e merita un rilascio isolato per il rischio scacchistico e di persistenza. | ✅ Rilasciata il 2026-08-13: OpenSpec valida, 120 test backend e 346 frontend verdi, task 6.1–6.3 chiusi e flussi E2E 49–52 verificati su H2 temporaneo. |
 | **R26 — Mediogioco reale** ✅ | `issue-016-middlegame-section` | Trasforma il segnaposto di R20 nella prima sezione posizionale utilizzabile; riusa modello e editor stabilizzati in R25. | ✅ Implementata e verificata il 2026-08-13: lista/CRUD studi `MIDDLEGAME`, dettaglio e CRUD posizioni, setup FEN, editor/dettaglio/navigazione canonici e controllo esatto della fase; import Lichess, training, statistiche, review/SM-2 e gioco da posizione esclusi. 120 test backend, 446 frontend, build e flussi E2E 53–58 verdi. |
-| **R27 — Finale reale** | `issue-016-endgame-section` | Replica il paradigma del Mediogioco solo dopo averne validato il riuso, evitando di sviluppare due sezioni divergenti in parallelo. | Lista, studio, posizioni e dettaglio Finale riusano i componenti comuni; regressione Aperture/Mediogioco verde. |
+| **R26.1 — Consolidamento posizioni di studio** ✅ | `issue-016-positional-study-consolidation` | Sana in un solo incremento i correttivi emersi dall'uso reale del Mediogioco e fissa i contratti riusabili dal Finale. | Implementazione e verifica completate il 2026-08-14: 120 test backend, 455 frontend, build Angular, flussi browser 59–63 e misure ai sei viewport verdi; DB condiviso invariato nel gate. Change archiviata senza saltare l'aggiornamento delle spec. |
+| **R27 — Finale reale** | `issue-016-endgame-section` | Replica il paradigma del Mediogioco solo dopo averne validato il riuso, evitando di sviluppare due sezioni divergenti in parallelo. | Lista, studio, posizioni e dettaglio Finale riusano i componenti comuni; tutti i correttivi R26-UI-01..06, R26-FUNC-07 e R26-UI-08..10 hanno evidenza `ENDGAME` dedicata, con rotte `/endgame`, sei viewport e regressione Aperture/Mediogioco verde. |
 | **R28 — Gioco da posizione** | `issue-016-play-position-vs-engine` | Aggiunge il confronto con Stockfish solo quando esistono posizioni salvate affidabili da passare al motore. | Avvio di `/play` dalla FEN della posizione salvata; lato al tratto e posizione iniziale corretti; nessun training/review introdotto nelle sezioni posizionali. |
 | **R29 — Informazioni e preferenze** | **015**, **017** | Chiude in modo coerente il cluster topbar dopo 021/011 e introduce le impostazioni solo con una scelta di persistenza esplicita. | OpenSpec 017; pagina Info con versioni FE/BE; decisione documentata DB vs `localStorage`; parametri SM-2 validati e applicati solo alle sessioni future. |
 | **R30 — Configurazione del motore** | **014** | Viene dopo l'hub che ne offre accesso e salvataggio; evita di costruire UI per opzioni che il build asm.js non espone. | Audit UCI documentato sulla build vendorizzata; solo opzioni supportate esposte e persistite; `Threads` resta a 1; MultiPV non amplia automaticamente la UI di R21. |
@@ -127,15 +129,42 @@ esplicitamente `localStorage` oppure un modello già associabile a utente.
 | R24 | ✅ [Mini-specifica R24](backlog/manutenzione-evolutiva.md#mini-specifica-r24--issue-013--issue-016-move-comments) formalizzata il 2026-08-10: NAG singolo, commento testuale limitato, JSON retrocompatibile, menu azioni accessibile; «Elimina continuazioni» resta fuori scope e tra i punti aperti. | ✅ Eseguita (2026-08-10, [esito R24](backlog/manutenzione-evolutiva.md#esito-r24--issue-013--issue-016-move-comments-2026-08-10)): backend 103 verdi e frontend 338 verdi, build ok e checklist live 45–48 a 1600/1440/1024/768/375/320px su una copia del DB H2; nessuna perdita di mosse o annotazioni, parser PGN/Lichess invariato. |
 | R25 | ✅ OpenSpec completa; implementazione e test eseguiti (120 backend, 346 frontend). | ✅ Eseguita il 2026-08-13: flussi manuali 49–52 verificati su H2 temporaneo, con controllo di atomicità, compatibilità Aperture e terminologia posizionale. |
 | R26 | ✅ OpenSpec completa; implementazione e test eseguiti senza ridecidere il modello a fasi. | ✅ Eseguita il 2026-08-13: 120 test backend, 446 frontend, build Angular riuscita e flussi manuali 53–58 su H2 temporaneo a 1600/1440/1024/768/375/320px; database condiviso invariato. |
-| R27–R28 | OpenSpec completa per ogni slice residua di ISSUE-016, riusando il modello e i componenti posizionali approvati. | Test API/validazione, frontend e checklist manuale della fase interessata. |
+| R26.1 | ✅ OpenSpec completa e validata; nessuna nuova API, migration o ridecisione del modello. | ✅ Implementazione, 120 test backend, 455 frontend, build, flussi 59–63 e misure `getBoundingClientRect()` completati ai sei viewport; DB condiviso invariato rispetto alla baseline del gate ed escluso dal lavoro. |
+| R27 | OpenSpec completa che recepisce la matrice R26.1 senza ridecidere il dominio o duplicare componenti in assenza di necessità reale. | Test automatici con fixture `ENDGAME`; verifica di CTA, form, azioni, setup FEN, analisi nascosta, eliminazione/redirect, layout, geometria e navigazione sulle rotte `/endgame`; browser a 1600/1440/1024/768/375/320 px e regressioni Aperture/Mediogioco. Il riuso del codice non sostituisce alcuna evidenza. |
+| R28 | OpenSpec completa per il gioco dalla posizione, riusando il modello e le sezioni posizionali approvate. | Test API/validazione, frontend e checklist manuale del flusso Stockfish dalla FEN salvata. |
 | R29 | Decisione di persistenza delle preferenze e contratto versione backend. | Test di `ReviewScheduler` con parametri e verifica che le schedule esistenti non vengano ricalcolate. |
 | R30 | Audit reale delle opzioni UCI emesse dal worker Stockfish asm.js. | Test del mapping opzioni/comandi UCI e verifica live del motore. |
 
 ## Lavoro preparatorio che può procedere senza cambiare il prodotto
 
 - R20–R26 sono chiusi; **R26 è implementata, verificata e archiviata in OpenSpec**.
-  R27 può riusare il contesto di sezione, il routing canonico e i
-  componenti posizionali consolidati dal Mediogioco.
+  I correttivi R26/R27 sono implementati e verificati nella change R26.1, ora archiviata;
+  R27 è la prossima slice di prodotto.
+- R26.1 ha chiuso nel codice i punti registrati nello stato corrente:
+  il primo è `R26-UI-01`, relativo alla CTA duplicata nello stato vuoto della lista studi, e il
+  secondo è `R26-UI-02`, relativo al campo Colore da nascondere nei form degli studi posizionali.
+  Il campo resta disponibile nelle Aperture e il riuso per R27 passa dallo stesso input contestuale.
+  Sono inoltre implementati `R26-UI-03` (CTA nascosta durante la modifica), `R26-UI-04`
+  (griglia FEN 8×8 invariabile), `R26-UI-05` (eliminazione dal dettaglio con ritorno allo studio)
+  e `R26-UI-06` (barra motore fuori dal flusso). Il riuso e le misure live del layout sono stati
+  verificati ai sei viewport; R27 dovrà ripetere le stesse prove con dati `ENDGAME`.
+- `R26-FUNC-07` è stato specificato e implementato nella stessa change OpenSpec R26.1:
+  Mediogioco e Finale devono trattare ogni posizione come posizione di studio, mostrando inizialmente
+  solo la `startingFen` e rivelando l'analisi completa su richiesta. In questa fase restano esclusi
+  suggerimenti progressivi, autoverifica interattiva e qualsiasi estensione del training posizionale.
+- Il correttivo condiviso `R26-UI-08` libera la colonna della scacchiera nell'editor
+  delle mosse: dal pulsante Motore in poi i controlli operativi vanno nell'aside destro sui layout
+  desktop, preservando la disposizione verticale responsive e lo stesso comportamento in tutte le fasi.
+- `R26-UI-09` stabilizza la geometria fra dettaglio posizione ed editor mosse: una
+  griglia condivisa deve mantenere la scacchiera nello stesso punto e con le stesse dimensioni anche
+  quando compaiono breadcrumb, rail delle posizioni o pannelli laterali, sia in R26 sia in R27.
+- `R26-UI-10` rende più compatta la navigazione posizionale eliminando il conteggio mosse
+  dalle voci del rail e del drawer di Mediogioco/Finale, senza modificare i metadati mostrati nelle
+  voci delle varianti di Apertura.
+- La change R27 deve riportare nei propri proposal/design/spec/tasks tutti i dieci punti come
+  matrice di accettazione. I componenti condivisi rendono probabile che non servano nuove correzioni,
+  ma ogni punto resta da provare con fixture `ENDGAME`, percorsi canonici `/endgame` e browser reale;
+  un test Mediogioco già verde non è, da solo, evidenza per Finale.
 - R23 ha preservato la catena consegnata da R21
   (`parseInfoLine` → `StockfishService.bestLine` → `.engine-line` in `.engine-panel`):
   il riassetto ha riguardato layout e ciclo di cambio variante, non la logica UCI. Resta

@@ -10,12 +10,18 @@
     <h2 class="page-title">Nuovo studio</h2>
     <p class="page-sub">
       Crea uno studio in cui raccogliere le tue posizioni. Il nome è obbligatorio;
-      descrizione e colore sono facoltativi.
+      la descrizione è facoltativa.
     </p>
   </header>
 
   <form class="study-form" (ngSubmit)="submit()">
-    <app-study-form-fields [(name)]="name" [(description)]="description" [(color)]="color" [disabled]="saving()" />
+    <app-study-form-fields
+      [(name)]="name"
+      [(description)]="description"
+      [(color)]="color"
+      [showColor]="false"
+      [disabled]="saving()"
+    />
 
     @if (error()) {
       <p class="page-error">{{ error() }}</p>

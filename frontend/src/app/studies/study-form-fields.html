@@ -13,21 +13,23 @@
       [disabled]="disabled()"
     />
   </label>
-  <label class="field field--color">
-    <span class="field-label">Colore</span>
-    <select
-      class="field-input"
-      [ngModel]="color()"
-      (ngModelChange)="color.set($event)"
-      name="color"
-      [disabled]="disabled()"
-    >
-      <option value="">&#8212;</option>
-      <option value="WHITE">Bianco</option>
-      <option value="BLACK">Nero</option>
-      <option value="MIXED">Misto</option>
-    </select>
-  </label>
+  @if (showColor()) {
+    <label class="field field--color">
+      <span class="field-label">Colore</span>
+      <select
+        class="field-input"
+        [ngModel]="color()"
+        (ngModelChange)="color.set($event)"
+        name="color"
+        [disabled]="disabled()"
+      >
+        <option value="">&#8212;</option>
+        <option value="WHITE">Bianco</option>
+        <option value="BLACK">Nero</option>
+        <option value="MIXED">Misto</option>
+      </select>
+    </label>
+  }
 </div>
 <label class="field">
   <span class="field-label">Descrizione (facoltativa)</span>

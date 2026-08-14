@@ -33,7 +33,7 @@ export class StudyList implements OnInit {
   protected readonly dueCount = signal(0);
 
   ngOnInit(): void {
-    this.service.getStudies().subscribe({
+    this.service.getStudiesByPhase('OPENING').subscribe({
       next: (s) => {
         this.studies.set(s);
         this.loading.set(false);

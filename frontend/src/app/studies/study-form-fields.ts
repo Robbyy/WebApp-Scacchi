@@ -20,6 +20,8 @@ export class StudyFormFields {
   readonly name = model.required<string>();
   readonly description = model.required<string>();
   readonly color = model.required<StudyColor | ''>();
+  /** Il colore è un metadato delle sole Aperture, non degli studi posizionali. */
+  readonly showColor = input(true);
   /** Disabilita i campi (upsert Lichess: i metadati locali restano invariati). */
   readonly disabled = input(false);
 }

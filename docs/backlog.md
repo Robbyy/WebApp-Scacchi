@@ -42,7 +42,7 @@
 | 010 | Pannello varianti adattivo nel dettaglio | manutenzione | mini-spec R23 | ✅ fatto (R23) |
 | 011 | Unifica creazione studio + import Lichess | manutenzione | mini-spec R22 | ✅ fatto (R22) |
 | 013 | Menu contestuale editor | manutenzione | diretto — mini-spec R24 | ✅ fatto (R24) |
-| 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | R26 implementata; restano R27–R28 |
+| 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | R26 e R26.1 chiuse; restano R27–R28 |
 | 017 | Menu "Impostazioni" + SM-2 | sviluppo | OpenSpec | da fare |
 | 014 | Parametri motore Stockfish (UCI) | sviluppo | OpenSpec | da fare |
 | 018 | Revisione di sicurezza | audit | a sé | da fare |
@@ -62,8 +62,11 @@ La sequenza dettagliata dei soli incrementi evolutivi è nel
 5. ~~**R24:** ISSUE-013 + `issue-016-move-comments` (editor).~~ ✅ fatto (2026-08-10).
 6. ~~**R25:** posizione FEN custom.~~ ✅ Implementata, integrata in `master` e verificata manualmente (flussi E2E 49–52, 2026-08-13).
 7. ~~**R26:** Mediogioco reale.~~ ✅ Implementata, verificata e archiviata in OpenSpec (446 test frontend, 120 backend, flussi E2E 53–58, 2026-08-13).
-8. **R27–R28:** slice residue di ISSUE-016: Finale → gioco da posizione.
-9. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
+8. ~~**R26.1:** consolidamento posizioni di studio.~~ ✅ Implementata, verificata e archiviata
+   (455 frontend, 120 backend, build, flussi 59–63 e gate DB).
+9. **R27–R28:** slice residue di ISSUE-016: Finale → gioco da posizione. R27 riusa i componenti
+   R26.1 ma deve verificarne tutti i correttivi con fase `ENDGAME`, rotte `/endgame` e regressioni.
+10. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
 
 I bug GitHub e l'audit di sicurezza seguono le proprie priorità e **non** fanno parte
 di questa cadenza di rilasci evolutivi.
@@ -98,6 +101,15 @@ di questa cadenza di rilasci evolutivi.
 ---
 
 ## Completati
+
+- **`issue-016-positional-study-consolidation` — R26.1** ✅ Implementata e verificata il 2026-08-14:
+  corregge CTA/colore/modalità modifica degli studi posizionali, griglia FEN, analisi inizialmente
+  nascosta, eliminazione dal dettaglio, barra motore e geometria dettaglio/editor, controlli
+  laterali e navigazione compatta. Nessuna API o migration. Suite 120 backend/455 frontend e
+  build verdi; flussi browser 59–63 e misure geometriche superati ai sei viewport. Il DB condiviso
+  è rimasto invariato rispetto alla baseline del gate ed escluso dal lavoro. Change archiviata in
+  `openspec/changes/archive/2026-08-14-issue-016-positional-study-consolidation/`. La matrice di accettazione è vincolante
+  anche per R27: il riuso delle classi non sostituisce test e prove browser con dati `ENDGAME`.
 
 - **`issue-016-middlegame-section` — Mediogioco reale** ✅ (R26, implementata e verificata
   il 2026-08-13). `/middlegame` offre lista e CRUD degli studi `MIDDLEGAME`, dettaglio e

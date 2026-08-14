@@ -98,11 +98,14 @@ describe('PositionStudyList (ISSUE-016)', () => {
     expect(el.querySelector('.study-cards')).toBeNull();
   });
 
-  it('offers the manual creation from the empty state', () => {
+  it('keeps a single creation action in the header when the list is empty', () => {
     const { el } = setup(phaseService([]));
     const empty = el.querySelector('.list-empty');
     expect(empty?.textContent).toContain('Nessuno studio di Mediogioco');
-    expect(empty?.querySelector('a.new-cta')?.getAttribute('href')).toBe('/middlegame/studies/new');
+    expect(empty?.querySelector('a.new-cta')).toBeNull();
+    const ctas = el.querySelectorAll<HTMLAnchorElement>('a.new-cta');
+    expect(ctas.length).toBe(1);
+    expect(ctas[0].getAttribute('href')).toBe('/middlegame/studies/new');
   });
 
   it('links the header CTA to the canonical creation page', () => {
@@ -128,6 +131,12 @@ describe('PositionStudyList (ISSUE-016)', () => {
     const counts = Array.from(el.querySelectorAll('.study-count')).map((s) => s.textContent?.trim());
     expect(counts).toEqual(['3 posizioni', '1 posizione']);
     expect(el.textContent).not.toContain('varianti');
+  });
+
+  it('never presents a legacy color on positional study cards', () => {
+    const { el } = setup(phaseService([m2]));
+    expect(el.querySelector('.study-meta .badge')).toBeNull();
+    expect(el.textContent).not.toContain('Bianco');
   });
 
   it('removes a study after confirmation', async () => {

@@ -1,7 +1,7 @@
 # Checklist E2E manuale - WebApp Scacchi
 
 > Checklist ripetibile per la validazione manuale end-to-end, verificata fino alla release
-> evolutiva R26 (2026-08-13), con i flussi R25 e R26 verificati.
+> evolutiva R26.1 (2026-08-14).
 > Eseguibile in pochi minuti dopo ogni rilascio significativo, prima di dichiararlo completato.
 > Complementare ai test automatici (vedi sezione "Copertura automatica" in fondo).
 
@@ -132,9 +132,50 @@
 
 ---
 
+## Flussi aggiunti (R26.1 — verificata il 2026-08-14)
+
+- [x] **59. Studi posizionali senza duplicazioni o colore (R26.1)** — a 1600/1440/1024/768/375/320px `/middlegame` mostra una sola CTA «Nuovo studio» nello stato vuoto; creazione e modifica non mostrano «Colore» e inviano/conservano `color: null`; durante «Modifica» non compaiono «Nuova posizione» né l'invito operativo. Verificare per contrasto che le Aperture conservino campo e badge colore.
+- [x] **60. Griglia FEN invariabile (R26.1)** — nella creazione e configurazione di una posizione, passare da board vuota a posizione standard e collocare/rimuovere pezzi di ogni tipo: le 64 caselle mantengono lo stesso rettangolo e gli SVG restano contenuti senza modificare bordi, righe o colonne; nessun overflow alle sei larghezze.
+- [x] **61. Posizione come esercizio di studio ed eliminazione (R26.1)** — il dettaglio apre sulla `startingFen` senza mosse, rami, commenti, NAG, replay o contatore; «Mostra analisi» rivela l'intero albero e il cambio posizione/ricaricamento lo nasconde di nuovo. Un albero vuoto mostra «Nessuna analisi salvata». «Elimina posizione» gestisce annullamento/errore senza navigare e, dopo successo, torna allo studio padre con toast.
+- [x] **62. Geometria stabile del dettaglio/editor (R26.1)** — nello stesso viewport misurare con `getBoundingClientRect()` la scacchiera nel dettaglio, dopo accensione del motore e nell'editor: `left`, `top`, `width` e `height` devono restare uguali dove previsto. Nell'editor `.board-col` contiene soltanto board/barra; Motore, replay, contatore, ramo, azioni e conferma sono nell'aside destro. Ripetere almeno a 1600/1440/1024/768/375/320px e verificare assenza di overflow.
+- [x] **63. Navigazione posizionale compatta e regressione Aperture (R26.1)** — rail e drawer Mediogioco mostrano per ogni posizione soltanto il titolo, senza «N mosse» né badge colore; selezione, stato corrente, chiusura drawer e percorsi canonici restano operativi. Le voci Aperture conservano colore e conteggio mosse, la home filtra esplicitamente `OPENING`; `/endgame` resta il segnaposto R27.
+
+> Evidenza del 2026-08-14: suite verde (120 backend, 455 frontend), build Angular riuscita e
+> flussi 59–63 completati sul backend collegato a `H2_DB_PATH` temporaneo. Nessun errore inatteso
+> in console. Le board di dettaglio ed editor hanno lo stesso rettangolo ai sei viewport; il toggle
+> motore non ne cambia geometria (sui viewport stretti l'eventuale scroll cambia soltanto le
+> coordinate relative alla finestra, non quelle del documento). Il setup mantiene 64 caselle
+> uniformi e non produce overflow. Il database condiviso è rimasto invariato durante il gate:
+> `86016` byte, timestamp `2026-08-14 01:45:52`, SHA-256
+> `144FD67C95C4D0EE886AC7048D56510845CA94899392544B663BD4618561C943`.
+
+### Gate futuro R27 — equivalenza Finale obbligatoria
+
+Questa matrice non è eseguibile finché `/endgame` resta un segnaposto e non incrementa il conteggio
+dei flussi correnti. Dovrà essere recepita e numerata nella checklist della change R27. Il fatto che
+un componente sia condiviso indica che non è attesa una seconda implementazione, non che la prova
+`ENDGAME` possa essere omessa.
+
+| Punto ereditato da R26.1 | Evidenza obbligatoria in R27 |
+|---|---|
+| R26-UI-01 | Stato vuoto di `/endgame` con una sola CTA «Nuovo studio». |
+| R26-UI-02 | Creazione/modifica studio `ENDGAME` senza colore e payload con `color: null`; Aperture invariata. |
+| R26-UI-03 | «Nuova posizione» e invito operativo assenti durante la modifica di uno studio Finale. |
+| R26-UI-04 | Setup FEN Finale con griglia 8×8 invariabile e nessun overflow ai sei viewport. |
+| R26-UI-05 | Eliminazione dal dettaglio e redirect riuscito a `/endgame/studies/{id}`; annullamento/errore senza navigazione. |
+| R26-UI-06 | Toggle motore senza variazioni del rettangolo della board nel dettaglio Finale. |
+| R26-FUNC-07 | Posizione `ENDGAME` con analisi nascosta, rivelazione completa e reset a cambio/reload; nessun training/review/statistica. |
+| R26-UI-08 | Editor Finale con board/barra nella colonna scacchiera e controlli operativi nell'aside desktop. |
+| R26-UI-09 | Stesse coordinate della board fra dettaglio ed editor Finale, con breadcrumb/rail e alle sei larghezze previste. |
+| R26-UI-10 | Rail/drawer Finale con soli titoli; navigazione Aperture ancora completa di colore e conteggio mosse. |
+
+---
+
 ## Pulizia
 
-- [x] Studi e varianti di test eliminati dal database temporaneo; i seed del database persistente sono invariati.
+- [x] I record di prova R26.1 (due posizioni e lo studio padre) sono stati eliminati dal database
+  temporaneo, esterno al workspace. Il database condiviso è rimasto invariato rispetto alla baseline
+  del gate e resta escluso da staging, ripristini e sovrascritture.
 
 ---
 
@@ -143,7 +184,7 @@
 Questi flussi sono coperti anche da test automatici (da eseguire prima della checklist manuale):
 
 - **Backend** (`mvnw.cmd test` — **120 test**): CRUD varianti, validazione legalità (mainline e albero, `400` strutturato), FEN custom R25 (normalizzazione, FEN mancante/vuota, re, pedoni, arrocco, en-passant, lato che ha appena mosso, mosse dalla FEN e aggiornamento atomico), round-trip albero `tree → DB → DTO`, annotazioni R24 (`MoveNodeTest` costruttore a due argomenti e normalizzazione del commento, `TreeConverterTest` lettura di JSON legacy e assenza dei campi per un albero non annotato, `VariantValidatorTest`/`VariantControllerTest` limite del commento e insieme dei NAG), `MoveNode`/mainline, CRUD studi (creazione variante nello studio, cancellazione a cascata, import bulk e upsert Lichess), sessioni di allenamento (`TrainingSessionControllerTest`), statistiche (`StatsControllerTest`), spaced repetition (`ReviewSchedulerTest` SM-2 puro + `ReviewControllerTest`).
-- **Frontend** (`npm test -- --watch=false` — **446 test**): scacchiera (click, drag, promozione, hide-on-drag, audio), editor posizione R25 (setup visuale, FEN, arrocco, en-passant, salvataggio senza mosse, accesso all'editor dell'albero, errori backend e guard di fase), sezione Mediogioco R26 (routing canonico e tab attivo, filtro `MIDDLEGAME`, lista/creazione/modifica/eliminazione studi, CRUD posizioni, setup/albero/dettaglio e navigazione sorelle, rifiuto di fase errata anche con risposte ritardate o fuori ordine, assenza delle azioni riservate alle Aperture), editor varianti (mosse, varianti, promuovi a mainline, conferma cancellazione, guard, creazione in studio), navigazione posizionale R25 (etichette «Posizioni», assenza dei badge Bianco/Nero e del lato da allenare, regressione Aperture), terminologia fase-aware nella home, training (mosse corrette/errate, rami, completamento, audio, submit sessione), studi (lista/dettaglio/eliminazione, CTA e modifica inline R22), pagina unica creazione/import R22 (`study-new` — creazione locale, anteprima e suggerimenti, upsert con metadati locali, `?studyId` valido/inesistente/non-Aperture, errore di import parziale, bozza `sessionStorage`; redirect della route storica in `app.routes`), import PGN (anche in studio) e parser `pgn`, import/auth Lichess (`lichess`, `lichess-auth`), comando Lichess in topbar (`app`), motore (`uci` — parsing PV completa, `pvToSan`, `numberedPv` —, `play`, `stockfish.service` — ciclo spegnimento/riaccensione con worker finto e righe `info` tardive), linea migliore e toggle unico del pannello motore R21 (`variant-detail`, `variant-editor`), pannello varianti R23 (`study-variant-nav` — incluso il caricamento cancellabile, le risposte fuori ordine, il riavvio a FEN identica, drawer/editor e assenza di Auto-play), azioni e annotazioni per mossa R24 (`move-actions-menu`, incluso il ciclo ↑/↓/`Home`/`End`, `move-annotation-dialog`, il blocco «menu azioni e annotazioni» di `variant-editor` e la lettura in sola lettura in `variant-detail`), statistiche (`stats-format`, `stats.service`, `variant-stats`, `study-stats`), ripetizione (`review-format`, `review.service`, `review-due`), navigazione R20 (`app`, `app.routes`, `study-sections`, `coming-soon`), più i servizi `StudyService`/`MoveSoundService` e le utilità `move-tree`.
+- **Frontend** (`npm test` — **455 test**): oltre alla copertura R20–R26, R26.1 verifica CTA e colore contestuali, modalità modifica dello studio, navigazione posizionale compatta, analisi nascosta/rivelata/reset e albero vuoto, cancellazione dal dettaglio con successo/annullamento/errore, griglia FEN strutturale 8×8, breadcrumb, collocazione dei controlli nell'aside e filtro esplicito `OPENING` della home, preservando le regressioni delle Aperture. Misure geometriche reali e flussi multi-viewport sono stati completati manualmente nei punti 59–63.
 
 ### Runner E2E browser (rinviato)
 Un runner E2E completo (Playwright/Cypress) è **rinviato**: richiede tooling e download aggiuntivi non prioritari in questa fase. La combinazione *test unit/integrazione + questa checklist + verifica live nel preview* copre i percorsi critici. Da rivalutare quando l'app si avvicina all'uso reale o all'integrazione CI/CD (terza tornata).

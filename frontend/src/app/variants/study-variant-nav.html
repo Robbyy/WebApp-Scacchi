@@ -30,17 +30,17 @@
           (click)="variantSelected.emit(v.id)"
         >
           <span class="nav-item__name">{{ v.name }}</span>
-          <span class="nav-item__meta">
-            @if (!positionMode()) {
+          @if (!positionMode()) {
+            <span class="nav-item__meta">
               <span
                 class="badge"
                 [class.badge--white]="v.color === 'WHITE'"
                 [class.badge--black]="v.color === 'BLACK'"
                 >{{ v.color === 'WHITE' ? 'Bianco' : 'Nero' }}</span
               >
-            }
-            <span class="nav-item__count">{{ v.moves.length }} mosse</span>
-          </span>
+              <span class="nav-item__count">{{ v.moves.length }} mosse</span>
+            </span>
+          }
         </button>
       </li>
     }

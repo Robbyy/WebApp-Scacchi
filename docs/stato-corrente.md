@@ -1,6 +1,6 @@
 # Stato corrente — WebApp Scacchi
 
-> Aggiornato al: **2026-08-13** (suite test verificata; fine Parte 2, P0–P19; + ISSUE-019 Liquibase; + ISSUE-016 modello a fasi; + ISSUE-021 navigazione a tre sezioni; + ISSUE-022/ISSUE-007 linea migliore del motore; + R22 ISSUE-011/012/009 ciclo di vita dello studio; OAuth R22 operativo; + R23 ISSUE-010/008 rilasciata; + R24 ISSUE-013/`issue-016-move-comments` rilasciata; + R25 rilasciata; + R26 Mediogioco implementata e verificata con E2E 53–58).
+> Aggiornato al: **2026-08-14** (R26.1 implementata, verificata e archiviata in OpenSpec).
 > Non è un diario cronologico. La storia per-prototipo è in `docs/archive/stato-avanzamento-2026-06-28.md` e nel git log.
 
 ---
@@ -8,7 +8,7 @@
 ## Sintesi
 
 La webapp è funzionante in locale. **Parte 1 (P0–P6) e Parte 2 (P7–P19) completate e verificate.**
-Suite automatica verde: backend **120 test**, frontend **446 test**.
+Suite automatica verde: backend **120 test**, frontend **455 test**.
 La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE-019); restano Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
 In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre le Aperture: **ISSUE-016 (`issue-016-phase-domain-model`)** introduce `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), immutabile dopo la creazione — vedi [ADR 0014](adr/decisioni-tecniche.md).
 
@@ -32,6 +32,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Modello a fasi di gioco (ISSUE-016)**: ogni studio ha una `phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), scelta alla creazione e immutabile. `Variant` resta l'elemento figlio comune (variante/capitolo in `OPENING`, posizione creata manualmente in `MIDDLEGAME`/`ENDGAME`). Import/sync Lichess, training, review SM-2 e statistiche restano applicati solo alle Aperture; per le altre fasi il backend rifiuta la richiesta (non solo nascondimento in UI).
 - **Posizioni manuali (R25, `issue-016-custom-starting-fen`)**: editor visuale per piazzamento/rimozione pezzi, lato al tratto, arrocco ed en-passant; generazione e normalizzazione della FEN, associazione allo studio, salvataggio anche senza mosse e validazione backend della posizione e dell'albero dalla FEN scelta. I task 6.1–6.3 e i flussi E2E 49–52 sono chiusi: FEN mancante/vuota rifiutata, accesso diretto all'editor dell'albero e terminologia/navigazione posizionale completati.
 - **Mediogioco reale (R26, `issue-016-middlegame-section`)**: `/middlegame` filtra gli studi `MIDDLEGAME` e offre lista, creazione manuale, modifica ed eliminazione; il dettaglio gestisce l'elenco e il CRUD delle posizioni. Setup FEN, editor dell'albero, dettaglio con replay/annotazioni, navigazione fra posizioni e analisi Stockfish riusano i componenti stabilizzati in R25/R23/R24 con percorsi canonici di sezione. La fase viene verificata prima di mostrare o rendere modificabile un contenuto. Import/sync Lichess, training, statistiche, review/SM-2 e gioco contro Stockfish dalla posizione non sono esposti. Finale resta pianificato in R27.
+- **Consolidamento posizioni di studio (R26.1, `issue-016-positional-study-consolidation`)**: implementati e verificati i dieci correttivi emersi dall'uso di R26. Gli studi posizionali non mostrano colore né CTA duplicate; le azioni rispettano la modalità modifica; la griglia FEN è rigidamente 8×8; l'analisi salvata parte nascosta e si rivela solo su richiesta; la posizione è eliminabile dal dettaglio; barra motore, breadcrumb, rail e controlli dell'editor non spostano la board; la navigazione posizionale mostra soltanto i titoli e la home Aperture filtra esplicitamente `OPENING`. Nessuna nuova API, migration o modifica al modello a fasi. R27 deve riusare questi contratti e ripeterne le evidenze con `ENDGAME`.
 
 ---
 
@@ -49,22 +50,95 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Stack**: Angular 22 · TypeScript · Vitest · componenti standalone · signals · OnPush · chess.js · Stockfish asm.js.
 - **Aree**: `chessboard`, `variants`, `positions`, `studies`, `stats`, `reviews`, `play`, `sections`, `core`.
 - **Routing**: `/` → lista studi Aperture; `/studies/new`, `/studies/:id`, `/variants/:id`, training/statistiche/review e `/play` conservano i flussi delle Aperture. La sezione R26 usa `/middlegame`, `/middlegame/studies/new`, `/middlegame/studies/:id`, `/middlegame/positions/new?studyId={id}`, `/middlegame/positions/:id/setup`, `/middlegame/positions/:id/edit` e `/middlegame/positions/:id`; `/endgame` resta sul segnaposto di R20 in attesa di R27.
-- **Test**: 446 verdi (`npm test -- --watch=false`, Vitest headless), inclusi routing e contesto R26, filtro per fase, CRUD studi/posizioni, verifica della fase prima della presentazione o modifica, percorsi canonici, confini delle funzioni riservate alle Aperture e regressioni dei componenti condivisi.
+- **Test**: 455 verdi (`npm test -- --watch=false`, Vitest headless), inclusi routing e contesto R26, filtro per fase, CRUD studi/posizioni, analisi nascosta/rivelata/reset, eliminazione dal dettaglio, form contestuali, griglia FEN 8×8, collocazione dei controlli, breadcrumb e regressioni Aperture.
 - **Avvio locale**: `npm start` (frontend su `http://localhost:4200`, con proxy verso `http://localhost:8080`).
 
 ---
 
 ## Verifiche live e checklist manuale
 
-Verifiche browser superate senza errori console: training, editor, import PGN ramificato, import/sync Lichess (studio pubblico reale `OR3CU5Je`) + OAuth, Stockfish e gioca-vs-computer, sessioni, statistiche, spaced repetition. Per R22: pagina `/studies/new` (creazione, anteprima, import, `?studyId`, errori dedicati, bozza OAuth), modifica inline e griglia verificate live su mock backend a 1440/1024/768/320/280px. Il flusso OAuth end-to-end con account Lichess reale è considerato operativo nella verifica corrente; la precedente risposta 401 era legata alla rete di sviluppo. Per R23: rail/drawer varianti, cambio variante dal dettaglio e dall'editor (pulito e con modifiche pendenti), riavvio dell'analisi col motore acceso e assenza di Auto-play verificati live sull'app reale a 1600/1440/1024/768/375/320px, senza overflow orizzontale e con la scacchiera invariata. Per R24: menu azioni (pulsante e tasto destro), dialog di annotazione, promozione ed eliminazione foglia/sottoalbero, lettura in sola lettura nel dettaglio e rifiuto backend dei metadati non validi verificati alle stesse sei larghezze su una variante reale di 48 nodi — su una **copia** del DB H2 in cartella temporanea, per non toccare la snapshot condivisa. Per R25: flussi 49–52 verificati il 2026-08-13 su H2 file temporaneo; creati e poi rimossi studi/posizioni di test, verificati FEN con arrocco/en-passant, albero legale e rifiuto atomico, rifiuti di configurazioni illegali, compatibilità Aperture e terminologia posizionale. Per R26: flussi 53–58 verificati su H2 file temporaneo isolato a 1600/1440/1024/768/375/320px; completati CRUD di studi e posizioni, FEN e albero vuoto/completo, navigazione sorelle, rifiuto di una fase errata, assenza delle azioni fuori scope, responsive e regressione Aperture. Il database persistente non è stato usato.
+Verifiche browser superate senza errori console inattesi fino a R26.1: training, editor, import PGN/Lichess, OAuth, Stockfish, sessioni, statistiche, responsive e flussi posizionali 49–63. Per R26.1 il backend era collegato a `H2_DB_PATH` temporaneo; CRUD, modalità analisi nascosta, errore controllato di eliminazione, regressioni Aperture/Finale e misure geometriche sono stati verificati a 1600/1440/1024/768/375/320px. Dettaglio ed editor condividono lo stesso rettangolo della board e il toggle motore non ne cambia la geometria; sui viewport stretti l'eventuale scroll modifica solo la coordinata relativa alla finestra, non quella nel documento.
 
-Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **59 flussi** (12 core + 25 Parte 2 + 1 evolutivo R21 + 3 evolutivi R22 + 4 evolutivi R23 + 4 evolutivi R24 + 4 flussi R25 + 6 flussi R26 verificati).
+Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **63 flussi**; i cinque flussi R26.1 (59–63) sono completati.
 
 ---
 
 ## Problemi noti
 
-Nella versione R26 implementata e verificata non risultano bug bloccanti applicativi. R23 ha chiuso i due P1 il 2026-08-10; restano come debito tecnico la race UCI di ISSUE-022 e il ritorno del focus al pulsante «Varianti» alla chiusura del drawer. La build R26 riesce con cinque avvisi di budget CSS/bundle già censiti; non sono errori di compilazione. **Policy DB**: finché non si migra a Supabase, il file `backend/data/scacchi.mv.db` **è versionato su Git** (il `.gitignore` lo ri-include di proposito) ed è la fonte dei dati del repertorio condivisa tra le postazioni; va committato dopo modifiche a repertorio o schema. Dopo l'audit R26 un processo Spring Boot ha aperto la risorsa e il working tree la segnala modificata (90112 byte, SHA-256 `9AECC00B8E0E7539FFB27C9311D968F80DD0458FF393F6F3871170CA4C8F5FBD`); il file resta escluso dallo staging e il ripristino al contenuto versionato è sospeso in attesa di autorizzazione esplicita.
+Nell'implementazione R26.1 non risultano regressioni: 120 test backend, 455 frontend, build Angular e flussi browser verdi. Restano come debito tecnico la race UCI di ISSUE-022 e il ritorno del focus al pulsante «Varianti» alla chiusura del drawer; i warning di budget CSS/bundle non sono errori di compilazione. **Policy DB**: `backend/data/scacchi.mv.db` è la fonte condivisa versionata e non va ripristinata, sovrascritta o inclusa senza decisione esplicita. Dopo lo stop autorizzato dei processi che la bloccavano, la baseline del gate era `86016` byte, timestamp `2026-08-14 01:45:52`, SHA-256 `144FD67C95C4D0EE886AC7048D56510845CA94899392544B663BD4618561C943`; gli stessi valori sono stati rilevati dopo browser, suite e arresto dei server temporanei. Il file resta modificato rispetto a Git per stato preesistente ed escluso dal lavoro R26.1.
+
+### Correttivi R26/R27 verificati in R26.1
+
+I punti seguenti sono implementati, coperti da test automatici e verificati nel browser
+multi-viewport nella change `issue-016-positional-study-consolidation`.
+Per R27 tutti i punti sono requisiti di accettazione: il riuso delle classi condivise evita
+duplicazioni, ma non dimostra da solo la corretta configurazione `ENDGAME`, le rotte `/endgame` o
+la geometria del Finale. La futura change dovrà quindi associare a ogni punto test automatici
+dedicati e verifica browser ai sei viewport previsti.
+
+- ✅ **R26-UI-01 — CTA duplicata nello stato vuoto della lista studi:** `position-study-list` mostrava
+  «Nuovo studio» sia nell'intestazione sia nell'empty state. R26.1 mantiene la CTA
+  dell'intestazione e rimuove quella inferiore, lasciando nell'empty state solo il messaggio.
+  La stessa regola dovrà essere applicata alla futura lista Finale R27 e coperta da test.
+- ✅ **R26-UI-02 — Colore non pertinente negli studi posizionali:** la creazione di uno studio
+  Mediogioco non mostra più il campo «Colore» ereditato dal componente condiviso. Per
+  Mediogioco e Finale il colore non rappresenta un lato di allenamento e non deve essere richiesto
+  o mostrato. R26.1 rende il campo configurabile per contesto e lo nasconde nei
+  form posizionali, mantenendo invariato il comportamento delle Aperture; la stessa regola e lo
+  stesso contratto dati dovranno essere riusati da R27.
+- ✅ **R26-UI-03 — CTA «Nuova posizione» durante la modifica dello studio:** nel dettaglio di uno
+  studio la CTA non resta più visibile mentre il form è in modalità «Modifica». R26.1 nasconde
+  la CTA e l'eventuale invito operativo collegato finché la modifica è aperta,
+  ripristinandoli al ritorno alla modalità di consultazione. La stessa regola dovrà essere
+  applicata al dettaglio degli studi Finale R27.
+- ✅ **R26-UI-04 — Caselle della scacchiera instabili nell'editor FEN:** durante l'inserimento della
+  posizione iniziale gli SVG non possono più alterare bordi e ingombro delle caselle. R26.1 mantiene
+  la griglia rigidamente 8×8 con caselle di dimensione invariabile e contiene
+  ogni pezzo entro la propria casella con dimensioni esplicite e `object-fit: contain`, senza lasciare
+  che l'ingombro intrinseco dell'SVG influenzi il layout. Il vincolo dovrà essere riusato dall'editor
+  posizionale di Finale R27 e coperto da un test di rendering/layout.
+- ✅ **R26-UI-05 — Eliminazione della posizione dal dettaglio:** il dettaglio di una posizione
+  espone ora l'azione distruttiva riusando `DELETE /api/variants/{id}` e `VariantService`.
+  La CTA chiede conferma esplicita, invoca il servizio e, dopo esito positivo, torna alla pagina
+  principale dello studio padre (`paths.study(studyId)`); il dettaglio resta aperto in caso di
+  annullamento o errore. Va riusato e coperto il
+  flusso anche per il dettaglio posizionale di Finale R27.
+- ✅ **R26-UI-06 — Scacchiera spostata dall'attivazione del motore:** la barra di valutazione è ora
+  posizionata fuori dal flusso di `.board-with-eval`; il layout centrato non ne somma più la larghezza.
+  La barra compare senza alterare posizione orizzontale, dimensione o allineamento della scacchiera;
+  il comportamento deve valere anche per il
+  dettaglio posizionale di Finale R27, con test di layout attivo/disattivo.
+- ✅ **R26-FUNC-07 — Analisi inizialmente nascosta nelle posizioni di studio:** il dettaglio di una
+  posizione `MIDDLEGAME` o `ENDGAME` deve aprirsi sulla `startingFen` con l'analisi salvata nascosta.
+  Albero, mosse, rami, commenti, NAG, contatore e controlli di replay non devono essere renderizzati
+  finché l'utente non attiva esplicitamente «Mostra analisi»; al cambio posizione o al ricaricamento
+  lo stato torna nascosto. Se l'albero è vuoto va mostrato «Nessuna analisi salvata» senza azione di
+  rivelazione. Stockfish resta disponibile e inizialmente spento secondo il contratto esistente;
+  Aperture, training, review SM-2 e statistiche non cambiano. Suggerimenti progressivi, autoverifica
+  interattiva e training posizionale restano fuori perimetro. R26.1 implementa il comportamento
+  come stato transitorio locale, resettato al cambio di posizione.
+- ✅ **R26-UI-08 — Controlli dell'editor mosse nella colonna destra:** nei layout desktop l'editor
+  condiviso colloca ora nell'aside il pulsante Motore e tutti i blocchi successivi. `.board-col`
+  contiene soltanto la scacchiera con l'eventuale barra di valutazione;
+  `engine-bar`, navigazione delle mosse, contatore, informazioni sul ramo, azioni di modifica e
+  conferma di eliminazione sono collocati nell'`aside` destro insieme al pannello dell'albero
+  e alle azioni di salvataggio. Sui viewport stretti resta ammessa la disposizione verticale prevista
+  dal responsive. Essendo `VariantEditor` condiviso, il layout deve restare coerente per Aperture,
+  Mediogioco e Finale R27 senza modificare il comportamento delle funzioni esistenti.
+- ✅ **R26-UI-09 — Ancoraggio stabile della scacchiera tra dettaglio ed editor mosse:** passando dal
+  dettaglio canonico di una posizione a «Modifica mosse», o tornando al dettaglio dopo il salvataggio,
+  la scacchiera usava coordinate diverse perché le due pagine avevano shell differenti. R26.1
+  aggiunge breadcrumb e slot geometrico del rail all'editor; dettaglio ed editor condividono così
+  una griglia desktop con colonna della scacchiera ancorata. Breadcrumb, rail
+  e pannello destro non devono modificarne posizione o dimensione. A parità di viewport, il rettangolo
+  della scacchiera (`left`, `top`, `width`, `height`) deve restare invariato nel passaggio fra
+  `/positions/{id}` e `/positions/{id}/edit`. La regola deve valere anche per Finale R27 e integrarsi
+  con `R26-UI-06` e `R26-UI-08`; sui viewport mobili resta ammesso il layout verticale responsive.
+- ✅ **R26-UI-10 — Rimuovere il conteggio mosse dalla navigazione delle posizioni:** in `positionMode`
+  rail e drawer non mostrano più «N mosse». Per le posizioni `MIDDLEGAME` e `ENDGAME`
+  ogni elemento di `StudyVariantNav` mostra soltanto il titolo, mantenendo un target cliccabile
+  accessibile; le varianti `OPENING` conservano badge del colore e conteggio mosse. La regola
+  è applicata sia al rail desktop sia al drawer responsive e va riusata da Finale R27.
 
 ---
 
@@ -109,8 +183,13 @@ su database temporaneo e i task OpenSpec 6.1–6.3 sono completati.
 446 frontend verdi, build Angular riuscita e flussi E2E 53–58 conclusi su database temporaneo.
 La change OpenSpec è archiviata in
 `openspec/changes/archive/2026-08-13-issue-016-middlegame-section/`.
-Il prossimo rilascio di prodotto è **R27** (`issue-016-endgame-section`), che renderà reale
-Finale riusando il contesto e i componenti posizionali consolidati dal Mediogioco.
+
+**R26.1** (`issue-016-positional-study-consolidation`) è implementata e verificata:
+120 test backend, 455 frontend, build Angular e flussi browser 59–63 verdi; misure geometriche
+concluse ai sei viewport e database condiviso invariato rispetto alla baseline del gate. La change
+è archiviata in `openspec/changes/archive/2026-08-14-issue-016-positional-study-consolidation/`.
+Il prossimo rilascio di prodotto sarà **R27**
+(`issue-016-endgame-section`), che renderà reale Finale riusando i contratti consolidati.
 
 La terza tornata infrastrutturale prosegue poi in quest'ordine:
 

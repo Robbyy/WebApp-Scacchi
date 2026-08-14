@@ -120,6 +120,21 @@ function link(el: HTMLElement, text: string): HTMLAnchorElement | undefined {
 }
 
 describe('PositionEditor', () => {
+  it('renders an invariant 8 by 8 setup grid with contained piece images', () => {
+    const { el } = setup();
+    const squares = Array.from(el.querySelectorAll<HTMLButtonElement>('.setup-square'));
+    expect(squares).toHaveLength(64);
+    expect(
+      new Set(squares.map((square) => square.getAttribute('aria-label')?.slice(0, 2))).size,
+    ).toBe(64);
+    expect(
+      squares.every((square) => {
+        const pieces = square.querySelectorAll(':scope > img.piece');
+        return pieces.length <= 1;
+      }),
+    ).toBe(true);
+  });
+
   it('generates a normalized FEN from visual piece placement and setup controls', () => {
     const { cmp } = setup();
     cmp.selectPiece('wK');
