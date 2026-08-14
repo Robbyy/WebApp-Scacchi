@@ -7,7 +7,7 @@ studi e posizioni manuali basate su FEN e albero di mosse.
 ## Stato
 
 Parte 1 e Parte 2 (P0–P19) completate e verificate in locale.
-Backend: 120 test verdi. Frontend: 455 test verdi.
+Backend: 120 test verdi. Frontend: 461 test verdi.
 Terza tornata (infrastruttura) avviata: **schema gestito da Liquibase** (ISSUE-019, fatto).
 OpenSpec è installato e lo scaffold `openspec/` è pronto per le change di maggiore impatto.
 ISSUE-003 (header home: titolo e pulsanti a capo) risolta e verificata a Full HD
@@ -32,14 +32,20 @@ verificato: corregge azioni e metadati degli studi posizionali, rende
 l'analisi salvata inizialmente nascosta, aggiunge l'eliminazione dal dettaglio e stabilizza
 la geometria di scacchiera/editor. Suite 120 backend/455 frontend, build Angular e flussi E2E
 59–63 verdi ai sei viewport; la change è archiviata in
-`openspec/changes/archive/2026-08-14-issue-016-positional-study-consolidation/`. Segue R27
-(`issue-016-endgame-section`): riuserà i componenti comuni, ma dovrà
-verificare tutti i correttivi R26.1 con dati `ENDGAME`, rotte `/endgame`, responsive e regressioni
-Aperture/Mediogioco. Seguono inoltre i bug ISSUE-004/005/006/020, Supabase PostgreSQL, Supabase
-Auth, Docker e CI/CD.
+`openspec/changes/archive/2026-08-14-issue-016-positional-study-consolidation/`. La mini-release
+**R26.2** (`issue-016-position-editor-contextual-actions`) ha poi rifinito l'editor posizionale
+senza cambiare modello o API; segue R27 (`issue-016-endgame-section`): riuserà i componenti
+comuni, ma dovrà verificare tutti i correttivi R26.1 e R26.2 con dati `ENDGAME`, rotte
+`/endgame`, responsive e regressioni Aperture/Mediogioco. Seguono inoltre i bug
+ISSUE-004/005/006/020, Supabase PostgreSQL, Supabase Auth, Docker e CI/CD.
+R26.2 è implementata e verificata (461 test frontend, build e flussi E2E 64–66 ai sei viewport):
+nell'editor di una posizione il breadcrumb resta leggibile ma non navigabile e non compaiono
+kicker, comando «Posizioni», pulsante «Motore» né la label «posizione iniziale», mentre
+«Mosse & rami» prende il posto gerarchico del motore. La change OpenSpec è archiviata in
+`openspec/changes/archive/2026-08-14-issue-016-position-editor-contextual-actions/`.
 Nota operativa: il database H2 versionato risulta modificato e resta rigorosamente escluso
-dal lavoro R26.1. Dopo lo stop esplicito dei processi esterni, il gate ha confermato prima e dopo
-il collaudo dimensione `86016`, timestamp `2026-08-14 01:45:52` e SHA-256
+dal lavoro R26.1 e R26.2. Dopo lo stop esplicito dei processi esterni, il gate ha confermato prima
+e dopo il collaudo dimensione `86016`, timestamp `2026-08-14 01:45:52` e SHA-256
 `144FD67C95C4D0EE886AC7048D56510845CA94899392544B663BD4618561C943`; non viene ripristinato,
 sovrascritto o incluso senza una decisione esplicita.
 

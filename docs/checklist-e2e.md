@@ -1,7 +1,7 @@
 # Checklist E2E manuale - WebApp Scacchi
 
 > Checklist ripetibile per la validazione manuale end-to-end, verificata fino alla release
-> evolutiva R26.1 (2026-08-14).
+> evolutiva R26.2 (2026-08-14).
 > Eseguibile in pochi minuti dopo ogni rilascio significativo, prima di dichiararlo completato.
 > Complementare ai test automatici (vedi sezione "Copertura automatica" in fondo).
 
@@ -149,6 +149,36 @@
 > `86016` byte, timestamp `2026-08-14 01:45:52`, SHA-256
 > `144FD67C95C4D0EE886AC7048D56510845CA94899392544B663BD4618561C943`.
 
+## Flussi aggiunti (R26.2 — verificata il 2026-08-14)
+
+- [x] **64. Breadcrumb non interattivo in modifica (R26.2)** — nell'editor `/middlegame/positions/{id}/edit` il breadcrumb resta leggibile ma nessuna voce è link, focalizzabile o navigabile; la pagina corrente è identificabile semanticamente. Verificare anche che Aperture conservi il comportamento precedente.
+- [x] **65. Gerarchia contestuale dell'editor (R26.2)** — nell'editor posizionale non compaiono «MODIFICA POSIZIONE», «Posizioni», «Motore» o «posizione iniziale»; «Mosse & rami» occupa la posizione del Motore e precede replay/azioni del tree. Salva, Annulla, guard, replay e azioni sui nodi restano operativi.
+- [x] **66. Responsive e preparazione al Finale (R26.2)** — ripetere 64–65 a 1600/1440/1024/768/375/320 px su H2 temporaneo, senza overflow o perdita di focus; il dettaglio conserva il Motore, `/endgame` resta segnaposto e la regressione Aperture è verde.
+
+> Evidenza del 2026-08-14: suite frontend verde (461 test), build Angular riuscita e flussi 64–66
+> completati sul backend collegato a `H2_DB_PATH` temporaneo, con uno studio `MIDDLEGAME` di due
+> posizioni. Alle sei larghezze il percorso «Mediogioco / Strutture di pedoni / Centro bloccato»
+> non contiene link né elementi focalizzabili (`aria-current="page"` sulla sola pagina corrente) e
+> l'ordine del pannello destro resta `side-head → nome → Mosse & rami → replay → contatore →
+> [ramo] → azioni del tree → Salva/Annulla`, senza overflow orizzontale (`scrollWidth ==
+> clientWidth`) e senza errori in console. Verificati replay, badge di ramo, menu azioni con
+> ritorno del focus al pulsante di origine, creazione di un ramo dalla scacchiera, guard delle
+> modifiche non salvate (rifiuto e permanenza nell'editor), salvataggio con toast e redirect a
+> `/middlegame/positions/{id}`, e persistenza di albero, commenti e NAG. Il dettaglio posizionale
+> conserva Motore, breadcrumb navigabile, navigazione fra posizioni e analisi inizialmente
+> nascosta; non espone «Gioca contro il computer» (R28 non anticipata). Riverificato anche il
+> contratto geometrico R26.1: a 1600 e 1024px la scacchiera ha lo stesso rettangolo nel dettaglio e
+> nell'editor (`left`/`top`/`width` identici) e il toggle motore del dettaglio non la sposta;
+> `.board-col` dell'editor contiene ancora soltanto board e barra. Le Aperture conservano
+> kicker, «Varianti» con drawer funzionante, campo colore, barra motore con «Gioca contro il
+> computer», label «posizione iniziale» e albero dopo le azioni del tree; `/endgame` resta il
+> segnaposto R27. Il database condiviso è rimasto invariato durante il gate: `86016` byte,
+> timestamp `2026-08-14 01:45:52`, SHA-256
+> `144FD67C95C4D0EE886AC7048D56510845CA94899392544B663BD4618561C943`.
+>
+> Nota: in questa sessione il pannello browser non era in composizione, quindi non sono state
+> acquisite schermate; le evidenze sono albero di accessibilità, misure DOM e interazioni reali.
+
 ### Gate futuro R27 — equivalenza Finale obbligatoria
 
 Questa matrice non è eseguibile finché `/endgame` resta un segnaposto e non incrementa il conteggio
@@ -169,6 +199,23 @@ un componente sia condiviso indica che non è attesa una seconda implementazione
 | R26-UI-09 | Stesse coordinate della board fra dettaglio ed editor Finale, con breadcrumb/rail e alle sei larghezze previste. |
 | R26-UI-10 | Rail/drawer Finale con soli titoli; navigazione Aperture ancora completa di colore e conteggio mosse. |
 
+### Gate futuro R27 — editor posizionale contestuale R26.2
+
+| Punto ereditato da R26.2 | Evidenza obbligatoria in R27 |
+|---|---|
+| R26.2-UI-01 | Editor `ENDGAME` con breadcrumb visibile ma non interattivo e pagina corrente semanticamente identificata. |
+| R26.2-UI-02 | Kicker «MODIFICA POSIZIONE» assente nell'editor Finale. |
+| R26.2-UI-03 | Pulsante «Posizioni» assente nell'editor Finale, senza comando sostitutivo duplicato. |
+| R26.2-UI-04 | Pulsante «Motore» assente dall'editor Finale; «Mosse & rami» nella sua posizione gerarchica. Il Motore resta verificato nel dettaglio. |
+| R26.2-UI-05 | Label «posizione iniziale» assente; replay, azioni del tree, Salva, Annulla e guard invariati. |
+| R26.2-REG-06 | Aperture e Mediogioco non regrediscono; verifica browser a sei viewport e console senza errori inattesi. |
+
+Il riuso di `VariantEditor` non vale come evidenza per nessuna riga della matrice. R26.2 lascia un
+test automatico che applica il contratto a uno studio `ENDGAME`
+(`variant-editor.spec.ts`, «applies the same contract to an endgame study»): dimostra che la
+presentazione dipende dalla fase e non dalla route, ma non sostituisce la verifica di R27 sulle
+rotte `/endgame` ai sei viewport.
+
 ---
 
 ## Pulizia
@@ -184,7 +231,7 @@ un componente sia condiviso indica che non è attesa una seconda implementazione
 Questi flussi sono coperti anche da test automatici (da eseguire prima della checklist manuale):
 
 - **Backend** (`mvnw.cmd test` — **120 test**): CRUD varianti, validazione legalità (mainline e albero, `400` strutturato), FEN custom R25 (normalizzazione, FEN mancante/vuota, re, pedoni, arrocco, en-passant, lato che ha appena mosso, mosse dalla FEN e aggiornamento atomico), round-trip albero `tree → DB → DTO`, annotazioni R24 (`MoveNodeTest` costruttore a due argomenti e normalizzazione del commento, `TreeConverterTest` lettura di JSON legacy e assenza dei campi per un albero non annotato, `VariantValidatorTest`/`VariantControllerTest` limite del commento e insieme dei NAG), `MoveNode`/mainline, CRUD studi (creazione variante nello studio, cancellazione a cascata, import bulk e upsert Lichess), sessioni di allenamento (`TrainingSessionControllerTest`), statistiche (`StatsControllerTest`), spaced repetition (`ReviewSchedulerTest` SM-2 puro + `ReviewControllerTest`).
-- **Frontend** (`npm test` — **455 test**): oltre alla copertura R20–R26, R26.1 verifica CTA e colore contestuali, modalità modifica dello studio, navigazione posizionale compatta, analisi nascosta/rivelata/reset e albero vuoto, cancellazione dal dettaglio con successo/annullamento/errore, griglia FEN strutturale 8×8, breadcrumb, collocazione dei controlli nell'aside e filtro esplicito `OPENING` della home, preservando le regressioni delle Aperture. Misure geometriche reali e flussi multi-viewport sono stati completati manualmente nei punti 59–63.
+- **Frontend** (`npm test` — **461 test**): oltre alla copertura R20–R26, R26.1 verifica CTA e colore contestuali, modalità modifica dello studio, navigazione posizionale compatta, analisi nascosta/rivelata/reset e albero vuoto, cancellazione dal dettaglio con successo/annullamento/errore, griglia FEN strutturale 8×8, breadcrumb, collocazione dei controlli nell'aside e filtro esplicito `OPENING` della home, preservando le regressioni delle Aperture. R26.2 aggiunge sei test sull'editor posizionale contestuale: breadcrumb senza voci focalizzabili con `aria-current`, assenza di kicker/«Posizioni»/motore/label anche con posizioni sorelle disponibili, ordine DOM del pannello con «Mosse & rami» nello slot del motore, replay/badge di ramo/azioni sui nodi/Salva/Annulla ancora operativi, stesso contratto per uno studio `ENDGAME` e ordine invariato dell'editor Aperture. Misure geometriche reali e flussi multi-viewport sono stati completati manualmente nei punti 59–66.
 
 ### Runner E2E browser (rinviato)
 Un runner E2E completo (Playwright/Cypress) è **rinviato**: richiede tooling e download aggiuntivi non prioritari in questa fase. La combinazione *test unit/integrazione + questa checklist + verifica live nel preview* copre i percorsi critici. Da rivalutare quando l'app si avvicina all'uso reale o all'integrazione CI/CD (terza tornata).

@@ -42,7 +42,7 @@
 | 010 | Pannello varianti adattivo nel dettaglio | manutenzione | mini-spec R23 | ✅ fatto (R23) |
 | 011 | Unifica creazione studio + import Lichess | manutenzione | mini-spec R22 | ✅ fatto (R22) |
 | 013 | Menu contestuale editor | manutenzione | diretto — mini-spec R24 | ✅ fatto (R24) |
-| 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | R26 e R26.1 chiuse; restano R27–R28 |
+| 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | R26/R26.1/R26.2 chiuse; poi R27–R28 |
 | 017 | Menu "Impostazioni" + SM-2 | sviluppo | OpenSpec | da fare |
 | 014 | Parametri motore Stockfish (UCI) | sviluppo | OpenSpec | da fare |
 | 018 | Revisione di sicurezza | audit | a sé | da fare |
@@ -64,9 +64,11 @@ La sequenza dettagliata dei soli incrementi evolutivi è nel
 7. ~~**R26:** Mediogioco reale.~~ ✅ Implementata, verificata e archiviata in OpenSpec (446 test frontend, 120 backend, flussi E2E 53–58, 2026-08-13).
 8. ~~**R26.1:** consolidamento posizioni di studio.~~ ✅ Implementata, verificata e archiviata
    (455 frontend, 120 backend, build, flussi 59–63 e gate DB).
-9. **R27–R28:** slice residue di ISSUE-016: Finale → gioco da posizione. R27 riusa i componenti
-   R26.1 ma deve verificarne tutti i correttivi con fase `ENDGAME`, rotte `/endgame` e regressioni.
-10. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
+9. ~~**R26.2:** rifinitura contestuale dell'editor posizionale.~~ ✅ Implementata e verificata
+   e archiviata (461 frontend, build, flussi 64–66 e gate DB).
+10. **R27–R28:** slice residue di ISSUE-016: Finale → gioco da posizione. R27 riusa i componenti
+   R26.1/R26.2 ma deve verificarne tutti i correttivi con fase `ENDGAME`, rotte `/endgame` e regressioni.
+11. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
 
 I bug GitHub e l'audit di sicurezza seguono le proprie priorità e **non** fanno parte
 di questa cadenza di rilasci evolutivi.
@@ -100,7 +102,22 @@ di questa cadenza di rilasci evolutivi.
 
 ---
 
+## In pianificazione
+
+- Nessuna change OpenSpec in sola pianificazione: la prossima è R27
+  (`issue-016-endgame-section`).
+
 ## Completati
+
+- **`issue-016-position-editor-contextual-actions` — R26.2** ✅ Implementata e verificata il
+  2026-08-14: breadcrumb non interattivo, rimozione di kicker, comando «Posizioni», pulsante
+  «Motore» e label «posizione iniziale», con «Mosse & rami» nella posizione gerarchica del motore.
+  Nessuna API, migration o modifica al modello a fasi. 461 test frontend e build verdi; flussi
+  browser 64–66 superati ai sei viewport su database temporaneo, con il DB condiviso invariato
+  rispetto alla baseline del gate. Dettagli nell'[analisi R26.2](backlog/assets/ISSUE-016/position-editor/analysis-r26.2-contextual-actions.md).
+  Change archiviata in
+  `openspec/changes/archive/2026-08-14-issue-016-position-editor-contextual-actions/`.
+  R27 dovrà applicare gli stessi cinque contratti al Finale e dimostrarli con dati `ENDGAME`.
 
 - **`issue-016-positional-study-consolidation` — R26.1** ✅ Implementata e verificata il 2026-08-14:
   corregge CTA/colore/modalità modifica degli studi posizionali, griglia FEN, analisi inizialmente

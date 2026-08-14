@@ -88,7 +88,8 @@ OpenSpec piccole, ordinate e revisionabili:
 | `issue-016-move-comments` ✅ | Aggiungere commenti e annotazioni alle mosse (`!`, `?`, `!!`, `??`, `!?`, `?!`). | `issue-016-phase-domain-model` | Estensione retrocompatibile di `MoveNode` nel JSON `tree`, senza migration relazionale, e UI di lettura/modifica. Completata in R24 con mini-spec. |
 | `issue-016-middlegame-section` ✅ *(implementata e verificata 2026-08-13)* | Rendere reale la sezione Mediogioco: studi con capitoli/posizioni navigabili, senza import Lichess, training né SM-2. | Modello deciso + editor posizione/FEN minimo. | Lista e CRUD studi, dettaglio e CRUD posizioni, setup/editor/dettaglio/navigazione canonici, controllo esatto della fase; 446 test frontend, 120 backend e flussi E2E 53–58 verdi. |
 | `issue-016-positional-study-consolidation` ✅ *(implementata, verificata e archiviata 2026-08-14)* | Consolidare il paradigma posizionale prima del Finale: UX studi, modalità analisi nascosta ed ancoraggio stabile della board. | R26 verificata. | 455 frontend, 120 backend, build, flussi browser 59–63, misure geometriche e gate DB verdi; change archiviata senza `--skip-specs`. |
-| `issue-016-endgame-section` | Rendere reale la sezione Finale riusando il modello e le componenti definite per Mediogioco. | `issue-016-positional-study-consolidation` chiusa e archiviata. | Vista lista/dettaglio/editor per studi e posizioni di finale, senza import Lichess; matrice completa R26.1 verificata con dati `ENDGAME`, rotte `/endgame`, sei viewport e regressioni Aperture/Mediogioco. Il riuso non sostituisce i test. |
+| `issue-016-position-editor-contextual-actions` ✅ *(R26.2 implementata, verificata e archiviata 2026-08-14)* | Rifinire il contesto dell'editor posizionale prima del Finale: breadcrumb non interattivo, gerarchia «Mosse & rami» e rimozione di comandi/etichette ridondanti. | R26.1 chiusa e archiviata. | Cinque contratti chiusi e verificati in Mediogioco (461 test frontend, flussi 64–66 ai sei viewport); il Finale dovrà ridimostrarli con dati `ENDGAME`. Change archiviata senza `--skip-specs`. |
+| `issue-016-endgame-section` | Rendere reale la sezione Finale riusando il modello e le componenti definite per Mediogioco. | R26.2 e R26.1 archiviate. | Vista lista/dettaglio/editor per studi e posizioni di finale, senza import Lichess; matrice completa R26.1/R26.2 verificata con dati `ENDGAME`, rotte `/endgame`, sei viewport e regressioni Aperture/Mediogioco. Il riuso non sostituisce i test. |
 | `issue-016-play-position-vs-engine` | Avviare il gioco contro Stockfish dalla posizione salvata. | FEN custom + sezioni reali. | Integrazione con `/play?fen=...` o flusso equivalente, senza introdurre training/review. |
 
 La prima change `issue-016-phase-domain-model` è stata completata il 2026-07-04 e ha
@@ -97,13 +98,15 @@ stata implementata e rilasciata dopo la verifica dei flussi E2E 49–52; `issue-
 è stata completata in R24 come estensione limitata del tree. R26 ha applicato queste
 decisioni alla prima sezione reale e ha verificato il riuso con i flussi E2E 53–58.
 R26.1 ha consolidato e verificato il comportamento comune alle sezioni posizionali ed è archiviata.
-Le slice successive non devono ridecidere il dominio.
-R27 dovrà recepire esplicitamente tutti i dieci correttivi R26.1 nei propri artefatti e produrre
-evidenza dedicata `ENDGAME`, anche quando l'implementazione è già ereditata da classi condivise.
+R26.2 ha chiuso la gerarchia contestuale dell'editor prima di R27;
+le slice successive non devono ridecidere il dominio.
+R27 dovrà recepire esplicitamente tutti i dieci correttivi R26.1 e i cinque R26.2 nei propri
+artefatti e produrre evidenza dedicata `ENDGAME`, anche quando l'implementazione è già ereditata
+da classi condivise.
 La navigazione iniziale è stata
 consegnata con ISSUE-021/R20.
 
-**`issue-016-phase-domain-model` implementata (2026-07-04):** `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`, immutabile), `Variant` riusata come elemento figlio comune, import/sync Lichess e training/review/statistiche limitati alle Aperture. **`issue-016-navigation-scaffold` è stata soddisfatta da ISSUE-021/R20 (2026-08-05).** Decisione e alternative in [ADR 0014](../adr/decisioni-tecniche.md). `issue-016-move-comments` è stata completata in R24; `issue-016-custom-starting-fen` è integrata e verificata; `issue-016-middlegame-section` è implementata, verificata e archiviata in R26; `issue-016-positional-study-consolidation` è implementata ma non ancora archiviata. Le slice funzionali residue sono `issue-016-endgame-section` e `issue-016-play-position-vs-engine`, ciascuna con la propria change OpenSpec.
+**`issue-016-phase-domain-model` implementata (2026-07-04):** `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`, immutabile), `Variant` riusata come elemento figlio comune, import/sync Lichess e training/review/statistiche limitati alle Aperture. **`issue-016-navigation-scaffold` è stata soddisfatta da ISSUE-021/R20 (2026-08-05).** Decisione e alternative in [ADR 0014](../adr/decisioni-tecniche.md). `issue-016-move-comments` è stata completata in R24; `issue-016-custom-starting-fen` è integrata e verificata; `issue-016-middlegame-section` è implementata, verificata e archiviata in R26; `issue-016-positional-study-consolidation` è archiviata; `issue-016-position-editor-contextual-actions` è implementata, verificata e archiviata in R26.2. Le slice funzionali residue sono `issue-016-endgame-section` e `issue-016-play-position-vs-engine`, ciascuna con la propria change OpenSpec.
 
 ## ISSUE-017 — Menu "Impostazioni" (hub) + parametrizzazione SM-2
 **Why (problema):** non esiste un punto centrale di configurazione; i parametri

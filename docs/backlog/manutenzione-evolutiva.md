@@ -38,6 +38,30 @@
 
 ---
 
+## R26.2 — Editor posizionale contestuale ✅
+
+**OpenSpec:** `issue-016-position-editor-contextual-actions` · **Stato:** ✅ implementata,
+verificata e archiviata il 2026-08-14 · **Effort:** basso · **Rischio:** basso/medio ·
+**Dipendenza:** R26.1.
+
+La verifica visuale della route `/middlegame/positions/{id}/edit` aveva evidenziato cinque elementi
+non coerenti con la modalità di modifica di una posizione di studio: breadcrumb ancora cliccabile,
+kicker «MODIFICA POSIZIONE», pulsante «Posizioni», pulsante «Motore» e label «posizione iniziale».
+La change mantiene il breadcrumb come testo non focalizzabile, rimuove i blocchi ridondanti e porta
+«Mosse & rami» nella posizione gerarchica del Motore. Il dettaglio posizione conserva il motore;
+Aperture restano invariate; il Finale dovrà ereditare e verificare il contratto in R27.
+
+La mini-release è stata scelta prima di R27 perché coesa, frontend-only e senza API, migration o
+modifiche al modello. L'analisi completa, i criteri di uscita e i rischi sono in
+[`analysis-r26.2-contextual-actions.md`](assets/ISSUE-016/position-editor/analysis-r26.2-contextual-actions.md).
+
+**Esito:** il contratto è guidato dalla fase dello studio (`isPosition()`), quindi vale già per
+`MIDDLEGAME` e `ENDGAME`. 461 test frontend e build Angular verdi; flussi browser 64–66 completati
+ai sei viewport su H2 temporaneo, con database condiviso invariato. La change è archiviata in
+`openspec/changes/archive/2026-08-14-issue-016-position-editor-contextual-actions/`.
+
+---
+
 ## ISSUE-021 — Scaffold navigazione tre sezioni (Aperture/Mediogioco/Finale) ✅
 **OpenSpec:** no · **Effort:** basso · **Rischio:** basso · **Stato: ✅ completata (R20, 2026-08-05).**
 **Scope storico R20:** tre tab di navigazione nella topbar, subito dopo il brand "WebApp Scacchi":

@@ -60,3 +60,19 @@ disabilitato.
 - Scambio Re/Donna.
 - Aiuto dedicato nella schermata.
 - Campo "numero mossa" esposto all'utente.
+
+## R26.2 — Segnalazioni post-R26.1
+
+La revisione della videata `/middlegame/positions/{id}/edit` ha prodotto cinque punti aperti da
+risolvere prima del Finale:
+
+1. breadcrumb visibile ma senza link attivi in modalità modifica;
+2. rimozione della scritta «MODIFICA POSIZIONE»;
+3. rimozione del pulsante «Posizioni»;
+4. rimozione del pulsante «Motore» dall'editor e collocazione di «Mosse & rami» al suo posto;
+5. rimozione della scritta «posizione iniziale» sopra le azioni del tree.
+
+La change `issue-016-position-editor-contextual-actions` li ha trattati come mini-release R26.2:
+tutti e cinque sono implementati e verificati il 2026-08-14 in `VariantEditor`, guidati dalla fase
+dello studio (`isPosition()`) e non dalla route. Il contratto deve essere riusato e verificato in
+R27 con `ENDGAME`; le Aperture sono rimaste invariate.

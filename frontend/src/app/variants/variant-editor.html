@@ -4,10 +4,13 @@
   <p class="list-muted">Verifica della sezione&#8230;</p>
 } @else {
   @if (hasSectionContext && studyId()) {
+    <!-- R26.2-UI-01: in modifica il percorso resta orientamento leggibile e non
+         navigazione. Gli antenati sono testo di contesto non focalizzabile; solo
+         la pagina corrente è marcata semanticamente. -->
     <nav class="crumbs" aria-label="Percorso posizione">
-      <a [routerLink]="paths.studyList">{{ parentLabel }}</a>
+      <span class="crumb-ancestor">{{ parentLabel }}</span>
       <span class="crumb-sep">/</span>
-      <a [routerLink]="paths.study(studyId()!)">{{ studyName() }}</a>
+      <span class="crumb-ancestor">{{ studyName() }}</span>
       <span class="crumb-sep">/</span>
       <span class="crumb-current" aria-current="page">{{ name() }}</span>
     </nav>
@@ -34,11 +37,18 @@
 
     <aside class="side">
       <header class="side-head">
-        <p class="side-kicker">{{ isEdit() ? ('Modifica ' + itemLabel()) : ('Nuova ' + itemLabel()) }}</p>
+        @if (!isPosition()) {
+          <!-- R26.2-UI-02: nell'editor posizionale route e titolo identificano
+               già la modalità, il kicker sarebbe ridondante. -->
+          <p class="side-kicker">{{ isEdit() ? ('Modifica ' + itemLabel()) : ('Nuova ' + itemLabel()) }}</p>
+        }
         <h2 class="side-title">{{ isEdit() ? 'Aggiorna la linea' : 'Crea dalla scacchiera' }}</h2>
       </header>
 
-      @if (hasVariantNav()) {
+      @if (hasVariantNav() && !isPosition()) {
+        <!-- R26.2-UI-03: la navigazione fra posizioni sorelle resta alla
+             consultazione; in modifica il pannello si concentra sull'editing e
+             non offre un comando equivalente. -->
         <button
           type="button"
           class="variants-toggle"
@@ -48,7 +58,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 6h16v2H4zM4 11h16v2H4zM4 16h16v2H4z" />
           </svg>
-          {{ isPosition() ? 'Posizioni' : 'Varianti' }}
+          Varianti
         </button>
       }
 
@@ -73,29 +83,34 @@
         </div>
       }
 
-      <div class="engine-bar">
-        <button
-          class="engine-toggle"
-          type="button"
-          (click)="toggleEngine()"
-          [class.engine-toggle--on]="engineOn()"
-          [disabled]="!engineAvailable()"
-          [attr.aria-pressed]="engineOn()"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v1H7a2 2 0 0 0-2 2v2H4a2 2 0 0 0 0 4h1v2a2 2 0 0 0 2 2h2v1a3 3 0 1 0 6 0v-1h2a2 2 0 0 0 2-2v-2h1a2 2 0 0 0 0-4h-1V8a2 2 0 0 0-2-2h-2V5a3 3 0 0 0-3-3z"/></svg>
-          {{ engineOn() ? 'Motore acceso' : 'Motore' }}
-          @if (engineOn() && engineEval(); as ev) {
-            <span class="engine-depth">prof. {{ ev.depth }}</span>
-          }
-        </button>
-        @if (isOpening()) {
+      @if (isPosition()) {
+        <!-- R26.2-UI-04: «Mosse & rami» occupa la posizione gerarchica del
+             controllo motore, che nell'editor posizionale non viene esposto. Il
+             motore resta disponibile nel dettaglio della posizione. -->
+        <ng-container [ngTemplateOutlet]="movesPanel"></ng-container>
+      } @else {
+        <div class="engine-bar">
+          <button
+            class="engine-toggle"
+            type="button"
+            (click)="toggleEngine()"
+            [class.engine-toggle--on]="engineOn()"
+            [disabled]="!engineAvailable()"
+            [attr.aria-pressed]="engineOn()"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v1H7a2 2 0 0 0-2 2v2H4a2 2 0 0 0 0 4h1v2a2 2 0 0 0 2 2h2v1a3 3 0 1 0 6 0v-1h2a2 2 0 0 0 2-2v-2h1a2 2 0 0 0 0-4h-1V8a2 2 0 0 0-2-2h-2V5a3 3 0 0 0-3-3z"/></svg>
+            {{ engineOn() ? 'Motore acceso' : 'Motore' }}
+            @if (engineOn() && engineEval(); as ev) {
+              <span class="engine-depth">prof. {{ ev.depth }}</span>
+            }
+          </button>
           <!-- Avviare una partita dalla FEN salvata di una posizione è R28:
-               qui resta solo l'analisi (ISSUE-016). -->
+               qui resta solo l'analisi delle Aperture (ISSUE-016). -->
           <button class="engine-sub" type="button" (click)="playVsComputer()" [disabled]="!engineAvailable()">
             Gioca contro il computer
           </button>
-        }
-      </div>
+        </div>
+      }
 
       <div class="controls">
         <button type="button" class="ctrl" (click)="first()" title="Vai all'inizio" aria-label="Vai all'inizio" [disabled]="atStart()">
@@ -111,8 +126,8 @@
 
       <p class="move-counter">Semimossa {{ moveCount() }} · gioca una mossa per continuare</p>
 
-      <div class="branch-info">
-        @if (currentLine().length > 0) {
+      @if (currentLine().length > 0) {
+        <div class="branch-info">
           <span
             class="branch-badge"
             [class.branch-badge--main]="onMainline()"
@@ -120,10 +135,14 @@
             >{{ onMainline() ? 'mainline' : 'variante' }}</span
           >
           <span class="branch-line">{{ currentLine().join(' ') }}</span>
-        } @else {
+        </div>
+      } @else if (!isPosition()) {
+        <!-- R26.2-UI-05: sopra le azioni dell'albero la scritta «posizione
+             iniziale» non descrive il gruppo di comandi e viene omessa. -->
+        <div class="branch-info">
           <span class="branch-line branch-line--muted">posizione iniziale</span>
-        }
-      </div>
+        </div>
+      }
 
       <div class="editor-controls">
         <button
@@ -158,56 +177,9 @@
         </div>
       }
 
-      <div class="panel">
-        <h3 class="panel-title">{{ isPosition() ? 'Mosse &amp; rami' : 'Mosse &amp; varianti' }}</h3>
-        @if (tokens().length === 0) {
-          <p class="panel-note">Gioca le mosse sulla scacchiera. Da una posizione, una mossa diversa crea {{ isPosition() ? 'un ramo' : 'una variante' }}.</p>
-        } @else {
-          <div class="pgn">
-            @for (t of tokens(); track $index) {
-              @switch (t.kind) {
-                @case ('open') {
-                  <span class="paren">(</span>
-                }
-                @case ('close') {
-                  <span class="paren">)</span>
-                }
-                @default {
-                  @if (t.label) {
-                    <span class="move-num">{{ t.label }}</span>
-                  }
-                  <span class="move-wrap">
-                    <button
-                      type="button"
-                      class="move"
-                      [class.move--variation]="t.variation"
-                      [class.move--current]="isCurrent(t.path)"
-                      (click)="goTo(t.path)"
-                      (contextmenu)="openMoveMenu($event, t.path, t.san)"
-                    >
-                      {{ t.san }}@if (t.nag) {<span class="move-nag">{{ t.nag }}</span>}
-                    </button>
-                    <button
-                      type="button"
-                      class="move-actions"
-                      aria-haspopup="menu"
-                      [attr.aria-expanded]="isMenuOpen(t.path)"
-                      [attr.aria-label]="'Azioni per ' + t.san"
-                      [attr.data-move-path]="pathKey(t.path)"
-                      (click)="openMoveMenu($event, t.path, t.san)"
-                    >
-                      &#8942;
-                    </button>
-                  </span>
-                  @if (t.comment) {
-                    <span class="move-comment">{{ t.comment }}</span>
-                  }
-                }
-              }
-            }
-          </div>
-        }
-      </div>
+      @if (!isPosition()) {
+        <ng-container [ngTemplateOutlet]="movesPanel"></ng-container>
+      }
 
       @if (error()) {
         <p class="list-error">{{ error() }}</p>
@@ -219,6 +191,61 @@
         </button>
         <a class="btn" [routerLink]="cancelLink()">Annulla</a>
       </div>
+
+      <!-- Un solo albero, due collocazioni: posizionale subito dopo il nome,
+           Aperture dopo le azioni sui nodi come prima di R26.2. -->
+      <ng-template #movesPanel>
+        <div class="panel">
+          <h3 class="panel-title">{{ isPosition() ? 'Mosse &amp; rami' : 'Mosse &amp; varianti' }}</h3>
+          @if (tokens().length === 0) {
+            <p class="panel-note">Gioca le mosse sulla scacchiera. Da una posizione, una mossa diversa crea {{ isPosition() ? 'un ramo' : 'una variante' }}.</p>
+          } @else {
+            <div class="pgn">
+              @for (t of tokens(); track $index) {
+                @switch (t.kind) {
+                  @case ('open') {
+                    <span class="paren">(</span>
+                  }
+                  @case ('close') {
+                    <span class="paren">)</span>
+                  }
+                  @default {
+                    @if (t.label) {
+                      <span class="move-num">{{ t.label }}</span>
+                    }
+                    <span class="move-wrap">
+                      <button
+                        type="button"
+                        class="move"
+                        [class.move--variation]="t.variation"
+                        [class.move--current]="isCurrent(t.path)"
+                        (click)="goTo(t.path)"
+                        (contextmenu)="openMoveMenu($event, t.path, t.san)"
+                      >
+                        {{ t.san }}@if (t.nag) {<span class="move-nag">{{ t.nag }}</span>}
+                      </button>
+                      <button
+                        type="button"
+                        class="move-actions"
+                        aria-haspopup="menu"
+                        [attr.aria-expanded]="isMenuOpen(t.path)"
+                        [attr.aria-label]="'Azioni per ' + t.san"
+                        [attr.data-move-path]="pathKey(t.path)"
+                        (click)="openMoveMenu($event, t.path, t.san)"
+                      >
+                        &#8942;
+                      </button>
+                    </span>
+                    @if (t.comment) {
+                      <span class="move-comment">{{ t.comment }}</span>
+                    }
+                  }
+                }
+              }
+            </div>
+          }
+        </div>
+      </ng-template>
     </aside>
   </div>
 

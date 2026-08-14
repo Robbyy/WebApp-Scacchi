@@ -58,10 +58,17 @@ Il piano esclude volutamente bug, audit e infrastruttura.
 > studi posizionali, modalità analisi nascosta, eliminazione dal dettaglio e layout stabile
 > condiviso con R27. Il gate browser/DB è chiuso e la change
 > `issue-016-positional-study-consolidation` è archiviata.
-> La prossima slice di prodotto resta **R27** (`issue-016-endgame-section`). R27 dovrà riusare
-> i componenti comuni e, insieme, verificare uno per uno tutti
-> i correttivi R26.1 con fase `ENDGAME`, rotte `/endgame`, sei viewport e regressioni
-> Aperture/Mediogioco: la condivisione del codice non vale come accettazione implicita.
+>
+> ✅ **R26.2 — Editor posizionale contestuale** — implementazione e verifica completate il
+> 2026-08-14 (461 test frontend, build Angular e flussi 64–66 ai sei viewport): nell'editor di una
+> posizione il breadcrumb è testo non focalizzabile, kicker, «Posizioni», «Motore» e «posizione
+> iniziale» non compaiono e «Mosse & rami» prende il posto gerarchico del motore. Aperture e
+> dettaglio posizionale restano invariati; la change è archiviata in
+> `openspec/changes/archive/2026-08-14-issue-016-position-editor-contextual-actions/`.
+> R27 dovrà riusare i componenti comuni e, insieme,
+> verificare uno per uno tutti i correttivi R26.1 e R26.2 con fase `ENDGAME`, rotte `/endgame`,
+> sei viewport e regressioni Aperture/Mediogioco: la condivisione del codice non vale come
+> accettazione implicita.
 
 In sintesi: navigazione → linea migliore del motore → gestione studi → flusso
 varianti/editor → Mediogioco ✅ → Finale → gioco da posizione → impostazioni → parametri motore.

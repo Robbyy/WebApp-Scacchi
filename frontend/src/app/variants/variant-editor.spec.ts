@@ -321,7 +321,9 @@ describe('VariantEditor', () => {
 
     expect(cmp.isPosition()).toBe(true);
     expect(fixture.nativeElement.querySelector('#vcolor')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.side-kicker')?.textContent?.trim()).toBe('Modifica posizione');
+    // R26.2: il kicker sparisce da ogni editor posizionale, anche montato da
+    // una route generica.
+    expect(fixture.nativeElement.querySelector('.side-kicker')).toBeNull();
     expect(cmp.fen()).toBe(startingFen);
     cmp.onMove(move('Ke2'));
     cmp.save();
@@ -1035,21 +1037,22 @@ describe('VariantEditor (Mediogioco, ISSUE-016)', () => {
   });
 
   it('shows the canonical breadcrumb and keeps every move control in the side column', () => {
-    const { el } = middlegame();
-    const crumbs = Array.from(el.querySelectorAll<HTMLAnchorElement>('.crumbs a'));
-    expect(crumbs.map((a) => [a.textContent?.trim(), a.getAttribute('href')])).toEqual([
-      ['Mediogioco', '/middlegame'],
-      ['Strutture di pedoni', '/middlegame/studies/6'],
-    ]);
+    const { el, cmp, fixture } = middlegame();
+    // R26.2: percorso leggibile, ma senza link.
+    expect(
+      Array.from(el.querySelectorAll('.crumbs .crumb-ancestor')).map((s) => s.textContent?.trim()),
+    ).toEqual(['Mediogioco', 'Strutture di pedoni']);
     expect(el.querySelector('.crumb-current')?.textContent?.trim()).toBe('Centro bloccato');
-    expect(el.querySelector('.side .engine-bar')).not.toBeNull();
+    expect(el.querySelector('.side .panel')).not.toBeNull();
     expect(el.querySelector('.side .controls')).not.toBeNull();
     expect(el.querySelector('.side .move-counter')).not.toBeNull();
-    expect(el.querySelector('.side .branch-info')).not.toBeNull();
     expect(el.querySelector('.side .editor-controls')).not.toBeNull();
-    expect(el.querySelector('.board-col .engine-bar')).toBeNull();
+    cmp.goTo([0]);
+    fixture.detectChanges();
+    expect(el.querySelector('.side .branch-info')).not.toBeNull();
     expect(el.querySelector('.board-col .controls')).toBeNull();
     expect(el.querySelector('.board-col .editor-controls')).toBeNull();
+    expect(el.querySelector('.board-col .panel')).toBeNull();
   });
 
   it('keeps the editor hidden and save inert while the parent phase is pending', () => {
@@ -1186,17 +1189,20 @@ describe('VariantEditor (Mediogioco, ISSUE-016)', () => {
     expect(cmp.sectionError()).toContain('Studio della posizione non trovato');
   });
 
-  it('keeps Stockfish but not the play command (ISSUE-016)', () => {
+  // R26.2-UI-04: nell'editor il motore non c'è più; resta nel dettaglio della
+  // posizione, dove è verificato da `variant-detail.spec.ts`. R28 non è
+  // anticipata: il comando di gioco non compare in nessuno dei due.
+  it('exposes neither the engine nor the play command (ISSUE-016, R26.2)', () => {
     const engine = fakeEngine();
-    const { cmp, el, fixture } = middlegame(undefined, undefined, engine);
-    expect(el.querySelector('.engine-toggle')).not.toBeNull();
+    const { el } = middlegame(undefined, undefined, engine);
+    expect(el.querySelector('.engine-bar')).toBeNull();
+    expect(el.querySelector('.engine-toggle')).toBeNull();
     expect(el.querySelector('.engine-sub')).toBeNull();
+    expect(el.textContent).not.toContain('Motore');
     expect(el.textContent).not.toContain('Gioca contro il computer');
-
-    cmp.toggleEngine();
-    fixture.detectChanges();
-    expect(engine.analysed).toEqual([CUSTOM_FEN]);
-    expect(el.querySelector('app-eval-bar')).not.toBeNull();
+    // Senza toggle nessuna analisi parte e la barra di valutazione non compare.
+    expect(engine.analysed).toEqual([]);
+    expect(el.querySelector('app-eval-bar')).toBeNull();
   });
 
   it('keeps the unsaved-changes guard', async () => {
@@ -1226,5 +1232,215 @@ describe('VariantEditor (Mediogioco, ISSUE-016)', () => {
       a.textContent?.includes('Annulla'),
     );
     expect(cancel?.getAttribute('href')).toBe('/');
+  });
+});
+
+// R26.2 (`issue-016-position-editor-contextual-actions`): l'editor di una
+// posizione di studio mostra solo ciò che serve a modificare l'albero. Le
+// Aperture restano al comportamento precedente; R27 eredita il contratto per
+// `ENDGAME`, ma dovrà ripetere le proprie evidenze sulle route `/endgame`.
+describe('VariantEditor — editor posizionale contestuale (R26.2)', () => {
+  const CUSTOM_FEN = '4k3/8/8/3pP3/8/8/8/4K3 w - - 0 1';
+
+  const position: Variant = {
+    id: 41,
+    name: 'Centro bloccato',
+    color: 'WHITE',
+    moves: ['Ke2'],
+    tree: [{ san: 'Ke2', children: [] }],
+    startingFen: CUSTOM_FEN,
+    studyId: 6,
+  };
+  const sibling: Variant = { ...position, id: 42, name: 'Maggioranza in ala', moves: [], tree: [] };
+
+  const opening: Variant = {
+    id: 9,
+    name: 'Italiana',
+    color: 'WHITE',
+    moves: ['e4', 'e5'],
+    startingFen: START,
+    studyId: 5,
+  };
+  const openingSibling: Variant = { ...opening, id: 10, name: 'Siciliana' };
+
+  function study(phase: Study['phase'], variants: Variant[]): Study {
+    return {
+      id: variants[0].studyId!,
+      name: phase === 'OPENING' ? 'Repertorio' : 'Strutture di pedoni',
+      phase,
+      variantCount: variants.length,
+      variants,
+    };
+  }
+
+  /** Blocchi di primo livello del pannello destro, nell'ordine del DOM. */
+  function sideBlocks(el: HTMLElement): string[] {
+    const side = el.querySelector('.side');
+    return side ? Array.from(side.children).map((c) => c.className) : [];
+  }
+
+  /**
+   * Editor di una posizione con una sorella disponibile: l'assenza del comando
+   * di navigazione è quindi attribuibile al contratto, non alla mancanza di
+   * alternative. `MIDDLEGAME` passa dalla route di sezione; `ENDGAME` usa la
+   * route generica, perché `/endgame` arriva con R27.
+   */
+  function positional(phase: Study['phase'] = 'MIDDLEGAME') {
+    const s = setup(
+      { getVariant: (id: number) => of(id === position.id ? position : sibling) },
+      position.id,
+      { getStudy: () => of(study(phase, [position, sibling])) },
+      {},
+      { ask: () => Promise.resolve(true) },
+      fakeEngine(),
+      phase === 'MIDDLEGAME' ? { [SECTION_CONTEXT_DATA]: MIDDLEGAME_SECTION_CONTEXT } : {},
+    );
+    return { ...s, el: s.fixture.nativeElement as HTMLElement };
+  }
+
+  /** Editor di una variante di apertura, anch'essa con una sorella. */
+  function openingEditor() {
+    const s = setup(
+      { getVariant: () => of(opening) },
+      opening.id,
+      { getStudy: () => of(study('OPENING', [opening, openingSibling])) },
+    );
+    return { ...s, el: s.fixture.nativeElement as HTMLElement };
+  }
+
+  it('keeps the breadcrumb readable without any interactive or focusable entry', () => {
+    const { el } = positional();
+    const crumbs = el.querySelector('.crumbs')!;
+    expect(crumbs.getAttribute('aria-label')).toBe('Percorso posizione');
+    // I separatori sono nodi a sé: la spaziatura è la `gap` del flex, non testo.
+    expect(crumbs.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Mediogioco/Strutture di pedoni/Centro bloccato',
+    );
+    expect(
+      Array.from(crumbs.querySelectorAll('.crumb-ancestor')).map((s) => s.textContent?.trim()),
+    ).toEqual(['Mediogioco', 'Strutture di pedoni']);
+    expect(crumbs.querySelectorAll('a').length).toBe(0);
+    expect(crumbs.querySelectorAll('button').length).toBe(0);
+    expect(crumbs.querySelector('[href]')).toBeNull();
+    expect(crumbs.querySelector('[tabindex]')).toBeNull();
+    // La pagina corrente resta identificabile semanticamente.
+    expect(crumbs.querySelector('[aria-current="page"]')?.textContent?.trim()).toBe(
+      'Centro bloccato',
+    );
+  });
+
+  it('hides kicker, positions command, engine and the initial-position label', () => {
+    const { cmp, el } = positional();
+    // Le sorelle esistono: il comando manca per contratto, non per assenza.
+    expect(cmp.hasVariantNav()).toBe(true);
+    expect(el.querySelector('.side-kicker')).toBeNull();
+    expect(el.querySelector('.variants-toggle')).toBeNull();
+    expect(el.querySelector('.engine-bar')).toBeNull();
+    expect(el.querySelector('.branch-line--muted')).toBeNull();
+    const text = el.textContent ?? '';
+    expect(text).not.toContain('MODIFICA POSIZIONE');
+    expect(text).not.toContain('Modifica posizione');
+    expect(text).not.toContain('Posizioni');
+    expect(text).not.toContain('Motore');
+    expect(text).not.toContain('posizione iniziale');
+    // Il titolo, il nome e il salvataggio restano al loro posto.
+    expect(el.querySelector('.side-title')?.textContent?.trim()).toBe('Aggiorna la linea');
+    expect(el.querySelector('#vname')).not.toBeNull();
+    expect(el.querySelector('.actions .btn--primary')?.textContent?.trim()).toBe('Salva modifiche');
+  });
+
+  it('puts the move tree in the engine slot, before replay and node actions', () => {
+    const { el } = positional();
+    expect(sideBlocks(el)).toEqual([
+      'side-head',
+      'form-field',
+      'panel',
+      'controls',
+      'move-counter',
+      'editor-controls',
+      'actions',
+    ]);
+    expect(el.querySelector('.panel-title')?.textContent?.trim()).toBe('Mosse & rami');
+  });
+
+  it('keeps replay, branch badge, node actions, save and cancel available', () => {
+    const { cmp, el, fixture } = positional();
+    const controls = Array.from(el.querySelectorAll<HTMLButtonElement>('.controls .ctrl'));
+    expect(controls.length).toBe(3);
+
+    controls[2].click(); // avanti
+    fixture.detectChanges();
+    expect(cmp.currentPath()).toEqual([0]);
+    expect(el.querySelector('.branch-badge')?.textContent?.trim()).toBe('mainline');
+    expect(el.querySelector('.branch-line')?.textContent?.trim()).toBe('Ke2');
+    expect(el.querySelector('.move-counter')?.textContent).toContain('Semimossa 1');
+
+    // Le azioni sui nodi restano nel pannello, ora più in alto.
+    const action = el.querySelector<HTMLButtonElement>('.side .panel .move-actions')!;
+    expect(action.getAttribute('aria-label')).toBe('Azioni per Ke2');
+    action.click();
+    fixture.detectChanges();
+    expect(el.querySelector('[role="menu"]')).not.toBeNull();
+    cmp.closeMoveMenu();
+    fixture.detectChanges();
+
+    const editorControls = Array.from(el.querySelectorAll<HTMLButtonElement>('.editor-controls .btn'));
+    expect(editorControls.length).toBe(3);
+    expect(editorControls[0].textContent).toContain('Rendi mainline');
+    expect(editorControls[0].disabled).toBe(true); // già sulla mainline
+    expect(editorControls[1].textContent).toContain('Elimina mossa');
+    expect(editorControls[1].disabled).toBe(false);
+    expect(editorControls[2].textContent).toContain('Reset');
+    expect(editorControls[2].disabled).toBe(false);
+
+    const cancel = el.querySelector<HTMLAnchorElement>('.actions a.btn');
+    expect(cancel?.textContent?.trim()).toBe('Annulla');
+    expect(cancel?.getAttribute('href')).toBe('/middlegame/positions/41');
+  });
+
+  // Il contratto dipende dalla fase dello studio, non dalla route: R27 lo
+  // erediterà su `/endgame`, dove dovrà comunque produrre le proprie evidenze.
+  it('applies the same contract to an endgame study', () => {
+    const { cmp, el } = positional('ENDGAME');
+    expect(cmp.isPosition()).toBe(true);
+    expect(cmp.hasVariantNav()).toBe(true);
+    expect(el.querySelector('.side-kicker')).toBeNull();
+    expect(el.querySelector('.variants-toggle')).toBeNull();
+    expect(el.querySelector('.engine-bar')).toBeNull();
+    expect(el.querySelector('.branch-line--muted')).toBeNull();
+    expect(sideBlocks(el)).toEqual([
+      'side-head',
+      'form-field',
+      'panel',
+      'controls',
+      'move-counter',
+      'editor-controls',
+      'actions',
+    ]);
+  });
+
+  it('leaves the opening editor unchanged', () => {
+    const { el } = openingEditor();
+    expect(sideBlocks(el)).toEqual([
+      'side-head',
+      'variants-toggle',
+      'form-field',
+      'form-field',
+      'engine-bar',
+      'controls',
+      'move-counter',
+      'branch-info',
+      'editor-controls',
+      'panel',
+      'actions',
+    ]);
+    expect(el.querySelector('.side-kicker')?.textContent?.trim()).toBe('Modifica variante');
+    expect(el.querySelector('.variants-toggle')?.textContent?.trim()).toBe('Varianti');
+    expect(el.querySelector('.engine-toggle')?.textContent).toContain('Motore');
+    expect(el.querySelector('.engine-sub')?.textContent).toContain('Gioca contro il computer');
+    expect(el.querySelector('.branch-line--muted')?.textContent?.trim()).toBe('posizione iniziale');
+    expect(el.querySelector('.panel-title')?.textContent?.trim()).toBe('Mosse & varianti');
+    // Le Aperture non montano il breadcrumb di sezione: comportamento pre-R26.2.
+    expect(el.querySelector('.crumbs')).toBeNull();
   });
 });

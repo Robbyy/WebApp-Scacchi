@@ -10,6 +10,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -73,10 +74,20 @@ interface MoveAnnotationState {
  * studio della fase attesa, resta dentro la sezione per sorelle, «Annulla» e
  * redirect di salvataggio e non espone il comando di gioco (R28). Senza
  * contesto restano comportamento e URL generici delle Aperture.
+ *
+ * R26.2 aggiunge il contratto di presentazione contestuale: con uno studio
+ * posizionale (`isPosition()`, cioè fase `MIDDLEGAME` o `ENDGAME`) il pannello
+ * si concentra sull'albero. Il breadcrumb resta leggibile ma non navigabile e
+ * il template non rende kicker, comando di navigazione fra posizioni, toggle
+ * motore né la label «posizione iniziale»; «Mosse & rami» prende il posto
+ * gerarchico del motore, subito dopo il nome. Le Aperture conservano il
+ * comportamento precedente e R27 eredita lo stesso contratto per `ENDGAME`,
+ * ripetendone però le evidenze.
  */
 @Component({
   selector: 'app-variant-editor',
   imports: [
+    NgTemplateOutlet,
     FormsModule,
     RouterLink,
     Chessboard,
