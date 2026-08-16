@@ -46,7 +46,8 @@ kicker, comando «Posizioni», pulsante «Motore» né la label «posizione iniz
 Il correttivo post-release `f5bbb25` (2026-08-14) ha poi adattato l'editor setup della posizione
 al viewport: pannello più compatto, scacchiera ridimensionabile in altezza, coordinate leggibili,
 breadcrumb non interattivo, kicker rimosso e FEN readonly non ridimensionabile. La suite corrente è
-a 462 test; la verifica browser dedicata è registrata come flusso E2E 67 e resta da eseguire.
+a 462 test; il flusso E2E 67 è stato verificato il 2026-08-16 su H2 temporaneo: setup leggibile ai
+viewport previsti, salvataggio, Annulla/guard e regressione Aperture superati.
 Nota operativa: il database H2 versionato risulta modificato e resta rigorosamente escluso
 dal lavoro R26.1 e R26.2. Dopo lo stop esplicito dei processi esterni, il gate ha confermato prima
 e dopo il collaudo dimensione `86016`, timestamp `2026-08-14 01:45:52` e SHA-256

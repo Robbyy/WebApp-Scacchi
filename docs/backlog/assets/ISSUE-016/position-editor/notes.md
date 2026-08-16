@@ -82,4 +82,5 @@ R27 con `ENDGAME`; le Aperture sono rimaste invariate.
 Il commit `f5bbb25` ha corretto il layout della schermata `/middlegame/positions/{id}/setup`:
 scacchiera adattabile alla viewport, coordinate leggibili, pannello più compatto, breadcrumb non
 interattivo, kicker rimosso e FEN readonly non ridimensionabile. Il correttivo è frontend-only;
-la suite è salita a 462 test. La verifica manuale dedicata è il flusso E2E 67, ancora pendente.
+la suite è salita a 462 test. La verifica manuale dedicata, flusso E2E 67, è stata superata il
+2026-08-16 su H2 temporaneo con viewport previsti, salvataggio, Annulla/guard e regressione Aperture.

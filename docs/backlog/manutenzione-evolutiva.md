@@ -63,7 +63,8 @@ ai sei viewport su H2 temporaneo, con database condiviso invariato. La change è
 **Follow-up post-R26.2 (`f5bbb25`):** l'editor setup della posizione è stato compattato per il
 viewport e la scacchiera può ridursi in altezza; sono stati inoltre riallineati coordinate,
 breadcrumb, kicker e textarea FEN. I test frontend sono 462 e la build è verde. La verifica browser
-dedicata è il flusso 67 della checklist e resta pendente.
+dedicata è il flusso 67 della checklist, superato il 2026-08-16 su H2 temporaneo con salvataggio,
+Annulla/guard e regressione Aperture verificati.
 
 ---
 
