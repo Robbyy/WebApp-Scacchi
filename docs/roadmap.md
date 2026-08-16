@@ -18,8 +18,8 @@
 ## Evolutive di prodotto pianificate
 
 La sequenza temporale e di priorità delle sole evolutive aperte è nel
-[`piano-rilasci-evolutivi.md`](piano-rilasci-evolutivi.md): undici incrementi
-proposti da **R20** (navigazione a tre sezioni) a **R30** (parametri UCI del motore).
+[`piano-rilasci-evolutivi.md`](piano-rilasci-evolutivi.md): gli incrementi vanno da **R20**
+(navigazione a tre sezioni) a **R30** (parametri UCI del motore), includendo R26.3 prima di R27.
 Il piano esclude volutamente bug, audit e infrastruttura.
 
 > ✅ **R20 — Fondazione di navigazione** — fatto (ISSUE-021, 2026-08-05): tab
@@ -65,13 +65,24 @@ Il piano esclude volutamente bug, audit e infrastruttura.
 > iniziale» non compaiono e «Mosse & rami» prende il posto gerarchico del motore. Aperture e
 > dettaglio posizionale restano invariati; la change è archiviata in
 > `openspec/changes/archive/2026-08-14-issue-016-position-editor-contextual-actions/`.
-> R27 dovrà riusare i componenti comuni e, insieme,
+>
+> **R26.3 — Studio guidato del Mediogioco** — prossimo rilascio pianificato. Preflight e analisi
+> sono completati; il rilascio introduce studi tattici/strategici, temi normalizzati, metadati e
+> ordine delle posizioni, tentativi storici, flussi guidati manuali e sequenziali. Verrà realizzato
+> con due change OpenSpec sequenziali: `issue-016-middlegame-guided-study-model` e
+> `issue-016-middlegame-guided-study-flows`. Entrambe sono attive, complete nei quattro artefatti
+> e valide in strict. Restano il triage standalone e i gate indipendenti di governance; dopo i
+> relativi esiti `READY`, i 40 task del modello devono essere implementati prima dei 55 task dei
+> flussi.
+>
+> **R27 — Finale reale** — seguirà R26.3. Dovrà riusare i componenti comuni e, insieme,
 > verificare uno per uno tutti i correttivi R26.1 e R26.2 con fase `ENDGAME`, rotte `/endgame`,
 > sei viewport e regressioni Aperture/Mediogioco: la condivisione del codice non vale come
 > accettazione implicita.
 
 In sintesi: navigazione → linea migliore del motore → gestione studi → flusso
-varianti/editor → Mediogioco ✅ → Finale → gioco da posizione → impostazioni → parametri motore.
+varianti/editor → Mediogioco ✅ → studio guidato Mediogioco → Finale → gioco da posizione →
+impostazioni → parametri motore.
 
 ---
 

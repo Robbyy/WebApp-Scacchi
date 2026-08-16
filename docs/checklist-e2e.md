@@ -2,6 +2,8 @@
 
 > Checklist ripetibile per la validazione manuale end-to-end, verificata fino alla release
 > evolutiva R26.2 (2026-08-14); il follow-up del setup editor è registrato nel flusso 67.
+> I flussi 68–81 sono il gate pianificato di R26.3 e non sono ancora eseguibili né inclusi nel
+> conteggio corrente dei **67 flussi completati**.
 > Eseguibile in pochi minuti dopo ogni rilascio significativo, prima di dichiararlo completato.
 > Complementare ai test automatici (vedi sezione "Copertura automatica" in fondo).
 
@@ -185,6 +187,30 @@
 
 > Evidenza del 2026-08-16: il correttivo è presente nel commit `f5bbb25`; test frontend (462) e build
 > sono verdi. Il flusso browser 67 è superato su H2 temporaneo; il database condiviso non è stato toccato.
+
+### Gate futuro R26.3 — Studio guidato del Mediogioco
+
+Questi flussi sono pianificati ma non ancora eseguibili: sono recepiti nelle due change OpenSpec
+attive e validate dalla CLI di R26.3. Dopo triage e gate indipendenti di governance con esito
+`READY`, devono essere implementati nell'ordine modello → flussi e verificati su H2 temporaneo.
+Fino alla loro chiusura il conteggio della checklist resta **67**.
+
+| # | Flusso futuro obbligatorio |
+|---|---|
+| 68 | Classificare uno studio Mediogioco legacy «Da classificare» come tattico o strategico; dopo la scelta la tipologia è immutabile e il contenuto resta consultabile/modificabile. |
+| 69 | Creare studi tattici e strategici, compreso uno studio vuoto valido; Aperture e studi Finale non ricevono la tipologia di R26.3. |
+| 70 | Creare/modificare una posizione con tema selezionato per ID dal catalogo compatibile, descrizioni, difficoltà a cinque livelli, fonte e ordine; il cambio della label del tema non spezza il riferimento. |
+| 71 | Migrare posizioni legacy preservando l'ordine per ID, mostrarle come «Tema da assegnare» ed escluderle dal guidato finché non ricevono un tema valido. |
+| 72 | Salvare una bozza senza mainline, usarla come scacchiera libera senza esito e verificarne l'esclusione dalle sequenze. |
+| 73 | Completare la mainline tattica: risposte avversarie automatiche, validazione server delle mosse inviate e registrazione automatica di `compresa`. |
+| 74 | Deviare dalla mainline tattica: interruzione immediata, validazione server, esito `errata`, soluzione automatica e replay sotto controllo dell'utente. |
+| 75 | Nel flusso strategico seguire la mainline e poi deviare con motore spento: deviazione segnalata, risposta automatica sospesa e comando «Attiva motore per continuare», lasciando disponibili soluzione e uscita. |
+| 76 | Attivare il motore dopo una deviazione strategica: una sola mossa di risposta tramite Stockfish, senza PV/barra obbligatorie e senza persistenza nell'albero autore o nello storico. Gestire anche il motore non disponibile. |
+| 77 | Mostrare la soluzione strategica dalla FEN iniziale: prima nulla dell'albero autore è visibile, dopo è disponibile l'intero albero in sola lettura; replay controllato dall'utente ed esito manuale `compresa`/`non compresa`. |
+| 78 | Registrare tentativi multipli e verificare ultimo esito, totale tentativi e data dell'ultima comprensione; modificare FEN o mainline preservando lo storico senza versionare la soluzione. |
+| 79 | Aprire manualmente una posizione completa e verificare che il relativo tentativo alimenti lo stesso storico e riepilogo della modalità sequenziale. |
+| 80 | Avviare sequenze con ordine autore/casuale e filtri «Tutte», «Mai tentate», «Da rivedere», «Comprese»; usare «Salta posizione» senza salvare un tentativo e verificare il riepilogo finale non persistito. |
+| 81 | Eliminare posizione/studio verificando le cascade sui tentativi; ripetere responsive ai sei viewport e regressioni Aperture, setup/editor/dettaglio R26.1/R26.2. |
 
 ### Gate futuro R27 — equivalenza Finale obbligatoria
 

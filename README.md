@@ -34,9 +34,17 @@ la geometria di scacchiera/editor. Suite 120 backend/455 frontend, build Angular
 59–63 verdi ai sei viewport; la change è archiviata in
 `openspec/changes/archive/2026-08-14-issue-016-positional-study-consolidation/`. La mini-release
 **R26.2** (`issue-016-position-editor-contextual-actions`) ha poi rifinito l'editor posizionale
-senza cambiare modello o API; segue R27 (`issue-016-endgame-section`): riuserà i componenti
-comuni, ma dovrà verificare tutti i correttivi R26.1 e R26.2 con dati `ENDGAME`, rotte
-`/endgame`, responsive e regressioni Aperture/Mediogioco. Seguono inoltre i bug
+senza cambiare modello o API. Il prossimo rilascio pianificato è **R26.3 — Studio guidato del
+Mediogioco**, descritto nel [preflight](docs/preflight-mediogioco-studio-guidato.md) e nella
+[relativa analisi](docs/analisi-mediogioco-studio-guidato.md): sarà realizzato tramite le due
+change OpenSpec sequenziali `issue-016-middlegame-guided-study-model` e
+`issue-016-middlegame-guided-study-flows`, entrambe attive con proposal, design, spec e task
+completi e validati in strict. La validazione CLI è conclusa, mentre restano da produrre, per
+ciascuna change, il triage standalone e i tre gate indipendenti di governance previsti dal workflow `openspec-v2`;
+l'implementazione non è ancora iniziata. Solo dopo seguirà R27
+(`issue-016-endgame-section`), che riuserà i componenti comuni ma dovrà verificare tutti i
+correttivi R26.1 e R26.2 con dati `ENDGAME`, rotte `/endgame`, responsive e regressioni
+Aperture/Mediogioco. Seguono inoltre i bug
 ISSUE-004/005/006/020, Supabase PostgreSQL, Supabase Auth, Docker e CI/CD.
 R26.2 è implementata e verificata (461 test frontend, build e flussi E2E 64–66 ai sei viewport):
 nell'editor di una posizione il breadcrumb resta leggibile ma non navigabile e non compaiono
@@ -48,11 +56,13 @@ al viewport: pannello più compatto, scacchiera ridimensionabile in altezza, coo
 breadcrumb non interattivo, kicker rimosso e FEN readonly non ridimensionabile. La suite corrente è
 a 462 test; il flusso E2E 67 è stato verificato il 2026-08-16 su H2 temporaneo: setup leggibile ai
 viewport previsti, salvataggio, Annulla/guard e regressione Aperture superati.
-Nota operativa: il database H2 versionato risulta modificato e resta rigorosamente escluso
-dal lavoro R26.1 e R26.2. Dopo lo stop esplicito dei processi esterni, il gate ha confermato prima
-e dopo il collaudo dimensione `86016`, timestamp `2026-08-14 01:45:52` e SHA-256
-`144FD67C95C4D0EE886AC7048D56510845CA94899392544B663BD4618561C943`; non viene ripristinato,
-sovrascritto o incluso senza una decisione esplicita.
+Nota operativa: il database H2 versionato è escluso dai lavori documentali e dai gate su dati
+temporanei. La baseline storica del gate R26.2 era `86016` byte, timestamp
+`2026-08-14 01:45:52` e SHA-256
+`144FD67C95C4D0EE886AC7048D56510845CA94899392544B663BD4618561C943`. Al controllo corrente Git
+non segnala differenze per `backend/data/scacchi.mv.db`; un processo lo mantiene però aperto, quindi
+l'hash del file corrente non è acquisibile. Non va ripristinato, sovrascritto o incluso senza una
+decisione esplicita.
 
 ## Stack
 
@@ -86,6 +96,9 @@ Ordine consigliato di lettura:
    - migrazioni schema (Liquibase) → [`docs/specs/liquibase.md`](docs/specs/liquibase.md)
    - setup e test → [`backend/README.md`](backend/README.md), [`frontend/README.md`](frontend/README.md)
    - checklist manuale → [`docs/checklist-e2e.md`](docs/checklist-e2e.md)
+   - R26.3 studio guidato Mediogioco →
+     [`docs/preflight-mediogioco-studio-guidato.md`](docs/preflight-mediogioco-studio-guidato.md),
+     [`docs/analisi-mediogioco-studio-guidato.md`](docs/analisi-mediogioco-studio-guidato.md)
    - change/spec → [`openspec/`](openspec/) (CLI `openspec`, comandi Claude `/opsx:*`)
 4. [`docs/adr/decisioni-tecniche.md`](docs/adr/decisioni-tecniche.md) — decisioni architetturali (ADR 0001–0014)
 5. [`docs/roadmap.md`](docs/roadmap.md) — cosa viene dopo · [`docs/backlog.md`](docs/backlog.md) — backlog (indice; classi in [`docs/backlog/`](docs/backlog/): bug, manutenzione evolutiva, sviluppi importanti) · [`docs/piano-rilasci-evolutivi.md`](docs/piano-rilasci-evolutivi.md) — sequenza prioritaria dei prossimi rilasci evolutivi

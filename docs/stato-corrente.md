@@ -1,6 +1,7 @@
 # Stato corrente — WebApp Scacchi
 
-> Aggiornato al: **2026-08-16** (R26.1 e R26.2 implementate, verificate e archiviate in OpenSpec; follow-up setup editor verificato).
+> Aggiornato al: **2026-08-16** (R26.1 e R26.2 implementate, verificate e archiviate in OpenSpec;
+> follow-up setup editor verificato; preflight, analisi e authoring OpenSpec di R26.3 allineati).
 > Non è un diario cronologico. La storia per-prototipo è in `docs/archive/stato-avanzamento-2026-06-28.md` e nel git log.
 
 ---
@@ -35,6 +36,29 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Consolidamento posizioni di studio (R26.1, `issue-016-positional-study-consolidation`)**: implementati e verificati i dieci correttivi emersi dall'uso di R26. Gli studi posizionali non mostrano colore né CTA duplicate; le azioni rispettano la modalità modifica; la griglia FEN è rigidamente 8×8; l'analisi salvata parte nascosta e si rivela solo su richiesta; la posizione è eliminabile dal dettaglio; barra motore, breadcrumb, rail e controlli dell'editor non spostano la board; la navigazione posizionale mostra soltanto i titoli e la home Aperture filtra esplicitamente `OPENING`. Nessuna nuova API, migration o modifica al modello a fasi. R27 deve riusare questi contratti e ripeterne le evidenze con `ENDGAME`.
 - **Editor posizionale contestuale (R26.2, `issue-016-position-editor-contextual-actions`)**: in `/middlegame/positions/{id}/edit` il breadcrumb resta visibile ma è testo non focalizzabile, con `aria-current="page"` sulla sola pagina corrente; kicker «MODIFICA POSIZIONE», comando «Posizioni», pulsante «Motore» e label «posizione iniziale» non vengono renderizzati e «Mosse & rami» occupa la posizione gerarchica del motore, subito dopo il nome. Il contratto dipende dalla fase dello studio (`isPosition()`), quindi vale per `MIDDLEGAME` e `ENDGAME`; le Aperture conservano il comportamento pre-R26.2 e il motore resta nel dettaglio della posizione. Nessuna nuova API, migration o modifica al modello a fasi. R27 eredita il contratto ma deve ripetere le evidenze sulle rotte `/endgame`.
 - **Follow-up post-R26.2 (`f5bbb25`)**: l'editor di configurazione della posizione (`/middlegame/positions/{id}/setup`) è stato compattato per rientrare nel viewport, con scacchiera adattabile all'altezza, coordinate leggibili, breadcrumb non interattivo, kicker rimosso e FEN readonly non ridimensionabile. Il correttivo è frontend-only e non modifica API, modello o database; la verifica automatica porta la suite frontend a 462 test. Il flusso E2E 67 è stato superato il 2026-08-16 su H2 temporaneo: viewport previsti, salvataggio, Annulla/guard e regressione Aperture verificati.
+
+### Evolutiva pianificata R26.3 — Studio guidato del Mediogioco
+
+R26.3 trasformerà l'archivio di posizioni del Mediogioco in uno strumento di studio guidato.
+Il dominio e le scelte di compatibilità sono chiusi nel
+[preflight](preflight-mediogioco-studio-guidato.md) e verificati tecnicamente
+nell'[analisi](analisi-mediogioco-studio-guidato.md). Le due change OpenSpec sono attive, hanno
+proposal, design, spec e task completi e superano la validazione strict. La validazione CLI non
+sostituisce la governance: prima del codice restano da produrre per ciascuna change, con gli
+adapter indipendenti previsti dal workflow normativo `openspec-v2`, il triage standalone e i gate
+di proposal, design+specs e tasks. Non è stata avviata alcuna implementazione.
+
+Il rilascio di prodotto resta unico, ma sarà costruito con due change sequenziali:
+
+1. `issue-016-middlegame-guided-study-model` — tipologia tattica/strategica, catalogo temi
+   normalizzato, metadati e ordine delle posizioni, storico minimo, migrazioni e API;
+2. `issue-016-middlegame-guided-study-flows` — esercizio tattico e strategico, soluzione,
+   motore esplorativo, modalità sequenziale, filtri e riepiloghi.
+
+Gli studi Mediogioco già esistenti resteranno consultabili e modificabili come «Da classificare»;
+le loro posizioni resteranno consultabili e modificabili come «Tema da assegnare». Il flusso
+guidato sarà disponibile solo dopo la classificazione dello studio e l'assegnazione del tema.
+R27 Finale segue R26.3 e resta fuori dal perimetro di questa evolutiva.
 
 ---
 
@@ -72,7 +96,7 @@ Il follow-up post-R26.2 ha aggiunto il flusso 67 per il setup editor; la verific
 
 ## Problemi noti
 
-Nell'implementazione R26.2 la baseline era di 461 test frontend, build Angular e flussi browser 64–66 verdi; il follow-up `f5bbb25` porta la suite a 462 e il flusso browser 67 è stato superato il 2026-08-16. Restano come debito tecnico la race UCI di ISSUE-022 e il ritorno del focus al pulsante «Varianti» alla chiusura del drawer — quest'ultimo ora riguarda le sole Aperture, perché l'editor posizionale non espone più quel comando; i warning di budget CSS/bundle non sono errori di compilazione. **Policy DB**: `backend/data/scacchi.mv.db` è la fonte condivisa versionata e non va ripristinata, sovrascritta o inclusa senza decisione esplicita. La baseline del gate R26.2 era `86016` byte, timestamp `2026-08-14 01:45:52`, SHA-256 `144FD67C95C4D0EE886AC7048D56510845CA94899392544B663BD4618561C943`; il follow-up non ha modificato intenzionalmente il DB, ma la verifica dell'hash corrente resta sospesa finché un processo non ne termina l'utilizzo.
+Nell'implementazione R26.2 la baseline era di 461 test frontend, build Angular e flussi browser 64–66 verdi; il follow-up `f5bbb25` porta la suite a 462 e il flusso browser 67 è stato superato il 2026-08-16. Restano come debito tecnico la race UCI di ISSUE-022 e il ritorno del focus al pulsante «Varianti» alla chiusura del drawer — quest'ultimo ora riguarda le sole Aperture, perché l'editor posizionale non espone più quel comando; i warning di budget CSS/bundle non sono errori di compilazione. **Policy DB**: `backend/data/scacchi.mv.db` è la fonte condivisa versionata e non va ripristinata, sovrascritta o inclusa senza decisione esplicita. La baseline storica del gate R26.2 era `86016` byte, timestamp `2026-08-14 01:45:52`, SHA-256 `144FD67C95C4D0EE886AC7048D56510845CA94899392544B663BD4618561C943`. Al controllo corrente Git non segnala differenze sul file; un processo lo mantiene aperto e impedisce di acquisirne l'hash corrente.
 
 ### R26.2 — Editor posizionale contestuale (implementata e archiviata)
 
@@ -193,6 +217,8 @@ dedicati e verifica browser ai sei viewport previsti.
 - Runner E2E browser (Playwright/Cypress) — rinviato alla terza tornata.
 - Conservazione di commenti e NAG **presenti in un PGN importato** (o da Lichess): R24 annota solo dall'editor, l'import continua a scartare `{...}`, `; ...` e `$n` — evolutiva distinta.
 - Comando «Elimina continuazioni» (mantenere la mossa ed eliminarne i soli figli): esplicitamente fuori da R24, resta un punto aperto da decidere.
+- Studio guidato del Mediogioco R26.3: specificato nelle due change OpenSpec attive e validato in
+  strict, ma non ancora implementato.
 - Sezione completa Finale (oggi ancora sul segnaposto di ISSUE-021), gioco contro il motore da una posizione salvata, tag/categorie — change successive a ISSUE-016 (vedi `docs/roadmap.md`).
 - Multi-PV (più linee del motore), frecce/highlight della PV sulla scacchiera e click sulla linea per eseguirla — esplicitamente fuori dal perimetro di ISSUE-022.
 
@@ -217,10 +243,15 @@ concluse ai sei viewport e database condiviso invariato rispetto alla baseline d
 **R26.2** (`issue-016-position-editor-contextual-actions`) è implementata, verificata e archiviata:
 baseline di 461 test frontend, build Angular e flussi browser 64–66 verdi ai sei viewport su
 database temporaneo, con il database condiviso invariato rispetto alla baseline del gate. La change è archiviata in
-`openspec/changes/archive/2026-08-14-issue-016-position-editor-contextual-actions/`. Il rilascio
-di prodotto successivo è **R27**
-(`issue-016-endgame-section`), che renderà reale Finale riusando i contratti consolidati e
-ripetendo con dati `ENDGAME` le evidenze R26.1 e R26.2.
+`openspec/changes/archive/2026-08-14-issue-016-position-editor-contextual-actions/`.
+
+Il rilascio di prodotto successivo è **R26.3 — Studio guidato del Mediogioco**. Preflight e
+analisi sono completati e le change OpenSpec `issue-016-middlegame-guided-study-model` (40 task) e
+`issue-016-middlegame-guided-study-flows` (55 task) hanno tutti gli artefatti completi e validi.
+Il passo successivo è implementare e chiudere prima la change modello, poi la change flussi e i
+flussi E2E 68–81. **R27** (`issue-016-endgame-section`) viene dopo R26.3:
+renderà reale Finale riusando i contratti consolidati e ripetendo con dati `ENDGAME` le evidenze
+R26.1 e R26.2.
 
 La terza tornata infrastrutturale prosegue poi in quest'ordine:
 

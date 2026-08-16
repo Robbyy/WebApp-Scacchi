@@ -36,6 +36,14 @@
 > Dettagli in
 > [`stato-corrente.md`](../stato-corrente.md#correttivi-r26r27-verificati-in-r261).
 
+> **Pianificazione corrente:** il prossimo rilascio è R26.3 — Studio guidato del Mediogioco,
+> prima di R27. Non è manutenzione evolutiva: resta classificato sotto ISSUE-016 negli
+> [sviluppi importanti](sviluppi-importanti.md) e sarà gestito con due change OpenSpec
+> sequenziali, ora attive e validate dalla CLI nei quattro artefatti; triage e gate indipendenti
+> di governance restano da eseguire prima del codice. Le note storiche di questa pagina su
+> R26.1/R26.2 restano valide come contratti
+> di riuso per il futuro Finale.
+
 ---
 
 ## R26.2 — Editor posizionale contestuale ✅

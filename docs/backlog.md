@@ -42,7 +42,7 @@
 | 010 | Pannello varianti adattivo nel dettaglio | manutenzione | mini-spec R23 | ✅ fatto (R23) |
 | 011 | Unifica creazione studio + import Lichess | manutenzione | mini-spec R22 | ✅ fatto (R22) |
 | 013 | Menu contestuale editor | manutenzione | diretto — mini-spec R24 | ✅ fatto (R24) |
-| 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | R26/R26.1/R26.2 chiuse; poi R27–R28 |
+| 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | R26–R26.2 chiuse; R26.3 in specifica (authoring valido, governance pendente), poi R27–R28 |
 | 017 | Menu "Impostazioni" + SM-2 | sviluppo | OpenSpec | da fare |
 | 014 | Parametri motore Stockfish (UCI) | sviluppo | OpenSpec | da fare |
 | 018 | Revisione di sicurezza | audit | a sé | da fare |
@@ -68,9 +68,14 @@ La sequenza dettagliata dei soli incrementi evolutivi è nel
    e archiviata (461 frontend, build, flussi 64–66 e gate DB).
    Follow-up post-release `f5bbb25` sul setup dell'editor posizione: suite frontend a 462 test;
    verifica browser dedicata registrata come flusso 67 e superata il 2026-08-16 su H2 temporaneo.
-10. **R27–R28:** slice residue di ISSUE-016: Finale → gioco da posizione. R27 riusa i componenti
-   R26.1/R26.2 ma deve verificarne tutti i correttivi con fase `ENDGAME`, rotte `/endgame` e regressioni.
-11. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
+10. **R26.3:** studio guidato del Mediogioco, come unico rilascio costruito con due change
+    OpenSpec sequenziali: modello/migrazioni → flussi guidati. Preflight, analisi e artefatti
+    OpenSpec completati e validati in strict; triage e gate indipendenti di governance ancora
+    da eseguire; implementazione non iniziata.
+11. **R27–R28:** slice successive di ISSUE-016: Finale → gioco da posizione. R27 riusa i
+    componenti R26.1/R26.2 ma deve verificarne tutti i correttivi con fase `ENDGAME`, rotte
+    `/endgame` e regressioni.
+12. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
 
 I bug GitHub e l'audit di sicurezza seguono le proprie priorità e **non** fanno parte
 di questa cadenza di rilasci evolutivi.
@@ -96,7 +101,7 @@ di questa cadenza di rilasci evolutivi.
 
 ## Rischi principali
 
-1. **ISSUE-016** — scope ampio; senza OpenSpec rischio di sovra-ingegnerizzazione. Mitigazione applicata: modello fissato in `issue-016-phase-domain-model`, poi slice piccoli; R26 ha validato il riuso per il Mediogioco e R27 deve mantenerlo per il Finale.
+1. **ISSUE-016** — scope ampio; senza OpenSpec rischio di sovra-ingegnerizzazione. Mitigazione applicata: modello fissato in `issue-016-phase-domain-model`, poi slice piccoli; R26 ha validato il riuso per il Mediogioco, R26.3 è divisa in due change sequenziali e R27 deve mantenere il riuso per il Finale.
 2. **ISSUE-014** — incertezza sulle opzioni UCI realmente esposte dalla build asm.js. Mitigazione: audit prima della UI.
 3. **ISSUE-017** — refactor di `ReviewScheduler` da statico a parametrizzato tocca logica testata (120 test BE): rischio regressione SM-2.
 4. **ISSUE-004** — `AudioContext` browser-dipendente, difficile da coprire in headless.
@@ -106,8 +111,11 @@ di questa cadenza di rilasci evolutivi.
 
 ## In pianificazione
 
-- Nessuna change OpenSpec in sola pianificazione: la prossima è R27
-  (`issue-016-endgame-section`).
+- **R26.3 — Studio guidato del Mediogioco:** le change OpenSpec attive
+  `issue-016-middlegame-guided-study-model` (40 task) e
+  `issue-016-middlegame-guided-study-flows` (55 task) hanno proposal, design, spec e task completi
+  e validi in strict. L'implementazione deve procedere nell'ordine modello → flussi; R27 viene dopo
+  la loro chiusura.
 
 ## Completati
 
