@@ -46,7 +46,7 @@ pianificazione. Non sono stati avviati backend o frontend e non è stato toccato
 | Baseline frontend | 462 test su 36 file spec |
 | Checklist manuale completata | 67 flussi |
 
-Il preflight e questa analisi sono documenti nuovi non ancora committati. Le due change R26.3
+Il preflight e questa analisi sono versionati nel commit `4884c47`. Le due change R26.3
 contengono ciascuna proposal, design, spec e task completi; entrambe superano la validazione strict.
 
 ## 3. Evidenze nel codice esistente
