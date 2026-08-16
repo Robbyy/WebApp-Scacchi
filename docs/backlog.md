@@ -66,6 +66,8 @@ La sequenza dettagliata dei soli incrementi evolutivi è nel
    (455 frontend, 120 backend, build, flussi 59–63 e gate DB).
 9. ~~**R26.2:** rifinitura contestuale dell'editor posizionale.~~ ✅ Implementata e verificata
    e archiviata (461 frontend, build, flussi 64–66 e gate DB).
+   Follow-up post-release `f5bbb25` sul setup dell'editor posizione: suite frontend a 462 test;
+   verifica browser dedicata registrata come flusso 67 e ancora pendente.
 10. **R27–R28:** slice residue di ISSUE-016: Finale → gioco da posizione. R27 riusa i componenti
    R26.1/R26.2 ma deve verificarne tutti i correttivi con fase `ENDGAME`, rotte `/endgame` e regressioni.
 11. **R29–R30:** ISSUE-015 + ISSUE-017 → ISSUE-014 (info, impostazioni, parametri motore).
@@ -118,6 +120,11 @@ di questa cadenza di rilasci evolutivi.
   Change archiviata in
   `openspec/changes/archive/2026-08-14-issue-016-position-editor-contextual-actions/`.
   R27 dovrà applicare gli stessi cinque contratti al Finale e dimostrarli con dati `ENDGAME`.
+
+- **Follow-up post-R26.2 (`f5bbb25`)** ✅ Corregge il layout dell'editor setup posizione:
+  scacchiera adattabile all'altezza del viewport, coordinate leggibili, pannello compatto,
+  breadcrumb non interattivo, kicker rimosso e FEN readonly non ridimensionabile. 462 test
+  frontend e build verdi; il flusso browser 67 resta da eseguire.
 
 - **`issue-016-positional-study-consolidation` — R26.1** ✅ Implementata e verificata il 2026-08-14:
   corregge CTA/colore/modalità modifica degli studi posizionali, griglia FEN, analisi inizialmente

@@ -60,6 +60,11 @@ modifiche al modello. L'analisi completa, i criteri di uscita e i rischi sono in
 ai sei viewport su H2 temporaneo, con database condiviso invariato. La change è archiviata in
 `openspec/changes/archive/2026-08-14-issue-016-position-editor-contextual-actions/`.
 
+**Follow-up post-R26.2 (`f5bbb25`):** l'editor setup della posizione è stato compattato per il
+viewport e la scacchiera può ridursi in altezza; sono stati inoltre riallineati coordinate,
+breadcrumb, kicker e textarea FEN. I test frontend sono 462 e la build è verde. La verifica browser
+dedicata è il flusso 67 della checklist e resta pendente.
+
 ---
 
 ## ISSUE-021 — Scaffold navigazione tre sezioni (Aperture/Mediogioco/Finale) ✅

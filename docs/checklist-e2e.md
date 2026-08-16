@@ -1,7 +1,7 @@
 # Checklist E2E manuale - WebApp Scacchi
 
 > Checklist ripetibile per la validazione manuale end-to-end, verificata fino alla release
-> evolutiva R26.2 (2026-08-14).
+> evolutiva R26.2 (2026-08-14); il follow-up del setup editor è registrato nel flusso 67.
 > Eseguibile in pochi minuti dopo ogni rilascio significativo, prima di dichiararlo completato.
 > Complementare ai test automatici (vedi sezione "Copertura automatica" in fondo).
 
@@ -178,6 +178,13 @@
 >
 > Nota: in questa sessione il pannello browser non era in composizione, quindi non sono state
 > acquisite schermate; le evidenze sono albero di accessibilità, misure DOM e interazioni reali.
+
+## Follow-up post-R26.2 — editor setup posizione
+
+- [ ] **67. Setup posizione entro il viewport (f5bbb25)** — verificare `/middlegame/positions/{id}/setup` a 1850×915 e ai sei viewport standard 1600/1440/1024/768/375/320px: nessun overflow verticale od orizzontale inatteso, scacchiera contenuta e ridimensionata in altezza quando necessario, coordinate leggibili sopra i pezzi, palette/diritti di arrocco utilizzabili, FEN readonly interamente visibile, breadcrumb non interattivo e kicker assente. Confermare anche salvataggio, Annulla/guard e regressione Aperture.
+
+> Stato del 2026-08-16: il correttivo è presente nel commit `f5bbb25`; test frontend (462) e build
+> sono verdi. Il flusso browser 67 non è ancora stato eseguito e resta quindi non spuntato.
 
 ### Gate futuro R27 — equivalenza Finale obbligatoria
 

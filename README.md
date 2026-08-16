@@ -7,7 +7,7 @@ studi e posizioni manuali basate su FEN e albero di mosse.
 ## Stato
 
 Parte 1 e Parte 2 (P0–P19) completate e verificate in locale.
-Backend: 120 test verdi. Frontend: 461 test verdi.
+Backend: 120 test verdi. Frontend: 462 test verdi.
 Terza tornata (infrastruttura) avviata: **schema gestito da Liquibase** (ISSUE-019, fatto).
 OpenSpec è installato e lo scaffold `openspec/` è pronto per le change di maggiore impatto.
 ISSUE-003 (header home: titolo e pulsanti a capo) risolta e verificata a Full HD
@@ -43,6 +43,10 @@ nell'editor di una posizione il breadcrumb resta leggibile ma non navigabile e n
 kicker, comando «Posizioni», pulsante «Motore» né la label «posizione iniziale», mentre
 «Mosse & rami» prende il posto gerarchico del motore. La change OpenSpec è archiviata in
 `openspec/changes/archive/2026-08-14-issue-016-position-editor-contextual-actions/`.
+Il correttivo post-release `f5bbb25` (2026-08-14) ha poi adattato l'editor setup della posizione
+al viewport: pannello più compatto, scacchiera ridimensionabile in altezza, coordinate leggibili,
+breadcrumb non interattivo, kicker rimosso e FEN readonly non ridimensionabile. La suite corrente è
+a 462 test; la verifica browser dedicata è registrata come flusso E2E 67 e resta da eseguire.
 Nota operativa: il database H2 versionato risulta modificato e resta rigorosamente escluso
 dal lavoro R26.1 e R26.2. Dopo lo stop esplicito dei processi esterni, il gate ha confermato prima
 e dopo il collaudo dimensione `86016`, timestamp `2026-08-14 01:45:52` e SHA-256

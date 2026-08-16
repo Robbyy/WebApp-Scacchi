@@ -8,7 +8,7 @@
 ## Sintesi
 
 La webapp è funzionante in locale. **Parte 1 (P0–P6) e Parte 2 (P7–P19) completate e verificate.**
-Suite automatica verde: backend **120 test**, frontend **461 test**.
+Suite automatica verde: backend **120 test**, frontend **462 test**.
 La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE-019); restano Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
 In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre le Aperture: **ISSUE-016 (`issue-016-phase-domain-model`)** introduce `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), immutabile dopo la creazione — vedi [ADR 0014](adr/decisioni-tecniche.md).
 
@@ -34,6 +34,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Mediogioco reale (R26, `issue-016-middlegame-section`)**: `/middlegame` filtra gli studi `MIDDLEGAME` e offre lista, creazione manuale, modifica ed eliminazione; il dettaglio gestisce l'elenco e il CRUD delle posizioni. Setup FEN, editor dell'albero, dettaglio con replay/annotazioni, navigazione fra posizioni e analisi Stockfish riusano i componenti stabilizzati in R25/R23/R24 con percorsi canonici di sezione. La fase viene verificata prima di mostrare o rendere modificabile un contenuto. Import/sync Lichess, training, statistiche, review/SM-2 e gioco contro Stockfish dalla posizione non sono esposti. Finale resta pianificato in R27.
 - **Consolidamento posizioni di studio (R26.1, `issue-016-positional-study-consolidation`)**: implementati e verificati i dieci correttivi emersi dall'uso di R26. Gli studi posizionali non mostrano colore né CTA duplicate; le azioni rispettano la modalità modifica; la griglia FEN è rigidamente 8×8; l'analisi salvata parte nascosta e si rivela solo su richiesta; la posizione è eliminabile dal dettaglio; barra motore, breadcrumb, rail e controlli dell'editor non spostano la board; la navigazione posizionale mostra soltanto i titoli e la home Aperture filtra esplicitamente `OPENING`. Nessuna nuova API, migration o modifica al modello a fasi. R27 deve riusare questi contratti e ripeterne le evidenze con `ENDGAME`.
 - **Editor posizionale contestuale (R26.2, `issue-016-position-editor-contextual-actions`)**: in `/middlegame/positions/{id}/edit` il breadcrumb resta visibile ma è testo non focalizzabile, con `aria-current="page"` sulla sola pagina corrente; kicker «MODIFICA POSIZIONE», comando «Posizioni», pulsante «Motore» e label «posizione iniziale» non vengono renderizzati e «Mosse & rami» occupa la posizione gerarchica del motore, subito dopo il nome. Il contratto dipende dalla fase dello studio (`isPosition()`), quindi vale per `MIDDLEGAME` e `ENDGAME`; le Aperture conservano il comportamento pre-R26.2 e il motore resta nel dettaglio della posizione. Nessuna nuova API, migration o modifica al modello a fasi. R27 eredita il contratto ma deve ripetere le evidenze sulle rotte `/endgame`.
+- **Follow-up post-R26.2 (`f5bbb25`)**: l'editor di configurazione della posizione (`/middlegame/positions/{id}/setup`) è stato compattato per rientrare nel viewport, con scacchiera adattabile all'altezza, coordinate leggibili, breadcrumb non interattivo, kicker rimosso e FEN readonly non ridimensionabile. Il correttivo è frontend-only e non modifica API, modello o database; la verifica automatica porta la suite frontend a 462 test. La verifica browser dedicata è il flusso E2E 67, ancora da eseguire.
 
 ---
 
@@ -51,7 +52,7 @@ In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre l
 - **Stack**: Angular 22 · TypeScript · Vitest · componenti standalone · signals · OnPush · chess.js · Stockfish asm.js.
 - **Aree**: `chessboard`, `variants`, `positions`, `studies`, `stats`, `reviews`, `play`, `sections`, `core`.
 - **Routing**: `/` → lista studi Aperture; `/studies/new`, `/studies/:id`, `/variants/:id`, training/statistiche/review e `/play` conservano i flussi delle Aperture. La sezione R26 usa `/middlegame`, `/middlegame/studies/new`, `/middlegame/studies/:id`, `/middlegame/positions/new?studyId={id}`, `/middlegame/positions/:id/setup`, `/middlegame/positions/:id/edit` e `/middlegame/positions/:id`; `/endgame` resta sul segnaposto di R20 in attesa di R27.
-- **Test**: 461 verdi (`npm test -- --watch=false`, Vitest headless), inclusi routing e contesto R26, filtro per fase, CRUD studi/posizioni, analisi nascosta/rivelata/reset, eliminazione dal dettaglio, form contestuali, griglia FEN 8×8, collocazione dei controlli, breadcrumb non interattivo e ordine DOM dell'editor posizionale (R26.2) e regressioni Aperture.
+- **Test**: 462 verdi (`npm test -- --watch=false`, Vitest headless), inclusi routing e contesto R26, filtro per fase, CRUD studi/posizioni, analisi nascosta/rivelata/reset, eliminazione dal dettaglio, form contestuali, griglia FEN 8×8, setup editor e regressioni Aperture.
 - **Avvio locale**: `npm start` (frontend su `http://localhost:4200`, con proxy verso `http://localhost:8080`).
 
 ---
@@ -62,13 +63,16 @@ Verifiche browser superate senza errori console inattesi fino a R26.2: training,
 
 R26.2 ha usato lo stesso schema, di nuovo su `H2_DB_PATH` temporaneo: alle sei larghezze il breadcrumb dell'editor posizionale non contiene link né elementi focalizzabili, il pannello destro mantiene l'ordine `nome → Mosse & rami → replay → contatore → [ramo] → azioni → Salva/Annulla` e non si produce overflow orizzontale. Sono stati riverificati replay, badge di ramo, menu azioni con ritorno del focus, creazione di un ramo, guard delle modifiche non salvate, salvataggio con redirect canonico e persistenza di albero/commenti/NAG; il dettaglio conserva il motore e le Aperture restano al comportamento precedente. In quella sessione il pannello browser non componeva frame, quindi le evidenze sono albero di accessibilità, misure DOM e interazioni reali invece di schermate.
 
-Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **66 flussi**; i cinque flussi R26.1 (59–63) e i tre R26.2 (64–66) sono completati.
+Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **67 flussi**; i cinque flussi R26.1 (59–63) e i tre R26.2 (64–66) sono completati, il follow-up 67 è pendente.
+
+Il follow-up post-R26.2 ha aggiunto il flusso 67 per il setup editor; il flusso resta non spuntato
+finché non viene eseguita la verifica browser dedicata.
 
 ---
 
 ## Problemi noti
 
-Nell'implementazione R26.2 non risultano regressioni: 461 test frontend, build Angular e flussi browser 64–66 verdi (il backend non è stato toccato dalla change). Restano come debito tecnico la race UCI di ISSUE-022 e il ritorno del focus al pulsante «Varianti» alla chiusura del drawer — quest'ultimo ora riguarda le sole Aperture, perché l'editor posizionale non espone più quel comando; i warning di budget CSS/bundle non sono errori di compilazione. **Policy DB**: `backend/data/scacchi.mv.db` è la fonte condivisa versionata e non va ripristinata, sovrascritta o inclusa senza decisione esplicita. La baseline del gate era `86016` byte, timestamp `2026-08-14 01:45:52`, SHA-256 `144FD67C95C4D0EE886AC7048D56510845CA94899392544B663BD4618561C943`; gli stessi valori sono stati rilevati dopo browser, suite e arresto dei server temporanei di R26.2. Il file resta modificato rispetto a Git per stato preesistente ed escluso dal lavoro R26.1 e R26.2.
+Nell'implementazione R26.2 la baseline era di 461 test frontend, build Angular e flussi browser 64–66 verdi; il follow-up `f5bbb25` porta la suite a 462 e lascia pendente il solo flusso browser 67. Restano come debito tecnico la race UCI di ISSUE-022 e il ritorno del focus al pulsante «Varianti» alla chiusura del drawer — quest'ultimo ora riguarda le sole Aperture, perché l'editor posizionale non espone più quel comando; i warning di budget CSS/bundle non sono errori di compilazione. **Policy DB**: `backend/data/scacchi.mv.db` è la fonte condivisa versionata e non va ripristinata, sovrascritta o inclusa senza decisione esplicita. La baseline del gate R26.2 era `86016` byte, timestamp `2026-08-14 01:45:52`, SHA-256 `144FD67C95C4D0EE886AC7048D56510845CA94899392544B663BD4618561C943`; il follow-up non ha modificato intenzionalmente il DB, ma la verifica dell'hash corrente resta sospesa finché un processo non ne termina l'utilizzo.
 
 ### R26.2 — Editor posizionale contestuale (implementata e archiviata)
 
@@ -210,9 +214,9 @@ La change OpenSpec è archiviata in
 concluse ai sei viewport e database condiviso invariato rispetto alla baseline del gate. La change
 è archiviata in `openspec/changes/archive/2026-08-14-issue-016-positional-study-consolidation/`.
 
-**R26.2** (`issue-016-position-editor-contextual-actions`) è implementata e verificata: 461 test
-frontend, build Angular e flussi browser 64–66 verdi ai sei viewport su database temporaneo, con
-il database condiviso invariato rispetto alla baseline del gate. La change è archiviata in
+**R26.2** (`issue-016-position-editor-contextual-actions`) è implementata, verificata e archiviata:
+baseline di 461 test frontend, build Angular e flussi browser 64–66 verdi ai sei viewport su
+database temporaneo, con il database condiviso invariato rispetto alla baseline del gate. La change è archiviata in
 `openspec/changes/archive/2026-08-14-issue-016-position-editor-contextual-actions/`. Il rilascio
 di prodotto successivo è **R27**
 (`issue-016-endgame-section`), che renderà reale Finale riusando i contratti consolidati e

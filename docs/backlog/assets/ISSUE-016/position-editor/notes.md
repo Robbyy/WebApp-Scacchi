@@ -76,3 +76,10 @@ La change `issue-016-position-editor-contextual-actions` li ha trattati come min
 tutti e cinque sono implementati e verificati il 2026-08-14 in `VariantEditor`, guidati dalla fase
 dello studio (`isPosition()`) e non dalla route. Il contratto deve essere riusato e verificato in
 R27 con `ENDGAME`; le Aperture sono rimaste invariate.
+
+## Follow-up post-R26.2 — setup editor posizione
+
+Il commit `f5bbb25` ha corretto il layout della schermata `/middlegame/positions/{id}/setup`:
+scacchiera adattabile alla viewport, coordinate leggibili, pannello più compatto, breadcrumb non
+interattivo, kicker rimosso e FEN readonly non ridimensionabile. Il correttivo è frontend-only;
+la suite è salita a 462 test. La verifica manuale dedicata è il flusso E2E 67, ancora pendente.
