@@ -139,6 +139,31 @@ describe('PositionStudyList (ISSUE-016)', () => {
     expect(el.textContent).not.toContain('Bianco');
   });
 
+  it('shows the study type badge to the left of the name in middlegame', () => {
+    const tactical: Study = { id: 3, name: 'Struttura IQP', phase: 'MIDDLEGAME', variantCount: 0, studyType: 'TACTICAL' };
+    const unclassified: Study = { id: 4, name: 'Bozza', phase: 'MIDDLEGAME', variantCount: 0, studyType: null };
+    const { el } = setup(phaseService([tactical, unclassified]));
+
+    const rows = Array.from(el.querySelectorAll('.study-title-row'));
+    expect(rows.length).toBe(2);
+    expect(rows[0].children[0].className).toContain('study-type-badge');
+    expect(rows[0].children[0].textContent?.trim()).toBe('Tattica');
+    expect(rows[0].children[1].className).toContain('study-name');
+
+    expect(rows[1].children[0].textContent?.trim()).toBe('Da classificare');
+    expect(rows[1].children[0].classList.contains('study-type-badge--pending')).toBe(true);
+  });
+
+  it('hides the study type badge outside middlegame (no such classification for Finale)', () => {
+    const endgameStudy: Study = { id: 5, name: 'Finale di torri', phase: 'ENDGAME', variantCount: 0 };
+    const { el } = setup(
+      phaseService([endgameStudy]),
+      true,
+      { section: 'endgame', phase: 'ENDGAME', base: '/endgame', positionMode: true },
+    );
+    expect(el.querySelector('.study-type-badge')).toBeNull();
+  });
+
   it('removes a study after confirmation', async () => {
     let deletedId: number | null = null;
     const { cmp } = setup(

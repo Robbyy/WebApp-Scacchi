@@ -5,6 +5,7 @@ import { StudyService } from '../core/study.service';
 import { ToastService } from '../core/toast.service';
 import { Study } from '../core/study.model';
 import { SectionRouteContext, sectionLabel, sectionPaths } from '../core/study-sections';
+import { studyTypeLabel } from '../core/middlegame-format';
 
 /**
  * Lista degli studi di una sezione posizionale (ISSUE-016): chiede al backend i
@@ -37,6 +38,9 @@ export class PositionStudyList implements OnInit {
   protected readonly label = computed(() => sectionLabel(this.sectionContext().section));
   /** Percorsi canonici della sezione: nessun URL generico `/studies/...`. */
   protected readonly paths = computed(() => sectionPaths(this.sectionContext()));
+  /** Tipologia (Tattica/Strategia) valida solo per Mediogioco: `null` per Finale. */
+  protected readonly isMiddlegame = computed(() => this.sectionContext().phase === 'MIDDLEGAME');
+  protected readonly studyTypeLabel = studyTypeLabel;
 
   protected readonly studies = signal<Study[]>([]);
   protected readonly error = signal<string | null>(null);

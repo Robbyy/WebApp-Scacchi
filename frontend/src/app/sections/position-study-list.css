@@ -11,3 +11,29 @@
 .list-empty .list-muted {
   margin: 0;
 }
+
+/* Riga badge tipologia + nome studio: la card resta a colonna (nome/descrizione/
+   meta), solo badge e nome stanno affiancati sulla stessa riga. */
+.study-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Tipologia di uno studio Mediogioco (R26.3/ISSUE-016): «Tattica»/«Strategia» o
+   «Da classificare» finché non viene scelta. Stessa presentazione di
+   `study-detail.css`, duplicata qui perché le due pagine non condividono foglio. */
+.study-type-badge {
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--wood-light);
+  color: var(--wood-dark);
+}
+
+.study-type-badge--pending {
+  background: oklch(0.95 0.05 75);
+  color: var(--wood-dark);
+  border: 1px dashed var(--panel-border);
+}

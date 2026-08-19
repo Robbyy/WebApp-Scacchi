@@ -234,7 +234,7 @@
   color: var(--text-muted);
 }
 
-/* Tipologia di uno studio Mediogioco (R26.3): «Tattica»/«Strategica» o
+/* Tipologia di uno studio Mediogioco (R26.3): «Tattica»/«Strategia» o
    «Da classificare» finché non viene scelta. Classe dedicata, non `.badge`,
    così resta distinta dal badge colore delle Aperture (vedi test R25). */
 .study-type-badge {

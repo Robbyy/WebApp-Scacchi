@@ -11,7 +11,7 @@ export function studyTypeLabel(studyType: StudyType | null | undefined): string 
     case 'TACTICAL':
       return 'Tattica';
     case 'STRATEGIC':
-      return 'Strategica';
+      return 'Strategia';
     default:
       return 'Da classificare';
   }

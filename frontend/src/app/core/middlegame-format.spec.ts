@@ -12,7 +12,7 @@ import { SEQUENCE_FILTERS, SEQUENCE_ORDERS } from './sequence-snapshot';
 describe('middlegame-format', () => {
   it('labels the study type, "Da classificare" when absent (R26.3)', () => {
     expect(studyTypeLabel('TACTICAL')).toBe('Tattica');
-    expect(studyTypeLabel('STRATEGIC')).toBe('Strategica');
+    expect(studyTypeLabel('STRATEGIC')).toBe('Strategia');
     expect(studyTypeLabel(null)).toBe('Da classificare');
     expect(studyTypeLabel(undefined)).toBe('Da classificare');
   });

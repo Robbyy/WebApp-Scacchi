@@ -91,79 +91,85 @@
         </label>
 
         @if (isMiddlegame()) {
-          <fieldset class="metadata-fields">
-            <legend>Dati Mediogioco</legend>
-            @if (unclassified()) {
-              <small>Classifica lo studio (tattico o strategico) per poter assegnare un tema.</small>
-            } @else {
+          <!-- Pannello a scomparsa e non `fieldset`: chiuso all'apertura della pagina,
+               così «Annulla» e «Salva posizione» restano nel viewport senza scorrere.
+               La disclosure nativa tiene i campi nel DOM anche da chiusa, quindi
+               binding e validazione non cambiano; `save()` la riapre se manca il tema. -->
+          <details class="metadata-fields" [open]="metadataOpen()" (toggle)="onMetadataToggle($event)">
+            <summary>Dati Mediogioco</summary>
+            <div class="metadata-body">
+              @if (unclassified()) {
+                <small>Classifica lo studio (tattico o strategico) per poter assegnare un tema.</small>
+              } @else {
+                <label>
+                  Tema
+                  <select
+                    name="themeId"
+                    [ngModel]="themeId()"
+                    (ngModelChange)="themeId.set($event); dirty.set(true)"
+                  >
+                    <option [ngValue]="null" disabled>Scegli un tema&#8230;</option>
+                    @for (theme of availableThemes(); track theme.id) {
+                      <option [ngValue]="theme.id">{{ theme.displayLabel }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  Descrizione del tema (facoltativa)
+                  <input
+                    name="themeDescription"
+                    [ngModel]="themeDescription()"
+                    (ngModelChange)="themeDescription.set($event); dirty.set(true)"
+                    maxlength="500"
+                  />
+                </label>
+              }
               <label>
-                Tema
+                Descrizione della posizione (facoltativa)
+                <input
+                  name="description"
+                  [ngModel]="description()"
+                  (ngModelChange)="description.set($event); dirty.set(true)"
+                  maxlength="1000"
+                />
+              </label>
+              <label>
+                Difficoltà (facoltativa)
                 <select
-                  name="themeId"
-                  [ngModel]="themeId()"
-                  (ngModelChange)="themeId.set($event); dirty.set(true)"
+                  name="difficulty"
+                  [ngModel]="difficulty()"
+                  (ngModelChange)="difficulty.set($event); dirty.set(true)"
                 >
-                  <option [ngValue]="null" disabled>Scegli un tema&#8230;</option>
-                  @for (theme of availableThemes(); track theme.id) {
-                    <option [ngValue]="theme.id">{{ theme.displayLabel }}</option>
+                  <option [ngValue]="null">&#8212;</option>
+                  @for (d of difficulties; track d) {
+                    <option [ngValue]="d">{{ difficultyLabel(d) }}</option>
                   }
                 </select>
               </label>
               <label>
-                Descrizione del tema (facoltativa)
+                Fonte (facoltativa)
                 <input
-                  name="themeDescription"
-                  [ngModel]="themeDescription()"
-                  (ngModelChange)="themeDescription.set($event); dirty.set(true)"
-                  maxlength="500"
+                  name="source"
+                  [ngModel]="source()"
+                  (ngModelChange)="source.set($event); dirty.set(true)"
+                  maxlength="300"
                 />
               </label>
-            }
-            <label>
-              Descrizione della posizione (facoltativa)
-              <input
-                name="description"
-                [ngModel]="description()"
-                (ngModelChange)="description.set($event); dirty.set(true)"
-                maxlength="1000"
-              />
-            </label>
-            <label>
-              Difficoltà (facoltativa)
-              <select
-                name="difficulty"
-                [ngModel]="difficulty()"
-                (ngModelChange)="difficulty.set($event); dirty.set(true)"
-              >
-                <option [ngValue]="null">&#8212;</option>
-                @for (d of difficulties; track d) {
-                  <option [ngValue]="d">{{ difficultyLabel(d) }}</option>
-                }
-              </select>
-            </label>
-            <label>
-              Fonte (facoltativa)
-              <input
-                name="source"
-                [ngModel]="source()"
-                (ngModelChange)="source.set($event); dirty.set(true)"
-                maxlength="300"
-              />
-            </label>
-            @if (!isEdit()) {
-              <label>
-                Ordine
-                <input
-                  type="number"
-                  name="positionOrder"
-                  min="1"
-                  [max]="maxOrder()"
-                  [ngModel]="positionOrder()"
-                  (ngModelChange)="positionOrder.set($event); dirty.set(true)"
-                />
-              </label>
-            }
-          </fieldset>
+              @if (!isEdit()) {
+                <label>
+                  Ordine
+                  <input
+                    type="number"
+                    name="positionOrder"
+                    min="1"
+                    [max]="maxOrder()"
+                    [ngModel]="positionOrder()"
+                    (ngModelChange)="positionOrder.set($event); dirty.set(true)"
+                  />
+                </label>
+              }
+            </div>
+          </details>
         }
 
         @if (error()) { <p class="editor-error">{{ error() }}</p> }

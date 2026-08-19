@@ -223,7 +223,7 @@ describe('PositionStudyNew (ISSUE-016)', () => {
     const options = Array.from(select?.querySelectorAll('option') ?? []).map((o) => o.value);
     expect(options).toEqual(['', 'TACTICAL', 'STRATEGIC']);
     expect(el.textContent).toContain('Tattica');
-    expect(el.textContent).toContain('Strategica');
+    expect(el.textContent).toContain('Strategia');
   });
 
   it('does not offer a study type choice outside Mediogioco (regression, future Finale)', () => {

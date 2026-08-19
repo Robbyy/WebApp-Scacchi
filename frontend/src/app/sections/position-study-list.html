@@ -27,7 +27,14 @@
       @for (s of studies(); track s.id) {
         <li class="study-card">
           <a class="study-main" [routerLink]="paths().study(s.id)">
-            <span class="study-name">{{ s.name }}</span>
+            <span class="study-title-row">
+              @if (isMiddlegame()) {
+                <span class="study-type-badge" [class.study-type-badge--pending]="!s.studyType">
+                  {{ studyTypeLabel(s.studyType) }}
+                </span>
+              }
+              <span class="study-name">{{ s.name }}</span>
+            </span>
             @if (s.description) {
               <span class="study-desc">{{ s.description }}</span>
             }

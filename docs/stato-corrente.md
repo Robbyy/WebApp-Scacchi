@@ -11,7 +11,7 @@
 ## Sintesi
 
 La webapp è funzionante in locale. **Parte 1 (P0–P6) e Parte 2 (P7–P19) completate e verificate.**
-Suite automatica verde: backend **191 test**, frontend **692 test**.
+Suite automatica verde: backend **191 test**, frontend **698 test**.
 La **terza tornata** (infrastruttura) è iniziata: **Liquibase** in place (ISSUE-019); restano Supabase PostgreSQL, Supabase Auth, Docker, CI/CD.
 In parallelo è stata chiusa la prima slice OpenSpec per estendere l'app oltre le Aperture: **ISSUE-016 (`issue-016-phase-domain-model`)** introduce `Study.phase` (`OPENING`/`MIDDLEGAME`/`ENDGAME`), immutabile dopo la creazione — vedi [ADR 0014](adr/decisioni-tecniche.md).
 
@@ -79,7 +79,7 @@ automaticamente la tipologia dello studio né i flussi guidati (vedi «Prossima 
 - **Stack**: Angular 22 · TypeScript · Vitest · componenti standalone · signals · OnPush · chess.js · Stockfish asm.js.
 - **Aree**: `chessboard`, `variants`, `positions`, `studies`, `stats`, `reviews`, `play`, `sections`, `core`.
 - **Routing**: `/` → lista studi Aperture; `/studies/new`, `/studies/:id`, `/variants/:id`, training/statistiche/review e `/play` conservano i flussi delle Aperture. La sezione R26 usa `/middlegame`, `/middlegame/studies/new`, `/middlegame/studies/:id`, `/middlegame/positions/new?studyId={id}`, `/middlegame/positions/:id/setup`, `/middlegame/positions/:id/edit` e `/middlegame/positions/:id`; R26.3 change B aggiunge `/middlegame/positions/:id/study` (tentativo manuale) e `/middlegame/studies/:id/study` (configurazione ed esecuzione sequenziale), sotto la feature dedicata `guided-study`. `/endgame` resta sul segnaposto di R20 in attesa di R27.
-- **Test**: 692 verdi (`npm test -- --watch=false`, Vitest headless, 45 file), inclusi routing e contesto R26, filtro per fase, CRUD studi/posizioni, analisi nascosta/rivelata/reset, eliminazione dal dettaglio, form contestuali, griglia FEN 8×8, setup editor, classificazione/temi/difficoltà/ordine/riepilogo del Mediogioco (R26.3 change A), route e CTA dello studio guidato, macchina a stati e flussi tattici/strategici, storico tentativi, configurazione/snapshot sequenziale, avanzamento/skip/riepilogo e regressioni Aperture/Finale (R26.3 change B).
+- **Test**: 698 verdi (`npm test -- --watch=false`, Vitest headless, 45 file), inclusi routing e contesto R26, filtro per fase, CRUD studi/posizioni, analisi nascosta/rivelata/reset, eliminazione dal dettaglio, form contestuali, griglia FEN 8×8, setup editor, classificazione/temi/difficoltà/ordine/riepilogo del Mediogioco (R26.3 change A), route e CTA dello studio guidato, macchina a stati e flussi tattici/strategici, storico tentativi, configurazione/snapshot sequenziale, avanzamento/skip/riepilogo e regressioni Aperture/Finale (R26.3 change B); badge tipologia nella lista Mediogioco e pannello «Dati Mediogioco» a scomparsa nel setup posizione (correttivi post-R26.3, 2026-08-19).
 - **Avvio locale**: `npm start` (frontend su `http://localhost:4200`, con proxy verso `http://localhost:8080`).
 
 ---

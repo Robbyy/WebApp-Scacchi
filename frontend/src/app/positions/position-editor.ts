@@ -87,6 +87,13 @@ export class PositionEditor implements CanComponentDeactivate {
   protected readonly unclassified = computed(
     () => this.isMiddlegame() && this.parentStudyType() == null,
   );
+  /**
+   * Pannello «Dati Mediogioco» chiuso all'apertura della pagina: i campi sono
+   * facoltativi tranne il tema, e da chiuso i pulsanti del form restano nel
+   * viewport senza scorrere. `save()` lo riapre quando manca il tema, altrimenti
+   * il messaggio d'errore punterebbe a un controllo non visibile.
+   */
+  protected readonly metadataOpen = signal(false);
   protected readonly availableThemes = signal<PositionTheme[]>([]);
   protected readonly themeId = signal<number | null>(null);
   protected readonly themeDescription = signal('');
@@ -251,6 +258,11 @@ export class PositionEditor implements CanComponentDeactivate {
     this.dirty.set(true);
   }
 
+  /** Allinea lo stato all'apertura/chiusura decisa dall'utente sulla disclosure. */
+  protected onMetadataToggle(event: Event): void {
+    this.metadataOpen.set((event.target as HTMLDetailsElement).open);
+  }
+
   canDeactivate(): boolean | Promise<boolean> {
     if (!this.dirty()) {
       return true;
@@ -273,6 +285,11 @@ export class PositionEditor implements CanComponentDeactivate {
     const localError = this.validate(name);
     if (localError) {
       this.error.set(localError);
+      // Il tema è l'unico campo obbligatorio del pannello a scomparsa: se manca,
+      // riaprirlo evita un errore che rimanda a un controllo fuori vista.
+      if (this.missingRequiredTheme()) {
+        this.metadataOpen.set(true);
+      }
       return;
     }
     const studyId = this.studyId();
@@ -472,9 +489,7 @@ export class PositionEditor implements CanComponentDeactivate {
     if (!name) {
       return 'Inserisci un titolo per la posizione.';
     }
-    // Il tema è obbligatorio solo per una nuova posizione Mediogioco classificata
-    // (design.md decisione 4); l'assegnazione a una posizione legacy è facoltativa.
-    if (this.isMiddlegame() && !this.isEdit() && this.themeId() == null) {
+    if (this.missingRequiredTheme()) {
       return 'Seleziona un tema per la posizione.';
     }
     const placed = this.pieces();
@@ -503,6 +518,14 @@ export class PositionEditor implements CanComponentDeactivate {
       return 'La configurazione non produce una FEN valida.';
     }
     return null;
+  }
+
+  /**
+   * Il tema è obbligatorio solo per una nuova posizione Mediogioco classificata
+   * (design.md decisione 4); l'assegnazione a una posizione legacy è facoltativa.
+   */
+  private missingRequiredTheme(): boolean {
+    return this.isMiddlegame() && !this.isEdit() && this.themeId() == null;
   }
 
   private validateCastling(placed: Record<string, PieceCode>): string | null {

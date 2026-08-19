@@ -316,6 +316,51 @@ describe('PositionEditor (Mediogioco, ISSUE-016/R26.3)', () => {
     expect(cmp.error()).toContain('tema');
   });
 
+  it('keeps the metadata panel collapsed on load, with the form actions above the fold', () => {
+    const { el, cmp } = setupMiddlegame();
+    const panel = el.querySelector<HTMLDetailsElement>('details.metadata-fields');
+
+    expect(cmp.metadataOpen()).toBe(false);
+    expect(panel?.open).toBe(false);
+    expect(panel?.querySelector('summary')?.textContent?.trim()).toBe('Dati Mediogioco');
+    // Da chiuso i campi restano nel DOM: binding e validazione non cambiano.
+    expect(panel?.querySelector('select[name="themeId"]')).not.toBeNull();
+    expect(panel?.querySelector('select[name="difficulty"]')).not.toBeNull();
+  });
+
+  it('reopens the metadata panel when saving without the required theme', () => {
+    const { el, fixture, cmp } = setupMiddlegame();
+    cmp.useStandardPosition();
+    cmp.onNameChange('Senza tema');
+    cmp.save();
+    fixture.detectChanges();
+
+    expect(cmp.metadataOpen()).toBe(true);
+    expect(el.querySelector<HTMLDetailsElement>('details.metadata-fields')?.open).toBe(true);
+  });
+
+  it('leaves the metadata panel closed when the failed validation is not about metadata', () => {
+    const { cmp } = setupMiddlegame({ positionId: 31, position: { ...saved, themeId: 1001 } });
+    cmp.onNameChange('   ');
+    cmp.save();
+
+    expect(cmp.error()).toContain('titolo');
+    expect(cmp.metadataOpen()).toBe(false);
+  });
+
+  it('tracks the panel state when the user toggles it', () => {
+    const { el, cmp } = setupMiddlegame();
+    const panel = el.querySelector<HTMLDetailsElement>('details.metadata-fields')!;
+
+    panel.open = true;
+    panel.dispatchEvent(new Event('toggle'));
+    expect(cmp.metadataOpen()).toBe(true);
+
+    panel.open = false;
+    panel.dispatchEvent(new Event('toggle'));
+    expect(cmp.metadataOpen()).toBe(false);
+  });
+
   it('renders the theme catalog of the classified study type', () => {
     const { el } = setupMiddlegame();
     const options = Array.from(
