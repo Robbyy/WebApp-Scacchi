@@ -365,6 +365,7 @@ public class VariantService {
             return new PreparedVariant(normalized, color, startingFen, null, null, null, null, null, null);
         }
 
+        validator.validateMiddlegameMetadata(request);
         Long themeId = request.themeId();
         if (themeId != null) {
             if (study == null || study.getStudyType() == null) {

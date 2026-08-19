@@ -48,6 +48,8 @@
       <form class="setup-form" (ngSubmit)="save()">
         <label>
           Titolo
+          <!-- Cap di UI più severo del contratto: l'API accetta fino alla capienza
+               della colonna (255), qui 120 basta a un titolo di posizione. -->
           <input name="name" [ngModel]="name()" (ngModelChange)="onNameChange($event)" maxlength="120" required />
         </label>
 
@@ -120,7 +122,7 @@
                     name="themeDescription"
                     [ngModel]="themeDescription()"
                     (ngModelChange)="themeDescription.set($event); dirty.set(true)"
-                    maxlength="500"
+                    [attr.maxlength]="maxThemeDescription"
                   />
                 </label>
               }
@@ -130,7 +132,7 @@
                   name="description"
                   [ngModel]="description()"
                   (ngModelChange)="description.set($event); dirty.set(true)"
-                  maxlength="1000"
+                  [attr.maxlength]="maxDescription"
                 />
               </label>
               <label>
@@ -152,7 +154,7 @@
                   name="source"
                   [ngModel]="source()"
                   (ngModelChange)="source.set($event); dirty.set(true)"
-                  maxlength="300"
+                  [attr.maxlength]="maxSource"
                 />
               </label>
               @if (!isEdit()) {

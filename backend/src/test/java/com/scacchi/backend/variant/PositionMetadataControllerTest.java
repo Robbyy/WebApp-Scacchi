@@ -172,6 +172,41 @@ class PositionMetadataControllerTest {
             .andExpect(jsonPath("$.startingFen").value(FEN));
     }
 
+    // --- limiti di lunghezza applicati dall'API, non solo dalla UI ---
+
+    /**
+     * I `maxlength` del frontend non sono il contratto: le colonne dei metadati
+     * sono CLOB, quindi senza il controllo server un client diverso dalla UI
+     * scriverebbe testo illimitato.
+     */
+    @Test
+    void rejectsMiddlegameMetadataLongerThanTheContractWithAStructuredError() throws Exception {
+        int studyId = createClassifiedStudy("Metadati lunghi", "TACTICAL");
+        String body = """
+            {"name":"Posizione","moves":[],"startingFen":"%s","themeId":1001,"source":"%s"}"""
+            .formatted(FEN, "s".repeat(301));
+
+        mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("source"))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("300")));
+    }
+
+    /** Oltre la capienza della colonna il nome produceva un 500 dal database. */
+    @Test
+    void rejectsAnOverlongPositionNameWithA400InsteadOfADatabaseError() throws Exception {
+        int studyId = createClassifiedStudy("Nome lungo", "TACTICAL");
+        String body = """
+            {"name":"%s","moves":[],"startingFen":"%s","themeId":1001}"""
+            .formatted("A".repeat(256), FEN);
+
+        mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("name"));
+    }
+
     // --- editor delle mosse: PUT .../tree non tocca i metadati ---
 
     /**

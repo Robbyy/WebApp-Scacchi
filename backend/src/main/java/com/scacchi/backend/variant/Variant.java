@@ -19,6 +19,24 @@ import java.util.List;
 @Table(name = "variant")
 public class Variant {
 
+    /**
+     * Limite del nome: è la capienza della colonna (`VARCHAR(255)` nel baseline
+     * Liquibase). Applicarlo nel validatore evita che un nome più lungo arrivi
+     * fino al database e produca un 500 invece di un 400 strutturato. Le UI
+     * possono restare più severe (l'editor di setup si ferma a 120).
+     */
+    public static final int MAX_NAME_LENGTH = 255;
+
+    /**
+     * Limiti dei metadati Mediogioco (R26.3). Le colonne sono CLOB, quindi qui
+     * non c'è un vincolo di database a fare da rete: senza questi controlli i
+     * `maxlength` del frontend sarebbero l'unico limite, e un client diverso
+     * dalla UI potrebbe scrivere testo illimitato.
+     */
+    public static final int MAX_THEME_DESCRIPTION_LENGTH = 500;
+    public static final int MAX_DESCRIPTION_LENGTH = 1000;
+    public static final int MAX_SOURCE_LENGTH = 300;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

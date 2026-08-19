@@ -154,6 +154,78 @@ class VariantValidatorTest {
         assertEquals("startingFen", ex.getError().field());
     }
 
+    // --- limiti di lunghezza: il contratto non può dipendere dai `maxlength` della UI ---
+
+    @Test
+    void acceptsANameUpToTheColumnCapacity() {
+        assertDoesNotThrow(() -> validator.validate(new CreateVariantRequest(
+            "A".repeat(Variant.MAX_NAME_LENGTH), "WHITE", List.of("e4"), null, null)));
+    }
+
+    /** Oltre la capienza della colonna il nome arrivava al database: 500 invece di 400. */
+    @Test
+    void rejectsANameLongerThanTheColumnCapacity() {
+        InvalidVariantException ex = assertThrows(InvalidVariantException.class,
+            () -> validator.validate(new CreateVariantRequest(
+                "A".repeat(Variant.MAX_NAME_LENGTH + 1), "WHITE", List.of("e4"), null, null)));
+
+        assertEquals("name", ex.getError().field());
+    }
+
+    @Test
+    void acceptsMiddlegameMetadataAtTheLimit() {
+        assertDoesNotThrow(() -> validator.validateMiddlegameMetadata(metadata(
+            "t".repeat(Variant.MAX_THEME_DESCRIPTION_LENGTH),
+            "d".repeat(Variant.MAX_DESCRIPTION_LENGTH),
+            "s".repeat(Variant.MAX_SOURCE_LENGTH))));
+    }
+
+    @Test
+    void acceptsAbsentMiddlegameMetadata() {
+        assertDoesNotThrow(() -> validator.validateMiddlegameMetadata(metadata(null, null, null)));
+    }
+
+    @Test
+    void rejectsAThemeDescriptionOverTheLimit() {
+        InvalidVariantException ex = assertThrows(InvalidVariantException.class,
+            () -> validator.validateMiddlegameMetadata(
+                metadata("t".repeat(Variant.MAX_THEME_DESCRIPTION_LENGTH + 1), null, null)));
+
+        assertEquals("themeDescription", ex.getError().field());
+    }
+
+    @Test
+    void rejectsADescriptionOverTheLimit() {
+        InvalidVariantException ex = assertThrows(InvalidVariantException.class,
+            () -> validator.validateMiddlegameMetadata(
+                metadata(null, "d".repeat(Variant.MAX_DESCRIPTION_LENGTH + 1), null)));
+
+        assertEquals("description", ex.getError().field());
+    }
+
+    @Test
+    void rejectsASourceOverTheLimit() {
+        InvalidVariantException ex = assertThrows(InvalidVariantException.class,
+            () -> validator.validateMiddlegameMetadata(
+                metadata(null, null, "s".repeat(Variant.MAX_SOURCE_LENGTH + 1))));
+
+        assertEquals("source", ex.getError().field());
+    }
+
+    /** Il testo è misurato ripulito, come viene poi persistito: gli spazi non contano. */
+    @Test
+    void measuresTheMetadataAfterTrimming() {
+        String padded = "   " + "s".repeat(Variant.MAX_SOURCE_LENGTH) + "   ";
+        assertDoesNotThrow(() -> validator.validateMiddlegameMetadata(metadata(null, null, padded)));
+    }
+
+    private static CreateVariantRequest metadata(
+        String themeDescription, String description, String source) {
+        return new CreateVariantRequest(
+            "Posizione", "WHITE", List.of(), null, null, KINGS_ONLY_WHITE,
+            1001L, themeDescription, description, null, source, null);
+    }
+
     @Test
     void validatesMovesFromTheCustomStartingFen() {
         CreateVariantRequest request = new CreateVariantRequest(

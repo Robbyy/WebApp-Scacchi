@@ -60,6 +60,9 @@ public class VariantValidator {
         if (request.name() == null || request.name().isBlank()) {
             throw error("name", null, null, "Il nome della variante è obbligatorio.");
         }
+        // Senza questo controllo un nome oltre la capienza della colonna arriva al
+        // database e diventa un 500 invece di un errore di validazione.
+        checkLength("name", request.name(), Variant.MAX_NAME_LENGTH);
         if (requireColor) {
             if (request.color() == null) {
                 throw error("color", null, null, "Il colore è obbligatorio.");
@@ -86,6 +89,25 @@ public class VariantValidator {
         String field = hasTree ? "tree" : "moves";
         List<MoveNode> tree = hasTree ? request.tree() : MoveNode.fromLine(request.moves());
         validateNodes(tree, startingFen, new ArrayList<>(), field);
+    }
+
+    /**
+     * Lunghezza dei metadati Mediogioco (R26.3). Le colonne sono CLOB e non
+     * pongono un limite, quindi senza questi controlli i {@code maxlength} del
+     * frontend sarebbero l'unico vincolo: il contratto dell'API non può
+     * dipendere dalla UI che lo usa.
+     */
+    public void validateMiddlegameMetadata(CreateVariantRequest request) {
+        checkLength("themeDescription", request.themeDescription(), Variant.MAX_THEME_DESCRIPTION_LENGTH);
+        checkLength("description", request.description(), Variant.MAX_DESCRIPTION_LENGTH);
+        checkLength("source", request.source(), Variant.MAX_SOURCE_LENGTH);
+    }
+
+    /** Misura il testo già ripulito, come viene poi persistito (`normalizeText`). */
+    private static void checkLength(String field, String value, int max) {
+        if (value != null && value.trim().length() > max) {
+            throw error(field, null, null, "Testo troppo lungo (massimo " + max + " caratteri).");
+        }
     }
 
     /**
@@ -304,6 +326,10 @@ public class VariantValidator {
         Square pawnSquare = Square.encode(pawnRank, target.getFile());
         Square originSquare = Square.encode(originRank, target.getFile());
 
+        // `getEnPassantTarget()` è la verifica di catturabilità, non un doppione
+        // del campo della FEN: chesslib lo azzera quando nessun pedone del lato al
+        // tratto può davvero catturare (vedi il test «senza un capturer legale»).
+        // È l'equivalente del controllo sulle colonne adiacenti fatto dall'editor.
         if (target.getRank() != expectedRank
             || board.getPiece(target) != Piece.NONE
             || board.getPiece(pawnSquare) != justMovedPawn

@@ -7,7 +7,17 @@ import { StudyService } from '../core/study.service';
 import { ToastService } from '../core/toast.service';
 import { VariantService } from '../core/variant.service';
 import { PositionThemeService } from '../core/position-theme.service';
-import { CreateVariantRequest, Difficulty, DIFFICULTIES, MoveNode, Variant, validationMessage } from '../core/variant.model';
+import {
+  CreateVariantRequest,
+  Difficulty,
+  DIFFICULTIES,
+  MAX_POSITION_DESCRIPTION_LENGTH,
+  MAX_POSITION_SOURCE_LENGTH,
+  MAX_THEME_DESCRIPTION_LENGTH,
+  MoveNode,
+  Variant,
+  validationMessage,
+} from '../core/variant.model';
 import { PositionTheme, StudyType } from '../core/position-theme.model';
 import { GamePhase } from '../core/study.model';
 import { difficultyLabel } from '../core/middlegame-format';
@@ -104,6 +114,10 @@ export class PositionEditor implements CanComponentDeactivate {
   protected readonly maxOrder = computed(() => this.existingPositionCount() + 1);
   protected readonly difficulties = DIFFICULTIES;
   protected readonly difficultyLabel = difficultyLabel;
+  /** Gli stessi limiti applicati dal backend: qui evitano di digitare oltre. */
+  protected readonly maxThemeDescription = MAX_THEME_DESCRIPTION_LENGTH;
+  protected readonly maxDescription = MAX_POSITION_DESCRIPTION_LENGTH;
+  protected readonly maxSource = MAX_POSITION_SOURCE_LENGTH;
 
   protected readonly name = signal('');
   protected readonly selectedPiece = signal<PieceCode | null>('wK');

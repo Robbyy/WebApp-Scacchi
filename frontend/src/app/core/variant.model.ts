@@ -27,6 +27,15 @@ export const MOVE_NAGS: readonly MoveNag[] = ['!', '!!', '?', '??', '!?', '?!'];
 export const MAX_MOVE_COMMENT_LENGTH = 1000;
 
 /**
+ * Limiti dei metadati Mediogioco (R26.3), gli stessi applicati dal backend in
+ * `VariantValidator`: qui sono il `maxlength` dei campi, là il contratto
+ * dell'API — che non può dipendere dai vincoli della UI che lo usa.
+ */
+export const MAX_THEME_DESCRIPTION_LENGTH = 500;
+export const MAX_POSITION_DESCRIPTION_LENGTH = 1000;
+export const MAX_POSITION_SOURCE_LENGTH = 300;
+
+/**
  * Nodo dell'albero di mosse: SAN + seguiti (il primo figlio è la mainline).
  * Da R24 può portare un commento testuale e un solo NAG: entrambi sono
  * opzionali, quindi gli alberi salvati prima restano leggibili senza modifiche.

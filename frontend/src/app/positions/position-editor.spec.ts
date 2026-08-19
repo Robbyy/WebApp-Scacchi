@@ -8,7 +8,13 @@ import { ToastService } from '../core/toast.service';
 import { VariantService } from '../core/variant.service';
 import { PositionThemeService } from '../core/position-theme.service';
 import { Study } from '../core/study.model';
-import { CreateVariantRequest, Variant } from '../core/variant.model';
+import {
+  CreateVariantRequest,
+  MAX_POSITION_DESCRIPTION_LENGTH,
+  MAX_POSITION_SOURCE_LENGTH,
+  MAX_THEME_DESCRIPTION_LENGTH,
+  Variant,
+} from '../core/variant.model';
 import { PositionTheme } from '../core/position-theme.model';
 import { MIDDLEGAME_SECTION_CONTEXT, SECTION_CONTEXT_DATA } from '../core/study-sections';
 
@@ -314,6 +320,21 @@ describe('PositionEditor (Mediogioco, ISSUE-016/R26.3)', () => {
 
     expect(captured()).toBeNull();
     expect(cmp.error()).toContain('tema');
+  });
+
+  /**
+   * I limiti sono gli stessi che il backend applica in `VariantValidator`: qui
+   * impediscono di digitare oltre, là sono il contratto. Il test li lega alle
+   * costanti condivise, così non tornano a essere numeri magici nel template.
+   */
+  it('caps the metadata fields with the shared limits', () => {
+    const { el } = setupMiddlegame();
+    const maxOf = (name: string) =>
+      el.querySelector<HTMLInputElement>(`[name="${name}"]`)?.getAttribute('maxlength');
+
+    expect(maxOf('themeDescription')).toBe(String(MAX_THEME_DESCRIPTION_LENGTH));
+    expect(maxOf('description')).toBe(String(MAX_POSITION_DESCRIPTION_LENGTH));
+    expect(maxOf('source')).toBe(String(MAX_POSITION_SOURCE_LENGTH));
   });
 
   it('keeps the metadata panel collapsed on load, with the form actions above the fold', () => {
