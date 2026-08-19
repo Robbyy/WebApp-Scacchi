@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Observable } from 'rxjs';
 import { Chess } from 'chess.js';
 import { ConfirmService } from '../core/confirm.service';
 import { StudyService } from '../core/study.service';
@@ -22,6 +23,7 @@ import { PositionTheme, StudyType } from '../core/position-theme.model';
 import { GamePhase } from '../core/study.model';
 import { difficultyLabel } from '../core/middlegame-format';
 import { fromLine } from '../core/move-tree';
+import { moveItem } from '../core/reorder';
 import { sectionContextFrom, sectionLabel, sectionPaths } from '../core/study-sections';
 import { CanComponentDeactivate } from '../variants/can-deactivate.guard';
 
@@ -111,7 +113,21 @@ export class PositionEditor implements CanComponentDeactivate {
   protected readonly difficulty = signal<Difficulty | null>(null);
   protected readonly source = signal('');
   protected readonly positionOrder = signal(1);
-  protected readonly maxOrder = computed(() => this.existingPositionCount() + 1);
+  /**
+   * Posizioni dello studio nell'ordine corrente: servono a costruire la
+   * permutazione del riordino, che è atomico e non passa dal PUT della
+   * posizione (vincolo unique su `study_id, position_order`).
+   */
+  private readonly siblingIds = signal<number[]>([]);
+  /**
+   * In creazione si può inserire anche in coda (N+1); in modifica la posizione
+   * è già nella lista, quindi ci si sposta soltanto dentro 1..N.
+   */
+  protected readonly maxOrder = computed(() =>
+    this.isEdit()
+      ? Math.max(this.existingPositionCount(), 1)
+      : this.existingPositionCount() + 1,
+  );
   protected readonly difficulties = DIFFICULTIES;
   protected readonly difficultyLabel = difficultyLabel;
   /** Gli stessi limiti applicati dal backend: qui evitano di digitare oltre. */
@@ -345,13 +361,18 @@ export class PositionEditor implements CanComponentDeactivate {
       : this.variants.updateVariant(id, request);
     request$.subscribe({
       next: (saved) => {
-        this.dirty.set(false);
-        this.saving.set(false);
-        this.toast.success(this.isEdit() ? 'Posizione aggiornata.' : 'Posizione salvata.');
-        // Dopo il setup della FEN l'utente può completare o correggere
-        // l'albero delle mosse nell'editor esistente (task R25 6.2), che nella
-        // sezione è `/middlegame/positions/{id}/edit` (ISSUE-016).
-        void this.router.navigateByUrl(this.paths.positionEdit(saved.id));
+        const move$ = this.pendingReorder();
+        if (!move$) {
+          this.afterSave(saved.id, this.isEdit() ? 'Posizione aggiornata.' : 'Posizione salvata.');
+          return;
+        }
+        move$.subscribe({
+          next: () => this.afterSave(saved.id, 'Posizione aggiornata e spostata.'),
+          // La posizione è già salvata: fallisce solo lo spostamento, e va detto
+          // con precisione invece di far credere perso tutto il salvataggio.
+          error: () =>
+            this.afterSave(saved.id, 'Posizione salvata, ma lo spostamento non è riuscito.', true),
+        });
       },
       error: (err) => {
         const message = validationMessage(err) ?? 'Salvataggio non riuscito.';
@@ -360,6 +381,42 @@ export class PositionEditor implements CanComponentDeactivate {
         this.saving.set(false);
       },
     });
+  }
+
+  /**
+   * Spostamento richiesto dal campo «Ordine» in modifica, `null` se l'ordine non
+   * è cambiato. È una seconda chiamata perché il riordino è atomico e passa dal
+   * contratto dedicato (task 3.5/5.5): il PUT della posizione ignora di
+   * proposito `positionOrder`, che ha un vincolo di unicità per studio.
+   */
+  private pendingReorder(): Observable<Variant[]> | null {
+    const studyId = this.studyId();
+    const id = this.editId();
+    const ids = this.siblingIds();
+    if (studyId === null || id === null || !this.isMiddlegame()) {
+      return null;
+    }
+    const from = ids.indexOf(id);
+    const to = this.positionOrder() - 1;
+    if (from < 0 || to < 0 || to >= ids.length || from === to) {
+      return null;
+    }
+    return this.studies.reorderVariants(studyId, moveItem(ids, from, to));
+  }
+
+  /** Chiusura comune del salvataggio: si prosegue nell'editor delle mosse. */
+  private afterSave(savedId: number, message: string, failed = false): void {
+    this.dirty.set(false);
+    this.saving.set(false);
+    if (failed) {
+      this.toast.error(message);
+    } else {
+      this.toast.success(message);
+    }
+    // Dopo il setup della FEN l'utente può completare o correggere l'albero
+    // delle mosse nell'editor esistente (task R25 6.2), che nella sezione è
+    // `/middlegame/positions/{id}/edit` (ISSUE-016).
+    void this.router.navigateByUrl(this.paths.positionEdit(savedId));
   }
 
   private loadPosition(id: number): void {
@@ -412,9 +469,15 @@ export class PositionEditor implements CanComponentDeactivate {
           );
           return;
         }
-        if (!this.isEdit()) {
-          this.positionOrder.set(study.variantCount + 1);
-        }
+        // Il backend restituisce già le posizioni Mediogioco per `positionOrder`,
+        // quindi l'indice nell'elenco è l'ordine mostrato.
+        this.siblingIds.set((study.variants ?? []).map((v) => v.id));
+        const current = this.siblingIds().indexOf(this.editId() ?? -1);
+        this.positionOrder.set(
+          this.isEdit()
+            ? (current >= 0 ? current + 1 : 1)
+            : study.variantCount + 1,
+        );
         if (study.phase === 'MIDDLEGAME' && study.studyType != null) {
           this.loadThemes(study.studyType);
         }
@@ -515,6 +578,12 @@ export class PositionEditor implements CanComponentDeactivate {
     }
     if (this.missingRequiredTheme()) {
       return 'Seleziona un tema per la posizione.';
+    }
+    if (this.isMiddlegame()) {
+      const order = this.positionOrder();
+      if (!Number.isInteger(order) || order < 1 || order > this.maxOrder()) {
+        return `L'ordine deve essere compreso tra 1 e ${this.maxOrder()}.`;
+      }
     }
     const placed = this.pieces();
     const whiteKing = Object.entries(placed).filter(([, p]) => p === 'wK').map(([s]) => s);

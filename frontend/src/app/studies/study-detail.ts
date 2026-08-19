@@ -18,6 +18,7 @@ import { formatReviewDate } from '../reviews/review-format';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
 import { sectionContextFrom, sectionLabel, sectionPaths } from '../core/study-sections';
+import { moveItem } from '../core/reorder';
 import { StudyFormFields } from './study-form-fields';
 
 /**
@@ -343,9 +344,7 @@ export class StudyDetail {
     ) {
       return;
     }
-    const next = [...current];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
+    const next = moveItem(current, from, to);
     this.reordering.set(true);
     this.study.set({ ...s, variants: next });
     this.service.reorderVariants(s.id, next.map((v) => v.id)).subscribe({

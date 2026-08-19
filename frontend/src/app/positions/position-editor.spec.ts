@@ -48,17 +48,23 @@ interface SetupOptions {
   /** `data` della route: con il contesto l'editor è quello di sezione. */
   data?: Record<string, unknown>;
   themes?: PositionTheme[];
+  /** Posizioni dello studio nell'ordine corrente, per il riordino da «Ordine». */
+  siblings?: Variant[];
+  /** Esito della chiamata di riordino, per provarne il fallimento. */
+  reorder?: () => unknown;
 }
 
 function setup(options: SetupOptions = {}) {
   let captured: CreateVariantRequest | null = null;
   let updatedId: number | null = null;
   let asked = 0;
+  let reordered: number[] | null = null;
   const currentStudy: Study = {
     ...study,
     phase: options.phase ?? study.phase,
     studyType: options.studyType,
     variantCount: options.variantCount ?? study.variantCount,
+    variants: options.siblings,
   };
   const positionId = options.positionId ?? null;
   TestBed.configureTestingModule({
@@ -72,6 +78,10 @@ function setup(options: SetupOptions = {}) {
           addVariant: (_studyId: number, request: CreateVariantRequest) => {
             captured = request;
             return options.save ? options.save(request) : of(saved);
+          },
+          reorderVariants: (_studyId: number, variantIds: number[]) => {
+            reordered = variantIds;
+            return options.reorder ? options.reorder() : of([]);
           },
         },
       },
@@ -130,6 +140,7 @@ function setup(options: SetupOptions = {}) {
     updatedId: () => updatedId,
     navigated: () => navTarget,
     asked: () => asked,
+    reordered: () => reordered,
   };
 }
 
@@ -353,6 +364,85 @@ describe('PositionEditor (Mediogioco, ISSUE-016/R26.3)', () => {
 
     cmp.onSideChange('b');
     expect(cmp.enPassant()).toBe('-');
+  });
+
+  // --- ordine modificabile anche dalla modifica ---
+
+  /** Le tre posizioni dello studio, con quella in modifica (31) al secondo posto. */
+  function threeSiblings(): Variant[] {
+    return [
+      { ...saved, id: 30, name: 'Prima' },
+      { ...saved, id: 31, name: 'Seconda' },
+      { ...saved, id: 32, name: 'Terza' },
+    ];
+  }
+
+  function editingSecondOfThree(extra: Partial<SetupOptions> = {}) {
+    return setupMiddlegame({
+      positionId: 31,
+      position: { ...saved, id: 31, themeId: 1001 },
+      siblings: threeSiblings(),
+      variantCount: 3,
+      ...extra,
+    });
+  }
+
+  it('shows the current order while editing, bounded by the existing positions', () => {
+    const { cmp, el } = editingSecondOfThree();
+
+    expect(cmp.positionOrder()).toBe(2);
+    // In modifica la posizione è già in elenco: ci si sposta dentro 1..N, non N+1.
+    expect(cmp.maxOrder()).toBe(3);
+    expect(el.querySelector<HTMLInputElement>('[name="positionOrder"]')?.getAttribute('max'))
+      .toBe('3');
+  });
+
+  /**
+   * Lo spostamento non viaggia nel PUT della posizione — che ignora di proposito
+   * `positionOrder` — ma nel contratto atomico del riordino.
+   */
+  it('moves the position through the dedicated reorder contract, not the position PUT', () => {
+    const { cmp, captured, reordered, navigated } = editingSecondOfThree();
+
+    cmp.positionOrder.set(1);
+    cmp.save();
+
+    expect((captured() as CreateVariantRequest | null)?.positionOrder).toBeUndefined();
+    expect(reordered()).toEqual([31, 30, 32]);
+    expect(navigated()).toBe('/middlegame/positions/31/edit');
+  });
+
+  it('does not reorder when the order is left untouched', () => {
+    const { cmp, reordered } = editingSecondOfThree();
+
+    cmp.save();
+
+    expect(reordered()).toBeNull();
+  });
+
+  /** La posizione è salvata comunque: solo lo spostamento è fallito. */
+  it('reports a failed move without claiming the save was lost', () => {
+    const { cmp, navigated } = editingSecondOfThree({
+      reorder: () => throwError(() => new Error('conflitto')),
+    });
+
+    cmp.positionOrder.set(3);
+    cmp.save();
+
+    expect(cmp.dirty()).toBe(false);
+    expect(cmp.saving()).toBe(false);
+    expect(navigated()).toBe('/middlegame/positions/31/edit');
+  });
+
+  it('rejects an order outside the existing positions', () => {
+    const { cmp, captured, reordered } = editingSecondOfThree();
+
+    cmp.positionOrder.set(4);
+    cmp.save();
+
+    expect(cmp.error()).toContain('tra 1 e 3');
+    expect(captured()).toBeNull();
+    expect(reordered()).toBeNull();
   });
 
   it('disables the submit until the position has a title', () => {

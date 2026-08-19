@@ -157,19 +157,20 @@
                   [attr.maxlength]="maxSource"
                 />
               </label>
-              @if (!isEdit()) {
-                <label>
-                  Ordine
-                  <input
-                    type="number"
-                    name="positionOrder"
-                    min="1"
-                    [max]="maxOrder()"
-                    [ngModel]="positionOrder()"
-                    (ngModelChange)="positionOrder.set($event); dirty.set(true)"
-                  />
-                </label>
-              }
+              <label>
+                Ordine
+                <input
+                  type="number"
+                  name="positionOrder"
+                  min="1"
+                  [max]="maxOrder()"
+                  [ngModel]="positionOrder()"
+                  (ngModelChange)="positionOrder.set($event); dirty.set(true)"
+                />
+                @if (isEdit()) {
+                  <small>Su {{ maxOrder() }} posizioni dello studio. Lo spostamento è salvato con la posizione.</small>
+                }
+              </label>
             </div>
           </details>
         }
