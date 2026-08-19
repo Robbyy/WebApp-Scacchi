@@ -1,7 +1,8 @@
 # custom-starting-fen Specification
 
 ## Purpose
-TBD - created by archiving change issue-016-custom-starting-fen. Update Purpose after archive.
+Definisce l'editor visuale e la validazione della FEN iniziale custom e dell'albero mosse per le
+posizioni di Mediogioco e Finale.
 ## Requirements
 ### Requirement: Non-opening positions are created with a visual starting-position editor
 Il sistema SHALL offrire un editor visuale per creare e modificare una posizione appartenente a uno studio `MIDDLEGAME` o `ENDGAME`. L'editor SHALL consentire di piazzare e rimuovere pezzi, impostare il lato al tratto, configurare i diritti d'arrocco e configurare una casa en-passant. Il flusso SHALL associare la posizione allo studio da cui è avviato.
@@ -99,4 +100,3 @@ track della griglia.
 #### Scenario: Use the setup board in either positional phase
 - **WHEN** l'editor FEN condiviso viene aperto per una posizione `MIDDLEGAME` o `ENDGAME`
 - **THEN** applica la stessa geometria 8×8 invariabile senza dipendere dalla fase dello studio
-

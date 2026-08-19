@@ -18,7 +18,7 @@ Fonti da leggere prima di iniziare:
 - [preflight di dominio](preflight-mediogioco-studio-guidato.md);
 - [analisi tecnica](analisi-mediogioco-studio-guidato.md);
 - [proposal, design, spec e task della change modello archiviata](../openspec/changes/archive/2026-08-17-issue-016-middlegame-guided-study-model/);
-- [proposal, design, spec e task della change flussi](../openspec/changes/issue-016-middlegame-guided-study-flows/);
+- [proposal, design, spec e task della change flussi archiviata](../openspec/changes/archive/2026-08-19-issue-016-middlegame-guided-study-flows/);
 - [checklist E2E R26.3](checklist-e2e.md#flussi-aggiunti-r263-change-flussi--gate-b9-verificata-il-2026-08-19).
 
 Le specifiche OpenSpec e i due `tasks.md` sono la fonte normativa dei requisiti. Questo piano
@@ -30,8 +30,8 @@ serve soltanto a stabilire l'ordine di esecuzione e i punti di controllo.
 - Change A e B: quattro artefatti completi ciascuna, `openspec validate --all --strict` superata.
 - Change A: **40/40 task completati**, verificati e archiviati il 2026-08-17.
 - Change B: **55/55 task completati**, verificati e archiviati il 2026-08-19 (gate B9).
-- Evidenze finali: 191 test backend, 692 frontend, build verde, 81 flussi E2E completati
-  (72–81 verificati il 2026-08-19, inclusa la regressione 68–71).
+- Evidenze finali: 191 test backend, 692 frontend, build verde, flussi E2E 68–81 verificati
+  (72–81 il 2026-08-19, inclusa la riesecuzione di regressione 68–71).
 - **R26.3 è rilasciata** come prodotto: entrambe le change sono implementate, verificate e archiviate.
 - `backend/data/scacchi.mv.db` è una risorsa protetta: non va usata per test, migration, preview,
   ripristini o staging.
@@ -108,7 +108,7 @@ riapertura o nuova change.
 
 ## 7. Change B — flussi guidati
 
-File normativo: `openspec/changes/issue-016-middlegame-guided-study-flows/tasks.md`.
+File normativo archiviato: `openspec/changes/archive/2026-08-19-issue-016-middlegame-guided-study-flows/tasks.md`.
 
 | Ordine | Task sorgente | Contenuto | Uscita verificabile |
 |---|---|---|---|

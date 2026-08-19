@@ -1,13 +1,15 @@
 # Checklist E2E manuale - WebApp Scacchi
 
-> Checklist ripetibile per la validazione manuale end-to-end, verificata fino alla release
-> evolutiva R26.2 (2026-08-14); il follow-up del setup editor è registrato nel flusso 67.
+> Checklist ripetibile per la validazione manuale end-to-end. La baseline R26.2 è stata
+> verificata il 2026-08-14; il follow-up del setup editor è registrato nel flusso 67.
 > I flussi 68–71, gate della change modello di R26.3 (`issue-016-middlegame-guided-study-model`),
 > sono stati verificati il 2026-08-17 su H2 temporaneo. I flussi 72–81, gate B9 della change flussi
 > (`issue-016-middlegame-guided-study-flows`), sono stati verificati il 2026-08-19 su H2 temporaneo,
 > incluse la riesecuzione di regressione dei flussi 68–71 e la verifica esplicita motore
-> spento/non disponibile/callback obsoleta. Il conteggio corrente è di **81 flussi completati**;
-> con questo gate la change flussi è completa e **R26.3 è rilasciata** come prodotto.
+> spento/non disponibile/callback obsoleta. La checklist contiene **81 flussi numerati**, oltre
+> al sottoflusso 30-bis; nel gate R26.3 sono stati verificati i flussi 68–81 e le caselle 41–81
+> risultano chiuse. Le caselle 1–40 e 30-bis restano da riverificare esplicitamente. Con il gate
+> dei flussi 72–81 la change flussi è completa e **R26.3 è rilasciata** come prodotto.
 > Eseguibile in pochi minuti dopo ogni rilascio significativo, prima di dichiararlo completato.
 > Complementare ai test automatici (vedi sezione "Copertura automatica" in fondo).
 

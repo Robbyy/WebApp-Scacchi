@@ -3,6 +3,7 @@
 > **Fonte autorevole:** controller, DTO, entità JPA e test sono la fonte di verità.
 > Questo documento è una panoramica operativa. In caso di discrepanza, il codice vince.
 > Per request/response complete → controller e DTO. Per campi esatti → entità JPA.
+> Aggiornato per includere il modello e i flussi dello studio guidato Mediogioco di R26.3.
 
 ---
 
@@ -33,6 +34,8 @@ Package principali sotto `com.scacchi.backend`:
 | `ping` | Health check (`GET /api/ping`) |
 | `variant` | CRUD varianti, albero mosse, validazione legalità (`chesslib`) |
 | `study` | CRUD studi 1-N con varianti, cascata, import bulk e upsert Lichess |
+| `theme` | Catalogo temi normalizzato per gli studi Mediogioco |
+| `attempt` | Storico e riepiloghi dei tentativi dello studio guidato Mediogioco |
 | `training` | Sessioni di allenamento: registrazione e storico mosse |
 | `stats` | Aggregazioni statistiche per variante e studio |
 | `review` | Spaced repetition SM-2: scheduling e lista varianti dovute (teoria e formule → [`docs/sm2.md`](sm2.md)) |
@@ -54,6 +57,7 @@ Aree principali sotto `src/app`:
 | `reviews` | Vista «Ripeti oggi» (spaced repetition) |
 | `play` | Gioca contro il computer (Stockfish client-side) |
 | `sections` | Lista/creazione degli studi Mediogioco e segnaposto riusabile per la sezione Finale |
+| `guided-study` | Tentativi manuali e sequenziali dello studio guidato Mediogioco |
 | `core` | Servizi e modelli condivisi |
 
 ---
@@ -90,12 +94,16 @@ Base URL: `/api`. Per dettagli di request/response → controller e DTO nel codi
 | POST | `/api/variants` | Crea variante |
 | PUT | `/api/variants/{id}` | Aggiorna variante |
 | DELETE | `/api/variants/{id}` | Elimina variante |
+| POST | `/api/variants/{id}/attempts` | Registra un tentativo di studio Mediogioco |
+| GET | `/api/variants/{id}/attempts` | Storico tentativi della posizione |
 | GET | `/api/studies` | Lista studi (con conteggio varianti); filtro opzionale `?phase=OPENING\|MIDDLEGAME\|ENDGAME` |
 | GET | `/api/studies/{id}` | Dettaglio studio + varianti |
-| POST | `/api/studies` | Crea studio (campo opzionale `phase`, default `OPENING`) |
-| PUT | `/api/studies/{id}` | Aggiorna studio (nome/descrizione/colore; `phase` immutabile → 400 se diversa da quella persistita) |
+| POST | `/api/studies` | Crea studio (`studyType` obbligatorio per `MIDDLEGAME`, vietato per `OPENING`/`ENDGAME`) |
+| PUT | `/api/studies/{id}` | Aggiorna studio (metadati; `phase` immutabile e `studyType` classificabile una sola volta) |
 | DELETE | `/api/studies/{id}` | Elimina studio (cascata sulle varianti) |
-| POST | `/api/studies/{id}/variants` | Crea variante/posizione nello studio (fase ereditata dallo studio) |
+| POST | `/api/studies/{id}/variants` | Crea variante/posizione nello studio (metadati R26.3 per Mediogioco) |
+| PUT | `/api/studies/{id}/variants/order` | Riordina atomicamente le posizioni Mediogioco |
+| GET | `/api/studies/{id}/attempts/summary` | Riepilogo tentativi delle posizioni dello studio |
 | POST | `/api/studies/import` | Import bulk: studio + varianti in transazione (sempre fase `OPENING`) |
 | POST | `/api/studies/import/lichess` | Import/upsert studio Lichess con riferimento remoto (sempre fase `OPENING`) |
 | POST | `/api/training-sessions` | Registra sessione di allenamento conclusa (solo varianti di studi `OPENING` o legacy senza studio → 400 altrimenti) |
@@ -105,6 +113,7 @@ Base URL: `/api`. Per dettagli di request/response → controller e DTO nel codi
 | GET | `/api/stats/studies/{id}` | Statistiche aggregate per studio (solo studi `OPENING`; `404` per studio inesistente o non `OPENING`) |
 | GET | `/api/reviews/due` | Varianti dovute per spaced repetition |
 | GET | `/api/reviews/variants/{id}` | Schedule SM-2 di una variante (204 se non ancora pianificata) |
+| GET | `/api/position-themes?studyType=...` | Catalogo temi Mediogioco filtrato per tipologia |
 
 **Errore di validazione strutturato (400):** `{ field, ply, branchPath, message }`.
 
@@ -122,10 +131,18 @@ Per i campi esatti → entità JPA in `backend/src/main/java/com/scacchi/backend
 Study 1──N Variant
   Study:   id, name, description?, color (WHITE/BLACK/MIXED)?,
            phase (OPENING/MIDDLEGAME/ENDGAME, immutabile dopo la creazione),
+           studyType (TACTICAL/STRATEGIC per MIDDLEGAME, nullable per legacy e altre fasi),
            createdAt, sourceProvider?, sourceStudyId?, sourceUrl?, lastImportedAt?
 
   Variant: id, name, color (WHITE/BLACK), moves (mainline JSON), tree (MoveNode JSON),
-           startingFen, sourcePgn (text), createdAt, studyId (FK nullable)
+           startingFen, sourcePgn (text), themeId?, themeDescription?, description?,
+           difficulty?, source?, positionOrder?, createdAt, studyId (FK nullable)
+
+PositionTheme 1──N Variant (reference by themeId)
+  PositionTheme: id, code, displayLabel, studyType, displayOrder, active
+
+Variant 1──N PositionAttempt
+  PositionAttempt: id, variantId, outcome, occurredAt
 
 Variant 1──N TrainingSession ──N TrainingMove
   TrainingSession: id, variantId, studyId (denormalizzato), result, mistakesCount,
@@ -140,6 +157,8 @@ Variant 1──1 ReviewSchedule
 - `Study → Variant`: **delete a cascata** (eliminare uno studio elimina le sue varianti).
 - `Variant` non ha una propria `phase`: si deriva sempre dallo studio padre (`studyId` → `Study.phase`); le varianti legacy senza `studyId` sono trattate come `OPENING` (ISSUE-016).
 - `Variant → TrainingSession`: cascade su `TrainingMove`.
+- `Variant → PositionAttempt`: delete a cascata; gli eventi sono immutabili e non espongono
+  endpoint di modifica o cancellazione del singolo tentativo.
 - `MoveNode`: `{ san: string, children: MoveNode[], comment?: string, nag?: '!' | '?' | '!!' | '??' | '!?' | '?!' }` — `children[0]` è la mainline. `comment` e `nag` (R24) sono **opzionali** e vivono nella stessa colonna JSON `tree`: nessuna migration, nessuna colonna nuova. Il backend valida lunghezza del commento (max 1.000 caratteri) e appartenenza del NAG all'insieme dei sei; gli alberi salvati prima di R24 restano validi e un albero non annotato serializza senza i due campi.
 
 ---

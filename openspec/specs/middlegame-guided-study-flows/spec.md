@@ -1,7 +1,8 @@
 # middlegame-guided-study-flows Specification
 
 ## Purpose
-TBD - created by archiving change issue-016-middlegame-guided-study-flows. Update Purpose after archive.
+Definisce i flussi frontend dello studio guidato Mediogioco, inclusi tentativi tattici e strategici,
+soluzione, motore esplorativo, modalità sequenziale, storico e riepiloghi.
 ## Requirements
 ### Requirement: Guided study uses dedicated middlegame routes and eligibility
 Il sistema SHALL offrire lo studio guidato tramite rotte dedicate sotto `/middlegame`, separate
@@ -301,4 +302,3 @@ contratti di Aperture e delle posizioni R26.1/R26.2.
 #### Scenario: Endgame remains outside guided study
 - **WHEN** l'utente apre `/endgame` o una posizione `ENDGAME`
 - **THEN** il sistema non espone le nuove rotte o azioni guidate di R26.3 e mantiene il perimetro pianificato di R27
-

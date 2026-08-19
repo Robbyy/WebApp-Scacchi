@@ -1,7 +1,8 @@
 # middlegame-guided-study-model Specification
 
 ## Purpose
-TBD - created by archiving change issue-016-middlegame-guided-study-model. Update Purpose after archive.
+Definisce il modello persistito, le migrazioni e le API per classificare gli studi Mediogioco,
+associare temi e metadati alle posizioni e registrare lo storico minimo dei tentativi.
 ## Requirements
 ### Requirement: Middlegame studies have an immutable study type
 Il sistema SHALL associare ai nuovi studi `MIDDLEGAME` esattamente una tipologia tra `TACTICAL` e
@@ -289,4 +290,3 @@ SHALL NOT applicare automaticamente tipologia, temi o tentativi R26.3 alla fase 
 #### Scenario: Endgame remains outside R26.3
 - **WHEN** viene aperto o modificato uno studio `ENDGAME`
 - **THEN** il sistema mantiene i contratti posizionali esistenti senza richiedere tipo o tema R26.3 e senza esporre tentativi guidati
-

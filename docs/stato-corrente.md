@@ -90,7 +90,8 @@ Verifiche browser superate senza errori console inattesi fino al follow-up R26.2
 
 R26.2 ha usato lo stesso schema, di nuovo su `H2_DB_PATH` temporaneo: alle sei larghezze il breadcrumb dell'editor posizionale non contiene link né elementi focalizzabili, il pannello destro mantiene l'ordine `nome → Mosse & rami → replay → contatore → [ramo] → azioni → Salva/Annulla` e non si produce overflow orizzontale. Sono stati riverificati replay, badge di ramo, menu azioni con ritorno del focus, creazione di un ramo, guard delle modifiche non salvate, salvataggio con redirect canonico e persistenza di albero/commenti/NAG; il dettaglio conserva il motore e le Aperture restano al comportamento precedente. In quella sessione il pannello browser non componeva frame, quindi le evidenze sono albero di accessibilità, misure DOM e interazioni reali invece di schermate.
 
-Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **81 flussi**; i cinque
+Checklist E2E ripetibile: [`docs/checklist-e2e.md`](checklist-e2e.md) — **81 flussi numerati** (più
+il sottoflusso 30-bis); i cinque
 flussi R26.1 (59–63), i tre R26.2 (64–66), il follow-up 67, i quattro della change modello R26.3
 (68–71) e i dieci della change flussi R26.3 (72–81, gate B9) sono tutti completati.
 
