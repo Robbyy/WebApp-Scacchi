@@ -2,8 +2,11 @@ package com.scacchi.backend.theme;
 
 import com.scacchi.backend.study.StudyType;
 import com.scacchi.backend.variant.ValidationError;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 /**
@@ -30,6 +33,19 @@ public class PositionThemeService {
     /** Dato leggibile di un tema per ID (A3): usato per risolvere {@code Variant.themeId}. */
     public Optional<PositionThemeDto> findById(Long id) {
         return repository.findById(id).map(PositionThemeService::toDto);
+    }
+
+    /**
+     * Risolve più temi in una sola query, indicizzati per ID. Serve a chi
+     * converte un elenco di varianti: risolvendoli uno a uno, un elenco di N
+     * posizioni costava N interrogazioni al catalogo.
+     */
+    public Map<Long, PositionThemeDto> findAllByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Map.of();
+        }
+        return repository.findAllById(ids).stream()
+            .collect(Collectors.toMap(PositionTheme::getId, PositionThemeService::toDto));
     }
 
     /**

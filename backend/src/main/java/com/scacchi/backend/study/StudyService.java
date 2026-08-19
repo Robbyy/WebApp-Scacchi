@@ -44,7 +44,7 @@ public class StudyService {
     /** Dettaglio di uno studio con l'elenco completo delle sue varianti. */
     public Optional<StudyDto> findById(Long id) {
         return repository.findById(id).map(s -> {
-            List<VariantDto> variants = variantService.findByStudyId(s.getId());
+            List<VariantDto> variants = variantService.findByStudy(s);
             return toDto(s, variants.size(), variants);
         });
     }

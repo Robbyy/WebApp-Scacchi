@@ -16,6 +16,13 @@ spring:
       # con validate, vedi docs/specs/liquibase.md D3): i test verificano via CRUD reale.
       ddl-auto: none
     open-in-view: false
+    properties:
+      hibernate:
+        # Abilita il contatore di query usato da StudyDetailQueryCountTest per
+        # impedire il rientro dell'N+1 sul catalogo temi. Solo nei test, e qui
+        # invece che con `@SpringBootTest(properties=...)` per non far creare al
+        # solo test di conteggio un secondo contesto applicativo.
+        generate_statistics: true
   h2:
     console:
       enabled: false

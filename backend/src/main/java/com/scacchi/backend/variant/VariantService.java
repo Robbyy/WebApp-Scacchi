@@ -9,6 +9,7 @@ import com.scacchi.backend.theme.PositionThemeService;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -42,9 +43,7 @@ public class VariantService {
     }
 
     public List<VariantDto> findAll() {
-        return repository.findAll(Sort.by(Sort.Direction.ASC, "id")).stream()
-            .map(this::toDto)
-            .toList();
+        return toDtos(repository.findAll(Sort.by(Sort.Direction.ASC, "id")));
     }
 
     public Optional<VariantDto> findById(Long id) {
@@ -177,13 +176,18 @@ public class VariantService {
         return true;
     }
 
-    /** Varianti appartenenti a uno studio (Prototipo 11): per ordine esplicito in Mediogioco, per id altrove. */
-    public List<VariantDto> findByStudyId(Long studyId) {
-        Study study = studyFor(studyId);
-        List<Variant> variants = (study != null && study.getPhase() == GamePhase.MIDDLEGAME)
+    /**
+     * Varianti appartenenti a uno studio (Prototipo 11): per ordine esplicito in
+     * Mediogioco, per id altrove. Prende lo studio già caricato invece del suo id:
+     * l'unico chiamante lo ha in mano, e rileggerlo serviva solo a conoscerne la
+     * fase, cioè una seconda interrogazione sulla stessa riga.
+     */
+    public List<VariantDto> findByStudy(Study study) {
+        Long studyId = study.getId();
+        List<Variant> variants = study.getPhase() == GamePhase.MIDDLEGAME
             ? repository.findByStudyIdOrderByPositionOrderAsc(studyId)
             : repository.findByStudyIdOrderByIdAsc(studyId);
-        return variants.stream().map(this::toDto).toList();
+        return toDtos(variants);
     }
 
     /** Numero di varianti in uno studio (per il conteggio in lista, Prototipo 11). */
@@ -235,9 +239,7 @@ public class VariantService {
         }
         repository.saveAll(existing);
 
-        return Optional.of(repository.findByStudyIdOrderByPositionOrderAsc(studyId).stream()
-            .map(this::toDto)
-            .toList());
+        return Optional.of(toDtos(repository.findByStudyIdOrderByPositionOrderAsc(studyId)));
     }
 
     private static void validateReorderPayload(List<Variant> existing, List<Long> orderedIds) {
@@ -311,14 +313,28 @@ public class VariantService {
         return study != null ? study.getPhase() : GamePhase.OPENING;
     }
 
+    /**
+     * Converte un elenco risolvendo i temi in una sola interrogazione al
+     * catalogo: uno a uno, uno studio con N posizioni ne costava N.
+     */
+    private List<VariantDto> toDtos(List<Variant> variants) {
+        Map<Long, PositionThemeDto> themes = themeService.findAllByIds(
+            variants.stream().map(Variant::getThemeId).filter(Objects::nonNull).collect(Collectors.toSet()));
+        return variants.stream()
+            .map(v -> toDto(v, v.getThemeId() == null ? null : themes.get(v.getThemeId())))
+            .toList();
+    }
+
+    /** Conversione singola: qui il tema costa una interrogazione, non un N+1. */
     private VariantDto toDto(Variant v) {
+        return toDto(v, v.getThemeId() == null ? null : themeService.findById(v.getThemeId()).orElse(null));
+    }
+
+    private VariantDto toDto(Variant v, PositionThemeDto theme) {
         // Righe legacy senza albero: lo si deriva dalla linea principale.
         List<MoveNode> tree = v.getTree() != null && !v.getTree().isEmpty()
             ? v.getTree()
             : MoveNode.fromLine(v.getMoves());
-        PositionThemeDto theme = v.getThemeId() == null
-            ? null
-            : themeService.findById(v.getThemeId()).orElse(null);
         boolean eligible = v.getThemeId() != null && v.getMoves() != null && !v.getMoves().isEmpty();
         return new VariantDto(
             v.getId(),
