@@ -23,7 +23,11 @@ import { studyTypeLabel } from '../core/middlegame-format';
   templateUrl: './position-study-list.html',
   // Presentazione condivisa con la home Aperture (card, badge, griglia
   // adattiva): riusata dal foglio esistente per non duplicarne gli stili.
-  styleUrls: ['../studies/study-list.css', './position-study-list.css'],
+  styleUrls: [
+    '../studies/study-list.css',
+    '../studies/study-type-badge.css',
+    './position-study-list.css',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PositionStudyList implements OnInit {

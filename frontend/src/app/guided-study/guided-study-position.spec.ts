@@ -124,7 +124,7 @@ describe('GuidedStudyPosition (R26.3, task 1.3/1.4)', () => {
 
   it('shows a controlled state for a position without an assigned theme', () => {
     const { cmp, el } = setup({
-      getVariant: () => of(eligiblePosition({ themeId: null, theme: null })),
+      getVariant: () => of(eligiblePosition({ themeId: null, theme: null, eligibleForGuidedStudy: false })),
     });
     expect(cmp.gate().reason).toBe('MISSING_THEME');
     expect(el.querySelector('app-chessboard')).toBeNull();
@@ -150,7 +150,7 @@ describe('GuidedStudyPosition (R26.3, task 1.3/1.4)', () => {
 
   it('never enables any control on a blocked state', () => {
     const { el } = setup({
-      getVariant: () => of(eligiblePosition({ themeId: null, theme: null })),
+      getVariant: () => of(eligiblePosition({ themeId: null, theme: null, eligibleForGuidedStudy: false })),
     });
     expect(el.querySelector('button')).toBeNull();
   });

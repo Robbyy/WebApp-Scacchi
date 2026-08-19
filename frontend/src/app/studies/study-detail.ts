@@ -37,7 +37,7 @@ import { StudyFormFields } from './study-form-fields';
   selector: 'app-study-detail',
   imports: [FormsModule, RouterLink, StudyFormFields],
   templateUrl: './study-detail.html',
-  styleUrl: './study-detail.css',
+  styleUrls: ['./study-type-badge.css', './study-detail.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudyDetail {

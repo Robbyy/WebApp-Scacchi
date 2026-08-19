@@ -1,0 +1,21 @@
+/* Tipologia di uno studio Mediogioco (R26.3): «Tattica»/«Strategia», oppure
+   «Da classificare» finché non viene scelta. Classe dedicata e non `.badge`,
+   così resta distinta dal badge colore delle Aperture (vedi test R25).
+
+   Foglio a sé perché il badge compare in tre pagine che non condividono altro:
+   dettaglio studio, lista degli studi di sezione e configurazione dello studio
+   guidato. Si include dai rispettivi `styleUrls`. */
+.study-type-badge {
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--wood-light);
+  color: var(--wood-dark);
+}
+
+.study-type-badge--pending {
+  background: oklch(0.95 0.05 75);
+  color: var(--wood-dark);
+  border: 1px dashed var(--panel-border);
+}

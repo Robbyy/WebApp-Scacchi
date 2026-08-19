@@ -351,7 +351,8 @@ public class VariantService {
         }
 
         if (request == null) {
-            validator.validate(request, START_FEN, true, false);
+            throw new InvalidVariantException(new ValidationError(
+                "request", null, null, "Richiesta mancante."));
         }
         String startingFen = validator.validateAndNormalizeStartingFen(request.startingFen());
         Color color = startingFen.split(" ")[1].equals("w") ? Color.WHITE : Color.BLACK;

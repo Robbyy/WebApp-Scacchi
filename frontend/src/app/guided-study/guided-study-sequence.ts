@@ -114,7 +114,11 @@ interface SequenceSummary {
   selector: 'app-guided-study-sequence',
   imports: [FormsModule, RouterLink, GuidedStudyAttempt],
   templateUrl: './guided-study-sequence.html',
-  styleUrls: ['../studies/study-detail.css', './guided-study-sequence.css'],
+  styleUrls: [
+    '../studies/study-detail.css',
+    '../studies/study-type-badge.css',
+    './guided-study-sequence.css',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GuidedStudySequence {

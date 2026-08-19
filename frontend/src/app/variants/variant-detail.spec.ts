@@ -1266,10 +1266,18 @@ describe('VariantDetail (perimetro dello studio guidato, R26.3 task 8.4)', () =>
   });
 
   it('does not offer the manual guided study for an unclassified study or a themeless position', () => {
+    // `eligibleForGuidedStudy` è derivato dal backend da tema e mainline: dove
+    // manca uno dei due il flag arriva `false`, e i doppi devono rifletterlo.
     for (const [study, position] of [
       [studyOf('MIDDLEGAME', { studyType: null }), eligible],
-      [studyOf('MIDDLEGAME'), { ...eligible, themeId: null }],
-      [studyOf('MIDDLEGAME'), { ...eligible, moves: [], tree: [] }],
+      [
+        studyOf('MIDDLEGAME'),
+        { ...eligible, themeId: null, eligibleForGuidedStudy: false },
+      ],
+      [
+        studyOf('MIDDLEGAME'),
+        { ...eligible, moves: [], tree: [], eligibleForGuidedStudy: false },
+      ],
     ] as [Study, Variant][]) {
       // Tre montaggi nello stesso `it`: il modulo va resettato fra l'uno e l'altro.
       TestBed.resetTestingModule();

@@ -542,9 +542,16 @@ export class PositionEditor implements CanComponentDeactivate {
     return this.isMiddlegame() && !this.isEdit() && this.themeId() == null;
   }
 
+  /** Un diritto d'arrocco richiede re e torre del proprio colore sulle case iniziali. */
   private validateCastling(placed: Record<string, PieceCode>): string | null {
-    const missing = (right: boolean, king: string, rook: string) => right && (placed[king] !== (king[0] === 'e' && king.endsWith('1') ? 'wK' : 'bK') || placed[rook] !== (rook.endsWith('1') ? 'wR' : 'bR'));
-    if (missing(this.whiteKingSide(), 'e1', 'h1') || missing(this.whiteQueenSide(), 'e1', 'a1') || missing(this.blackKingSide(), 'e8', 'h8') || missing(this.blackQueenSide(), 'e8', 'a8')) {
+    const missing = (right: boolean, side: 'w' | 'b', rook: string) =>
+      right && (placed[side === 'w' ? 'e1' : 'e8'] !== `${side}K` || placed[rook] !== `${side}R`);
+    if (
+      missing(this.whiteKingSide(), 'w', 'h1')
+      || missing(this.whiteQueenSide(), 'w', 'a1')
+      || missing(this.blackKingSide(), 'b', 'h8')
+      || missing(this.blackQueenSide(), 'b', 'a8')
+    ) {
       return 'I diritti di arrocco richiedono il re e la torre corrispondenti sulle case iniziali.';
     }
     return null;

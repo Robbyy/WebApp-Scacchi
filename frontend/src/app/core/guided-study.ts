@@ -29,9 +29,14 @@ function blocked(reason: GuidedStudyBlockReason): GuidedStudyGate {
 
 /**
  * Eleggibilità di una posizione al tentativo manuale/sequenziale (design
- * decisione 2): studio della fase attesa e classificato, tema assegnato,
- * mainline non vuota (non bozza). L'ultimo controllo rilegge il flag
- * derivato dal backend (`eligibleForGuidedStudy`) come rete di sicurezza.
+ * decisione 2): studio della fase attesa e classificato, più il giudizio del
+ * backend sulla posizione.
+ *
+ * Sull'eleggibilità della posizione l'autorità è `eligibleForGuidedStudy`, non
+ * una regola riscritta qui: tema mancante e bozza restano controlli locali ma
+ * servono solo a dire *perché* è bloccata, con un messaggio preciso invece di
+ * uno generico. Così una condizione aggiunta in futuro dal backend blocca
+ * comunque, e nessun ramo resta irraggiungibile.
  */
 export function positionGuidedStudyGate(
   study: Study | null,
@@ -47,13 +52,13 @@ export function positionGuidedStudyGate(
   if (!study.studyType) {
     return blocked('UNCLASSIFIED_STUDY');
   }
-  if (variant.themeId == null) {
-    return blocked('MISSING_THEME');
-  }
-  if (!variant.moves || variant.moves.length === 0) {
-    return blocked('DRAFT');
-  }
   if (!variant.eligibleForGuidedStudy) {
+    if (variant.themeId == null) {
+      return blocked('MISSING_THEME');
+    }
+    if (!variant.moves || variant.moves.length === 0) {
+      return blocked('DRAFT');
+    }
     return blocked('INELIGIBLE');
   }
   return ELIGIBLE;

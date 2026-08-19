@@ -53,23 +53,40 @@ describe('positionGuidedStudyGate', () => {
     });
   });
 
+  // Il backend deriva `eligibleForGuidedStudy` da tema assegnato e mainline non
+  // vuota: nei casi bloccati il flag è quindi sempre `false`, e i due controlli
+  // locali servono solo a scegliere il messaggio.
+
   it('blocks a position without an assigned theme', () => {
-    expect(positionGuidedStudyGate(study(), variant({ themeId: null }))).toEqual({
-      eligible: false,
-      reason: 'MISSING_THEME',
-    });
+    expect(
+      positionGuidedStudyGate(
+        study(),
+        variant({ themeId: null, eligibleForGuidedStudy: false }),
+      ),
+    ).toEqual({ eligible: false, reason: 'MISSING_THEME' });
   });
 
   it('blocks a draft position (no mainline)', () => {
-    expect(positionGuidedStudyGate(study(), variant({ moves: [] }))).toEqual({
-      eligible: false,
-      reason: 'DRAFT',
-    });
+    expect(
+      positionGuidedStudyGate(study(), variant({ moves: [], eligibleForGuidedStudy: false })),
+    ).toEqual({ eligible: false, reason: 'DRAFT' });
   });
 
-  it('falls back to the backend eligibility flag as a safety net', () => {
+  /**
+   * Posizione con tema e mosse che il backend dichiara comunque non eleggibile:
+   * il client non conosce il motivo e blocca con il messaggio generico invece
+   * di lasciarla passare. È il caso di una regola aggiunta solo lato server.
+   */
+  it('blocks on the backend flag alone when the client sees no local reason', () => {
     expect(
       positionGuidedStudyGate(study(), variant({ eligibleForGuidedStudy: false })),
+    ).toEqual({ eligible: false, reason: 'INELIGIBLE' });
+  });
+
+  /** Il flag assente (risposta parziale) non vale come eleggibilità. */
+  it('does not treat a missing eligibility flag as eligible', () => {
+    expect(
+      positionGuidedStudyGate(study(), variant({ eligibleForGuidedStudy: undefined })),
     ).toEqual({ eligible: false, reason: 'INELIGIBLE' });
   });
 });
