@@ -94,6 +94,8 @@ export class StudyDetail {
   /** Riordino numerico e drag-and-drop (R26.3, task 5.5): una richiesta alla volta. */
   protected readonly reordering = signal(false);
   private readonly dragIndex = signal<number | null>(null);
+  /** Ultima card sorvolata: destinazione del drop anche se il rilascio cade fra due card. */
+  private readonly dropIndex = signal<number | null>(null);
 
   constructor() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -306,24 +308,55 @@ export class StudyDetail {
 
   protected onDragStart(index: number): void {
     this.dragIndex.set(index);
+    this.dropIndex.set(null);
   }
 
   protected dragIndexIs(index: number): boolean {
     return this.dragIndex() === index;
   }
 
-  protected onDragOver(event: DragEvent): void {
+  /** Sorvolo di una card: la registra come destinazione e abilita il drop. */
+  protected onDragOver(event: Event, index: number): void {
     // Necessario per rendere la riga una destinazione di drop valida (API nativa).
+    event.preventDefault();
+    this.dropIndex.set(index);
+  }
+
+  /**
+   * Sorvolo della lista fuori da una card: `.variant-cards` lascia uno spazio
+   * fra una card e l'altra che non appartiene a nessuna delle due. Senza questo
+   * il rilascio in quello spazio — frequente quando si sposta di una sola
+   * posizione — non produceva alcun drop. La destinazione resta l'ultima card
+   * sorvolata.
+   */
+  protected onListDragOver(event: Event): void {
     event.preventDefault();
   }
 
-  protected onDrop(index: number): void {
+  /** Il drop è gestito sulla lista: raccoglie anche i rilasci fra due card. */
+  protected onListDrop(event: Event): void {
+    event.preventDefault();
     const from = this.dragIndex();
-    this.dragIndex.set(null);
-    if (from === null || from === index) {
+    const to = this.dropIndex();
+    this.clearDrag();
+    if (from === null || to === null || from === to) {
       return;
     }
-    this.reorder(from, index);
+    this.reorder(from, to);
+  }
+
+  /**
+   * `dragend` scatta sempre alla fine del trascinamento, anche quando non c'è
+   * stato alcun drop (rilascio fuori dalla lista, o annullamento con Esc).
+   * Senza, la card restava a `opacity: .5` e sembrava disabilitata.
+   */
+  protected onDragEnd(): void {
+    this.clearDrag();
+  }
+
+  private clearDrag(): void {
+    this.dragIndex.set(null);
+    this.dropIndex.set(null);
   }
 
   /**

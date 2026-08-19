@@ -179,15 +179,19 @@
         <p class="list-muted">Nessuna {{ itemLabel() }} in questo studio. Aggiungine una con &laquo;Nuova {{ itemLabel() }}&raquo;.</p>
       }
     } @else {
-      <ul class="variant-cards">
+      <ul
+        class="variant-cards"
+        (dragover)="isMiddlegame() ? onListDragOver($event) : null"
+        (drop)="isMiddlegame() ? onListDrop($event) : null"
+      >
         @for (v of variants(); track v.id; let i = $index) {
           <li
             class="variant-card"
             [attr.draggable]="isMiddlegame() ? true : null"
             [class.variant-card--dragging]="isMiddlegame() && dragIndexIs(i)"
             (dragstart)="onDragStart(i)"
-            (dragover)="onDragOver($event)"
-            (drop)="onDrop(i)"
+            (dragover)="onDragOver($event, i)"
+            (dragend)="onDragEnd()"
           >
             @if (isMiddlegame()) {
               <div class="reorder-controls">

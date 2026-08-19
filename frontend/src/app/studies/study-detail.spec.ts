@@ -607,6 +607,12 @@ describe('StudyDetail (riordino, R26.3 task 5.5)', () => {
     expect(cmp.reordering()).toBe(false);
   });
 
+  /** Evento di trascinamento sintetico: in jsdom `DragEvent` non è costruibile. */
+  function dragEvent(): Event {
+    const event = new Event('dragover', { bubbles: true, cancelable: true });
+    return event;
+  }
+
   it('reorders via drag-and-drop using the same atomic contract', () => {
     let captured: number[] | null = null;
     const { cmp } = setupMiddlegame({
@@ -621,9 +627,70 @@ describe('StudyDetail (riordino, R26.3 task 5.5)', () => {
     });
 
     cmp.onDragStart(0);
-    cmp.onDrop(1);
+    cmp.onDragOver(dragEvent(), 1);
+    cmp.onListDrop(dragEvent());
 
     expect(captured).toEqual([12, 11]);
+  });
+
+  /**
+   * Fra una card e l'altra `.variant-cards` lascia 12px che non appartengono a
+   * nessuna: rilasciare lì — cosa frequente spostando di una sola posizione —
+   * non produceva alcun drop sulla card. Il drop è ora gestito sulla lista, che
+   * ricorda l'ultima card sorvolata.
+   */
+  it('still moves when the pointer is released in the gap between two cards', () => {
+    let captured: number[] | null = null;
+    const { cmp } = setupMiddlegame({
+      getStudy: () => of(middlegameStudy([p1, p2])),
+      reorderVariants: (_id: number, ids: number[]) => {
+        captured = ids;
+        return of([
+          { ...p2, positionOrder: 1 },
+          { ...p1, positionOrder: 2 },
+        ]);
+      },
+    });
+
+    cmp.onDragStart(0);
+    cmp.onDragOver(dragEvent(), 1); // sorvola la seconda card
+    cmp.onListDragOver(dragEvent()); // poi lo spazio fra le due
+    cmp.onListDrop(dragEvent());
+
+    expect(captured).toEqual([12, 11]);
+  });
+
+  /**
+   * Un trascinamento abbandonato (rilasciato fuori dalla lista, o annullato con
+   * Esc) non produce alcun drop: senza `dragend` la card restava a `opacity: .5`
+   * e sembrava disabilitata.
+   */
+  it('clears the drag state when the drag ends without a drop', () => {
+    const { cmp } = setupMiddlegame({ getStudy: () => of(middlegameStudy([p1, p2])) });
+
+    cmp.onDragStart(0);
+    expect(cmp.dragIndexIs(0)).toBe(true);
+
+    cmp.onDragEnd();
+
+    expect(cmp.dragIndexIs(0)).toBe(false);
+  });
+
+  it('does not reorder when the drag ends outside any card', () => {
+    let called = false;
+    const { cmp } = setupMiddlegame({
+      getStudy: () => of(middlegameStudy([p1, p2])),
+      reorderVariants: () => {
+        called = true;
+        return of([]);
+      },
+    });
+
+    cmp.onDragStart(0);
+    cmp.onDragEnd();
+
+    expect(called).toBe(false);
+    expect(cmp.variants().map((v: Variant) => v.id)).toEqual([11, 12]);
   });
 
   it('does not reorder for an opening study (regression)', () => {
