@@ -5,7 +5,13 @@ import { StudyService } from '../core/study.service';
 import { ToastService } from '../core/toast.service';
 import { Study } from '../core/study.model';
 import { SectionRouteContext, sectionLabel, sectionPaths } from '../core/study-sections';
-import { studyTypeLabel } from '../core/middlegame-format';
+
+interface StudyGroup {
+  key: 'tactical' | 'strategic' | 'unclassified' | 'all';
+  title: string | null;
+  emptyMessage: string | null;
+  studies: Study[];
+}
 
 /**
  * Lista degli studi di una sezione posizionale (ISSUE-016): chiede al backend i
@@ -25,7 +31,6 @@ import { studyTypeLabel } from '../core/middlegame-format';
   // adattiva): riusata dal foglio esistente per non duplicarne gli stili.
   styleUrls: [
     '../studies/study-list.css',
-    '../studies/study-type-badge.css',
     './position-study-list.css',
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -44,9 +49,46 @@ export class PositionStudyList implements OnInit {
   protected readonly paths = computed(() => sectionPaths(this.sectionContext()));
   /** Tipologia (Tattica/Strategia) valida solo per Mediogioco: `null` per Finale. */
   protected readonly isMiddlegame = computed(() => this.sectionContext().phase === 'MIDDLEGAME');
-  protected readonly studyTypeLabel = studyTypeLabel;
 
   protected readonly studies = signal<Study[]>([]);
+  /**
+   * Il Mediogioco espone sempre i due cataloghi principali e aggiunge il
+   * gruppo legacy soltanto quando serve. Il Finale conserva invece la lista
+   * unica: il componente resta riusabile senza estendere il suo dominio.
+   * L'ordine ricevuto dal backend viene preservato dentro ciascun gruppo.
+   */
+  protected readonly studyGroups = computed<StudyGroup[]>(() => {
+    const studies = this.studies();
+    if (!this.isMiddlegame()) {
+      return [{ key: 'all', title: null, emptyMessage: null, studies }];
+    }
+
+    const groups: StudyGroup[] = [
+      {
+        key: 'tactical',
+        title: 'Studi di tattica',
+        emptyMessage: 'Nessuno studio di tattica.',
+        studies: studies.filter((study) => study.studyType === 'TACTICAL'),
+      },
+      {
+        key: 'strategic',
+        title: 'Studi di strategia',
+        emptyMessage: 'Nessuno studio di strategia.',
+        studies: studies.filter((study) => study.studyType === 'STRATEGIC'),
+      },
+    ];
+    const unclassified = studies.filter((study) => study.studyType == null);
+    if (unclassified.length > 0) {
+      groups.push({
+        key: 'unclassified',
+        title: 'Da classificare',
+        emptyMessage: null,
+        studies: unclassified,
+      });
+    }
+    return groups;
+  });
+
   protected readonly error = signal<string | null>(null);
   protected readonly loading = signal(true);
   protected readonly deletingId = signal<number | null>(null);

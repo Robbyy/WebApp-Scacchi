@@ -16,46 +16,57 @@
     <p class="list-muted">Caricamento&#8230;</p>
   } @else if (error()) {
     <p class="list-error">{{ error() }}</p>
-  } @else if (studies().length === 0) {
+  } @else if (!isMiddlegame() && studies().length === 0) {
     <div class="list-empty">
       <p class="list-muted">
         Nessuno studio di {{ label() }}. Crea il primo studio per raccogliere le tue posizioni.
       </p>
     </div>
   } @else {
-    <ul class="study-cards">
-      @for (s of studies(); track s.id) {
-        <li class="study-card">
-          <a class="study-main" [routerLink]="paths().study(s.id)">
-            <span class="study-title-row">
-              @if (isMiddlegame()) {
-                <span class="study-type-badge" [class.study-type-badge--pending]="!s.studyType">
-                  {{ studyTypeLabel(s.studyType) }}
-                </span>
+    <div class="study-groups" [class.study-groups--classified]="isMiddlegame()">
+      @for (group of studyGroups(); track group.key) {
+        <section
+          class="study-group"
+          [attr.data-study-group]="group.key"
+          [attr.aria-labelledby]="group.title ? 'study-group-' + group.key : null"
+          [attr.aria-label]="group.title ? null : 'Studi di ' + label()"
+        >
+          @if (group.title) {
+            <h3 class="study-group-title" [id]="'study-group-' + group.key">{{ group.title }}</h3>
+          }
+          @if (group.studies.length === 0) {
+            <p class="study-group-empty">{{ group.emptyMessage }}</p>
+          } @else {
+            <ul class="study-cards">
+              @for (s of group.studies; track s.id) {
+                <li class="study-card">
+                  <a class="study-main" [routerLink]="paths().study(s.id)">
+                    <span class="study-name">{{ s.name }}</span>
+                    @if (s.description) {
+                      <span class="study-desc">{{ s.description }}</span>
+                    }
+                    <span class="study-meta">
+                      <span class="study-count">{{ s.variantCount }} {{ itemLabel(s.variantCount) }}</span>
+                    </span>
+                  </a>
+                  <button
+                    class="delete-btn"
+                    type="button"
+                    (click)="remove(s)"
+                    [disabled]="deletingId() === s.id"
+                    [attr.aria-label]="'Elimina ' + s.name"
+                    title="Elimina studio"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M9 3v1H4v2h16V4h-5V3H9zM6 8l1 12h10l1-12H6z" />
+                    </svg>
+                  </button>
+                </li>
               }
-              <span class="study-name">{{ s.name }}</span>
-            </span>
-            @if (s.description) {
-              <span class="study-desc">{{ s.description }}</span>
-            }
-            <span class="study-meta">
-              <span class="study-count">{{ s.variantCount }} {{ itemLabel(s.variantCount) }}</span>
-            </span>
-          </a>
-          <button
-            class="delete-btn"
-            type="button"
-            (click)="remove(s)"
-            [disabled]="deletingId() === s.id"
-            [attr.aria-label]="'Elimina ' + s.name"
-            title="Elimina studio"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M9 3v1H4v2h16V4h-5V3H9zM6 8l1 12h10l1-12H6z" />
-            </svg>
-          </button>
-        </li>
+            </ul>
+          }
+        </section>
       }
-    </ul>
+    </div>
   }
 </section>

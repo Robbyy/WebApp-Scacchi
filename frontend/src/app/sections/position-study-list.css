@@ -12,11 +12,24 @@
   margin: 0;
 }
 
-/* Riga badge tipologia + nome studio: la card resta a colonna (nome/descrizione/
-   meta), solo badge e nome stanno affiancati sulla stessa riga. Il badge stesso
-   arriva da `studies/study-type-badge.css`. */
-.study-title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+/* Nel Mediogioco la tipologia diventa struttura della pagina, non un badge
+   ripetuto su ogni card. La griglia condivisa resta indipendente per gruppo. */
+.study-groups--classified {
+  display: grid;
+  gap: 2rem;
+}
+
+.study-group-title {
+  margin: 0 0 0.75rem;
+  color: var(--text-main);
+  font-size: 1.15rem;
+}
+
+.study-group-empty {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border: 1px dashed var(--panel-border);
+  border-radius: 0.85rem;
+  color: var(--text-muted);
+  background: var(--panel-bg);
 }

@@ -7,7 +7,7 @@ studi e posizioni manuali basate su FEN e albero di mosse.
 ## Stato
 
 Parte 1 e Parte 2 (P0–P19) completate e verificate in locale.
-Backend: 208 test verdi. Frontend: 708 test verdi.
+Backend: 208 test verdi. Frontend: 711 test verdi.
 Terza tornata (infrastruttura) avviata: **schema gestito da Liquibase** (ISSUE-019, fatto).
 OpenSpec è installato e lo scaffold `openspec/` è pronto per le change di maggiore impatto.
 ISSUE-003 (header home: titolo e pulsanti a capo) risolta e verificata a Full HD

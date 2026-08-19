@@ -98,11 +98,16 @@ describe('PositionStudyList (ISSUE-016)', () => {
     expect(el.querySelector('.study-cards')).toBeNull();
   });
 
-  it('keeps a single creation action in the header when the list is empty', () => {
+  it('keeps a single creation action and shows both empty middlegame groups', () => {
     const { el } = setup(phaseService([]));
-    const empty = el.querySelector('.list-empty');
-    expect(empty?.textContent).toContain('Nessuno studio di Mediogioco');
-    expect(empty?.querySelector('a.new-cta')).toBeNull();
+    expect(el.querySelector('.list-empty')).toBeNull();
+    expect(el.querySelector('[data-study-group="tactical"]')?.textContent).toContain(
+      'Nessuno studio di tattica',
+    );
+    expect(el.querySelector('[data-study-group="strategic"]')?.textContent).toContain(
+      'Nessuno studio di strategia',
+    );
+    expect(el.querySelector('[data-study-group="unclassified"]')).toBeNull();
     const ctas = el.querySelectorAll<HTMLAnchorElement>('a.new-cta');
     expect(ctas.length).toBe(1);
     expect(ctas[0].getAttribute('href')).toBe('/middlegame/studies/new');
@@ -139,29 +144,125 @@ describe('PositionStudyList (ISSUE-016)', () => {
     expect(el.textContent).not.toContain('Bianco');
   });
 
-  it('shows the study type badge to the left of the name in middlegame', () => {
-    const tactical: Study = { id: 3, name: 'Struttura IQP', phase: 'MIDDLEGAME', variantCount: 0, studyType: 'TACTICAL' };
-    const unclassified: Study = { id: 4, name: 'Bozza', phase: 'MIDDLEGAME', variantCount: 0, studyType: null };
-    const { el } = setup(phaseService([tactical, unclassified]));
+  it('groups middlegame studies by type while preserving their relative order', () => {
+    const tactical1: Study = {
+      id: 3,
+      name: 'Struttura IQP',
+      phase: 'MIDDLEGAME',
+      variantCount: 0,
+      studyType: 'TACTICAL',
+    };
+    const tactical2: Study = {
+      id: 4,
+      name: 'Attacco doppio',
+      phase: 'MIDDLEGAME',
+      variantCount: 0,
+      studyType: 'TACTICAL',
+    };
+    const strategic1: Study = {
+      id: 5,
+      name: 'Pedone isolato',
+      phase: 'MIDDLEGAME',
+      variantCount: 0,
+      studyType: 'STRATEGIC',
+    };
+    const strategic2: Study = {
+      id: 6,
+      name: 'Case deboli',
+      phase: 'MIDDLEGAME',
+      variantCount: 0,
+      studyType: 'STRATEGIC',
+    };
+    const unclassified: Study = {
+      id: 7,
+      name: 'Archivio legacy',
+      phase: 'MIDDLEGAME',
+      variantCount: 0,
+      studyType: null,
+    };
+    const { el } = setup(
+      phaseService([strategic1, tactical1, unclassified, tactical2, strategic2]),
+    );
 
-    const rows = Array.from(el.querySelectorAll('.study-title-row'));
-    expect(rows.length).toBe(2);
-    expect(rows[0].children[0].className).toContain('study-type-badge');
-    expect(rows[0].children[0].textContent?.trim()).toBe('Tattica');
-    expect(rows[0].children[1].className).toContain('study-name');
-
-    expect(rows[1].children[0].textContent?.trim()).toBe('Da classificare');
-    expect(rows[1].children[0].classList.contains('study-type-badge--pending')).toBe(true);
+    const groups = Array.from(el.querySelectorAll<HTMLElement>('[data-study-group]'));
+    expect(groups.map((group) => group.dataset['studyGroup'])).toEqual([
+      'tactical',
+      'strategic',
+      'unclassified',
+    ]);
+    expect(groups.map((group) => group.querySelector('h3')?.textContent?.trim())).toEqual([
+      'Studi di tattica',
+      'Studi di strategia',
+      'Da classificare',
+    ]);
+    const names = (key: string) =>
+      Array.from(
+        el.querySelectorAll<HTMLElement>(`[data-study-group="${key}"] .study-name`),
+      ).map((name) => name.textContent?.trim());
+    expect(names('tactical')).toEqual(['Struttura IQP', 'Attacco doppio']);
+    expect(names('strategic')).toEqual(['Pedone isolato', 'Case deboli']);
+    expect(names('unclassified')).toEqual(['Archivio legacy']);
+    expect(el.querySelector('.study-type-badge')).toBeNull();
   });
 
-  it('hides the study type badge outside middlegame (no such classification for Finale)', () => {
+  it('keeps the unclassified group hidden when no legacy study exists', () => {
+    const tactical: Study = {
+      id: 3,
+      name: 'Tattica',
+      phase: 'MIDDLEGAME',
+      variantCount: 0,
+      studyType: 'TACTICAL',
+    };
+    const { el } = setup(phaseService([tactical]));
+
+    expect(el.querySelector('[data-study-group="unclassified"]')).toBeNull();
+    expect(el.querySelector('[data-study-group="strategic"]')?.textContent).toContain(
+      'Nessuno studio di strategia',
+    );
+  });
+
+  it('keeps the single ungrouped list outside middlegame', () => {
     const endgameStudy: Study = { id: 5, name: 'Finale di torri', phase: 'ENDGAME', variantCount: 0 };
     const { el } = setup(
       phaseService([endgameStudy]),
       true,
       { section: 'endgame', phase: 'ENDGAME', base: '/endgame', positionMode: true },
     );
+    expect(el.querySelector('[data-study-group="all"]')).not.toBeNull();
+    expect(el.querySelector('.study-group-title')).toBeNull();
     expect(el.querySelector('.study-type-badge')).toBeNull();
+  });
+
+  it('keeps the original empty state outside middlegame', () => {
+    const { el } = setup(
+      phaseService([]),
+      true,
+      { section: 'endgame', phase: 'ENDGAME', base: '/endgame', positionMode: true },
+    );
+
+    expect(el.querySelector('.list-empty')?.textContent).toContain('Nessuno studio di Finale');
+    expect(el.querySelector('[data-study-group]')).toBeNull();
+    expect(el.querySelectorAll('a.new-cta').length).toBe(1);
+  });
+
+  it('removes the legacy group when its last study is deleted', async () => {
+    const legacy: Study = {
+      id: 8,
+      name: 'Da sistemare',
+      phase: 'MIDDLEGAME',
+      variantCount: 0,
+      studyType: null,
+    };
+    const { cmp, el, fixture } = setup(
+      phaseService([legacy], { deleteStudy: () => of(void 0) }),
+    );
+    expect(el.querySelector('[data-study-group="unclassified"]')).not.toBeNull();
+
+    await cmp.remove(legacy);
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-study-group="unclassified"]')).toBeNull();
+    expect(el.querySelectorAll('[data-study-group]').length).toBe(2);
   });
 
   it('removes a study after confirmation', async () => {
