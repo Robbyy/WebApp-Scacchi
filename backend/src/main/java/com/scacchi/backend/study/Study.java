@@ -45,6 +45,16 @@ public class Study {
     private GamePhase phase;
 
     /**
+     * Tipologia dello studio Mediogioco (ISSUE-016/R26.3): {@code TACTICAL} o
+     * {@code STRATEGIC}. Nullable: {@code NULL} per fasi diverse da {@code MIDDLEGAME}
+     * e per i Mediogioco legacy «Da classificare» in attesa dell'unica transizione
+     * consentita verso un valore (vedi {@code StudyService}).
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "study_type", length = 16)
+    private StudyType studyType;
+
+    /**
      * Provenienza remota (Prototipo 15): per gli studi importati da Lichess
      * {@code sourceProvider="LICHESS"} e {@code sourceStudyId} è l'id Lichess.
      * La coppia (provider, sourceStudyId) identifica univocamente l'origine ed
@@ -106,6 +116,14 @@ public class Study {
 
     public void setPhase(GamePhase phase) {
         this.phase = phase;
+    }
+
+    public StudyType getStudyType() {
+        return studyType;
+    }
+
+    public void setStudyType(StudyType studyType) {
+        this.studyType = studyType;
     }
 
     public String getSourceProvider() {

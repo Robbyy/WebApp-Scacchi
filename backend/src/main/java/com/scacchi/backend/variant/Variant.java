@@ -51,6 +51,32 @@ public class Variant {
     @Column(name = "study_id")
     private Long studyId;
 
+    /**
+     * Metadati di studio guidato Mediogioco (ISSUE-016/R26.3, design.md decisioni 4-5).
+     * Colonne nullable e condivise con Aperture/Finale, dove restano sempre {@code NULL}.
+     * {@code themeId} referenzia soltanto l'ID del catalogo {@code position_theme}, mai il
+     * {@code code}: nessuna relazione JPA, come per {@code studyId} sopra.
+     */
+    @Column(name = "theme_id")
+    private Long themeId;
+
+    @Column(name = "theme_description", columnDefinition = "text")
+    private String themeDescription;
+
+    @Column(name = "description", columnDefinition = "text")
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "difficulty", length = 16)
+    private Difficulty difficulty;
+
+    @Column(name = "source", columnDefinition = "text")
+    private String source;
+
+    /** Ordine contiguo 1..N per studio, valorizzato solo per le posizioni Mediogioco. */
+    @Column(name = "position_order")
+    private Integer positionOrder;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -119,6 +145,54 @@ public class Variant {
 
     public void setStudyId(Long studyId) {
         this.studyId = studyId;
+    }
+
+    public Long getThemeId() {
+        return themeId;
+    }
+
+    public void setThemeId(Long themeId) {
+        this.themeId = themeId;
+    }
+
+    public String getThemeDescription() {
+        return themeDescription;
+    }
+
+    public void setThemeDescription(String themeDescription) {
+        this.themeDescription = themeDescription;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Difficulty getDifficulty() {
+        return difficulty;
+    }
+
+    public void setDifficulty(Difficulty difficulty) {
+        this.difficulty = difficulty;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
+    }
+
+    public Integer getPositionOrder() {
+        return positionOrder;
+    }
+
+    public void setPositionOrder(Integer positionOrder) {
+        this.positionOrder = positionOrder;
     }
 
     public Instant getCreatedAt() {

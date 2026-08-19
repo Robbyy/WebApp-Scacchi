@@ -1,13 +1,17 @@
 # Piano progressivo dei rilasci evolutivi
 
-> **Aggiornato:** 2026-08-16 · **Stato:** in corso — **R20–R26.2 completati**;
+> **Aggiornato:** 2026-08-19 · **Stato:** in corso — **R20–R26.2 completati**;
 > **R26 implementata, verificata e archiviata in OpenSpec il 2026-08-13**;
 > **R26.1 implementata, verificata e archiviata in OpenSpec il 2026-08-14**;
 > **R26.2 implementata, verificata e archiviata in OpenSpec il 2026-08-14**;
 > **follow-up `f5bbb25` verificato nel flusso E2E 67 il 2026-08-16**;
-> **R26.3 pianificata prima di R27**, con preflight, analisi e due change OpenSpec validate
-> dalla CLI; governance indipendente ancora da eseguire;
-> i rilasci da R26.3 in poi restano pianificazione.
+> **R26.3 completata e rilasciata**: la change modello `issue-016-middlegame-guided-study-model` è
+> **implementata, verificata e archiviata il 2026-08-17** (191 backend/503 frontend, flussi E2E
+> 68–71); la change flussi `issue-016-middlegame-guided-study-flows` è **implementata, verificata
+> e archiviata il 2026-08-19** (gate B9, 55/55 task, 191 backend/692 frontend, flussi E2E 72–81
+> inclusa la regressione 68–71). R27 non eredita automaticamente tipologia dello studio né flussi
+> guidati;
+> i rilasci da R27 in poi restano pianificazione.
 >
 > **Perimetro:** sole issue evolutive ancora aperte. I difetti registrati su GitHub,
 > gli audit e l'infrastruttura non fanno parte di questa sequenza. La storia dei
@@ -62,7 +66,7 @@ Riferimenti: [backlog](backlog.md),
 | **010** ✅ | Permette di passare tra varianti senza tornare allo studio | dettaglio variante, editor, layout responsivo | rilasciata con R23 (2026-08-10) |
 | **008** ✅ | Rimuove l'auto-play non necessario | controlli del dettaglio variante | rilasciata con R23 (2026-08-10) |
 | **013** ✅ | Operazioni rapide sull'albero di mosse | editor, menu contestuale, conferma | rilasciata con R24 (2026-08-10); mini-spec completata |
-| **016** | Estende l'app a Mediogioco e Finale | modello, editor, API, sezioni UI | modello a fasi e R25–R26.2 completati; R26.3 pianificata, poi R27–R28 |
+| **016** | Estende l'app a Mediogioco e Finale | modello, editor, API, sezioni UI | modello a fasi, R25–R26.2 e R26.3 (entrambe le change) completati e archiviati; poi R27–R28 |
 | **015** | Espone identità e versioni dell'app | topbar, contratto versione FE/BE | da consolidare con l'hub Impostazioni |
 | **017** | Centralizza le impostazioni e parametrizza SM-2 | topbar, persistenza, `ReviewScheduler` | richiede OpenSpec e scelta DB/localStorage |
 | **014** | Configura i parametri UCI del motore | worker Stockfish, Impostazioni | richiede audit UCI e ISSUE-017 |
@@ -76,16 +80,18 @@ rimangono intenzionalmente limitati alle Aperture.
 `issue-016-move-comments` è stata completata con R24. `issue-016-custom-starting-fen` è stata
 implementata, integrata in `master` e verificata manualmente con i flussi E2E 49–52.
 `issue-016-middlegame-section` è implementata, verificata con i flussi E2E 53–58 e
-archiviata in OpenSpec. Prima del Finale è pianificata **R26.3 — Studio guidato del Mediogioco**,
-articolata nelle change sequenziali `issue-016-middlegame-guided-study-model` e
-`issue-016-middlegame-guided-study-flows`. Seguono, in ordine di dipendenza,
-`issue-016-endgame-section` e `issue-016-play-position-vs-engine`.
+archiviata in OpenSpec. R26.3 — Studio guidato del Mediogioco è **completata e rilasciata**,
+articolata nelle change sequenziali `issue-016-middlegame-guided-study-model` (implementata,
+verificata e archiviata il 2026-08-17) e `issue-016-middlegame-guided-study-flows` (55/55 task,
+implementata, verificata e archiviata il 2026-08-19, gate B9 con i flussi E2E 72–81). Seguono, in
+ordine di dipendenza, `issue-016-endgame-section` e `issue-016-play-position-vs-engine`; R27 non
+eredita automaticamente la tipologia dello studio né i flussi guidati.
 
 R25 è una vera slice di dominio, non una semplice UI: comprende il contratto API,
 la validazione backend della FEN e dell'albero dalla posizione scelta, la derivazione
 del colore tecnico e l'editor visuale. Le verifiche automatiche e manuali sono verdi;
 la change è chiusa per R25. R26 ha reso reale Mediogioco riusando lo stesso contratto;
-R26.3 ne aggiungerà lo studio guidato e il Finale resta nella slice R27 successiva.
+R26.3 ne ha aggiunto lo studio guidato e il Finale resta nella slice R27 successiva.
 
 ---
 
@@ -102,8 +108,8 @@ R26.3 ne aggiungerà lo studio guidato e il Finale resta nella slice R27 success
 | **R26 — Mediogioco reale** ✅ | `issue-016-middlegame-section` | Trasforma il segnaposto di R20 nella prima sezione posizionale utilizzabile; riusa modello e editor stabilizzati in R25. | ✅ Implementata e verificata il 2026-08-13: lista/CRUD studi `MIDDLEGAME`, dettaglio e CRUD posizioni, setup FEN, editor/dettaglio/navigazione canonici e controllo esatto della fase; import Lichess, training, statistiche, review/SM-2 e gioco da posizione esclusi. 120 test backend, 446 frontend, build e flussi E2E 53–58 verdi. |
 | **R26.1 — Consolidamento posizioni di studio** ✅ | `issue-016-positional-study-consolidation` | Sana in un solo incremento i correttivi emersi dall'uso reale del Mediogioco e fissa i contratti riusabili dal Finale. | Implementazione e verifica completate il 2026-08-14: 120 test backend, 455 frontend, build Angular, flussi browser 59–63 e misure ai sei viewport verdi; DB condiviso invariato nel gate. Change archiviata senza saltare l'aggiornamento delle spec. |
 | **R26.2 — Editor posizionale contestuale** ✅ | `issue-016-position-editor-contextual-actions` | È un blocco UX coeso e frontend-only: chiude cinque incoerenze dell'editor prima di introdurre nuove route Finale, riducendo il rischio di confondere rifiniture condivise e regressioni di fase. | Implementazione, verifica e archiviazione completate il 2026-08-14: breadcrumb non interattivo, rimozione di kicker/«Posizioni»/«Motore»/«posizione iniziale» e «Mosse & rami» nello slot del motore. 461 test frontend, build Angular e flussi 64–66 ai sei viewport verdi; nessuna API, migration o implementazione Finale, DB condiviso invariato. Follow-up `f5bbb25` sul setup editor: suite a 462 test e flusso browser 67 superato il 2026-08-16 (viewport, salvataggio, Annulla/guard e regressione Aperture). |
-| **R26.3 — Studio guidato del Mediogioco** | `issue-016-middlegame-guided-study-model` → `issue-016-middlegame-guided-study-flows` | Completa il valore didattico della prima sezione posizionale prima di replicarla nel Finale e separa la parte dati/migrazioni dai flussi interattivi. | Unico rilascio di prodotto dopo entrambe le change: studi tattici/strategici, catalogo temi normalizzato, metadati e ordine, compatibilità dei dati legacy, storico minimo, flussi tattico/strategico, modalità manuale/sequenziale e flussi E2E 68–81. |
-| **R27 — Finale reale** | `issue-016-endgame-section` | Replica il paradigma del Mediogioco solo dopo averne validato il riuso, evitando di sviluppare due sezioni divergenti in parallelo. | Lista, studio, posizioni e dettaglio Finale riusano i componenti comuni; tutti i correttivi R26.1/R26.2 hanno evidenza `ENDGAME` dedicata, con rotte `/endgame`, sei viewport e regressione Aperture/Mediogioco verde. |
+| **R26.3 — Studio guidato del Mediogioco** ✅ | `issue-016-middlegame-guided-study-model` ✅ → `issue-016-middlegame-guided-study-flows` ✅ | Completa il valore didattico della prima sezione posizionale prima di replicarla nel Finale e separa la parte dati/migrazioni dai flussi interattivi. | ✅ Rilasciato il 2026-08-19: unico rilascio di prodotto dopo entrambe le change. Change modello: implementata, verificata e archiviata il 2026-08-17 — studi tattici/strategici, catalogo temi normalizzato, metadati e ordine, compatibilità dei dati legacy, storico minimo, 191 test backend/503 frontend e flussi E2E 68–71 verdi. Change flussi: **55/55 task completati**, implementata, verificata e archiviata il 2026-08-19 (gate B9) — 191 test backend/692 frontend, build Angular e flussi E2E 72–81 (inclusa la regressione 68–71) verdi su H2 temporaneo, database condiviso invariato. |
+| **R27 — Finale reale** | `issue-016-endgame-section` | Replica il paradigma del Mediogioco solo dopo averne validato il riuso, evitando di sviluppare due sezioni divergenti in parallelo. | Lista, studio, posizioni e dettaglio Finale riusano i componenti comuni; tutti i correttivi R26.1/R26.2 hanno evidenza `ENDGAME` dedicata, con rotte `/endgame`, sei viewport e regressione Aperture/Mediogioco verde. Non eredita automaticamente la tipologia tattica/strategica né i flussi guidati di R26.3: un'eventuale estensione richiede una decisione di prodotto dedicata ed esplicita. |
 | **R28 — Gioco da posizione** | `issue-016-play-position-vs-engine` | Aggiunge il confronto con Stockfish solo quando esistono posizioni salvate affidabili da passare al motore. | Avvio di `/play` dalla FEN della posizione salvata; lato al tratto e posizione iniziale corretti; nessun training/review introdotto nelle sezioni posizionali. |
 | **R29 — Informazioni e preferenze** | **015**, **017** | Chiude in modo coerente il cluster topbar dopo 021/011 e introduce le impostazioni solo con una scelta di persistenza esplicita. | OpenSpec 017; pagina Info con versioni FE/BE; decisione documentata DB vs `localStorage`; parametri SM-2 validati e applicati solo alle sessioni future. |
 | **R30 — Configurazione del motore** | **014** | Viene dopo l'hub che ne offre accesso e salvataggio; evita di costruire UI per opzioni che il build asm.js non espone. | Audit UCI documentato sulla build vendorizzata; solo opzioni supportate esposte e persistite; `Threads` resta a 1; MultiPV non amplia automaticamente la UI di R21. |
@@ -138,7 +144,7 @@ esplicitamente `localStorage` oppure un modello già associabile a utente.
 | R26 | ✅ OpenSpec completa; implementazione e test eseguiti senza ridecidere il modello a fasi. | ✅ Eseguita il 2026-08-13: 120 test backend, 446 frontend, build Angular riuscita e flussi manuali 53–58 su H2 temporaneo a 1600/1440/1024/768/375/320px; database condiviso invariato. |
 | R26.1 | ✅ OpenSpec completa e validata; nessuna nuova API, migration o ridecisione del modello. | ✅ Implementazione, 120 test backend, 455 frontend, build, flussi 59–63 e misure `getBoundingClientRect()` completati ai sei viewport; DB condiviso invariato rispetto alla baseline del gate ed escluso dal lavoro. |
 | R26.2 | ✅ OpenSpec completa e validata in strict; nessuna nuova API, migration o ridecisione del modello. | ✅ Implementazione, 461 test frontend, build e flussi 64–66 ai sei viewport completati: breadcrumb senza voci focalizzabili, assenza di «MODIFICA POSIZIONE», «Posizioni», «Motore» e «posizione iniziale», «Mosse & rami» nello slot del motore, replay/guard/salvataggio invariati e Aperture non regredite; DB condiviso invariato rispetto alla baseline del gate. |
-| R26.3 | Proposal/design/spec/tasks completi e validi in strict per `issue-016-middlegame-guided-study-model` (40 task) e `issue-016-middlegame-guided-study-flows` (55 task). Prima del codice, ciascuna change richiede triage standalone e gate indipendenti `proposal`, `design+specs`, `tasks` con esito `READY`; poi implementare, verificare e archiviare la prima change prima di applicare i task della seconda. | Test backend/frontend, build e flussi 68–81 su H2 temporaneo; verificare migrazione dei dati legacy, validazione tattica backend, catalogo temi per ID, storico/cascate, motore strategico, filtri/skip, responsive e regressioni Aperture/R26.1/R26.2. |
+| R26.3 | Proposal/design/spec/tasks completi e validi in strict per `issue-016-middlegame-guided-study-model` (40 task) e `issue-016-middlegame-guided-study-flows` (55 task); implementare, verificare e archiviare la prima change prima di applicare i task della seconda. | ✅ Change modello: 191 test backend, 503 frontend, build e flussi 68–71 verdi su H2 temporaneo il 2026-08-17; migrazione dei dati legacy, catalogo temi per ID, storico/cascate e regressioni Aperture/R26.1/R26.2 verificati; database condiviso invariato; change archiviata. ✅ Change flussi: **55/55 task completati**, 191 test backend/692 frontend e build verdi il 2026-08-19 (gate B9); flussi E2E 72–81 (inclusa regressione 68–71), accessibilità/responsive ai sei viewport, verifica motore spento/non disponibile/callback obsoleta e cascade di eliminazione verificati su H2 temporaneo; database condiviso invariato; change archiviata. |
 | R27 | OpenSpec da completare includendo la matrice R26.1/R26.2 senza ridecidere il dominio o duplicare componenti in assenza di necessità reale. | Test automatici con fixture `ENDGAME`; verifica di CTA, form, azioni, setup FEN, analisi nascosta, eliminazione/redirect, editor contestuale, layout, geometria e navigazione sulle rotte `/endgame`; browser a 1600/1440/1024/768/375/320 px e regressioni Aperture/Mediogioco. Il riuso del codice non sostituisce alcuna evidenza. |
 | R28 | OpenSpec completa per il gioco dalla posizione, riusando il modello e le sezioni posizionali approvate. | Test API/validazione, frontend e checklist manuale del flusso Stockfish dalla FEN salvata. |
 | R29 | Decisione di persistenza delle preferenze e contratto versione backend. | Test di `ReviewScheduler` con parametri e verifica che le schedule esistenti non vengano ricalcolate. |
@@ -149,11 +155,11 @@ esplicitamente `localStorage` oppure un modello già associabile a utente.
 - R20–R26.2 sono chiusi; **R26 è implementata, verificata e archiviata in OpenSpec**.
   I correttivi R26/R27 sono implementati e verificati nella change R26.1, ora archiviata;
   **R26.2 è implementata, verificata e archiviata in OpenSpec**.
-- R26.3 è il prossimo rilascio: le decisioni sono consolidate nel
+- R26.3 è rilasciata: le decisioni sono consolidate nel
   [preflight](preflight-mediogioco-studio-guidato.md) e nell'[analisi](analisi-mediogioco-studio-guidato.md).
-  Le due change OpenSpec sono attive, complete nei quattro artefatti e valide in strict. Il
-  prossimo passo è la governance indipendente prevista da `openspec-v2`; soltanto dopo esiti
-  `READY` i task devono procedere nell'ordine modello → flussi.
+  La change modello `issue-016-middlegame-guided-study-model` è implementata, verificata e
+  archiviata il 2026-08-17. La change flussi `issue-016-middlegame-guided-study-flows` è
+  implementata, verificata e archiviata il 2026-08-19 (gate B9, 55/55 task, flussi E2E 72–81).
 - R26.1 ha chiuso nel codice i punti registrati nello stato corrente:
   il primo è `R26-UI-01`, relativo alla CTA duplicata nello stato vuoto della lista studi, e il
   secondo è `R26-UI-02`, relativo al campo Colore da nascondere nei form degli studi posizionali.

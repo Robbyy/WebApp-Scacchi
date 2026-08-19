@@ -42,7 +42,7 @@
 | 010 | Pannello varianti adattivo nel dettaglio | manutenzione | mini-spec R23 | ✅ fatto (R23) |
 | 011 | Unifica creazione studio + import Lichess | manutenzione | mini-spec R22 | ✅ fatto (R22) |
 | 013 | Menu contestuale editor | manutenzione | diretto — mini-spec R24 | ✅ fatto (R24) |
-| 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | R26–R26.2 chiuse; R26.3 in specifica (authoring valido, governance pendente), poi R27–R28 |
+| 016 | Tutte le fasi del gioco (mediogioco/finale) | sviluppo | OpenSpec | R26–R26.3 chiuse (entrambe le change R26.3 ✅ archiviate, 2026-08-17 e 2026-08-19), poi R27–R28 |
 | 017 | Menu "Impostazioni" + SM-2 | sviluppo | OpenSpec | da fare |
 | 014 | Parametri motore Stockfish (UCI) | sviluppo | OpenSpec | da fare |
 | 018 | Revisione di sicurezza | audit | a sé | da fare |
@@ -68,10 +68,13 @@ La sequenza dettagliata dei soli incrementi evolutivi è nel
    e archiviata (461 frontend, build, flussi 64–66 e gate DB).
    Follow-up post-release `f5bbb25` sul setup dell'editor posizione: suite frontend a 462 test;
    verifica browser dedicata registrata come flusso 67 e superata il 2026-08-16 su H2 temporaneo.
-10. **R26.3:** studio guidato del Mediogioco, come unico rilascio costruito con due change
-    OpenSpec sequenziali: modello/migrazioni → flussi guidati. Preflight, analisi e artefatti
-    OpenSpec completati e validati in strict; triage e gate indipendenti di governance ancora
-    da eseguire; implementazione non iniziata.
+10. ~~**R26.3:** studio guidato del Mediogioco, come unico rilascio costruito con due change
+    OpenSpec sequenziali: modello/migrazioni → flussi guidati.~~ ✅ Rilasciata il 2026-08-19.
+    `issue-016-middlegame-guided-study-model` implementata, verificata e archiviata il
+    2026-08-17 (191 backend/503 frontend, flussi E2E 68–71 su H2 temporaneo, database condiviso
+    invariato). `issue-016-middlegame-guided-study-flows` implementata, verificata e archiviata
+    il 2026-08-19 (gate B9, 55/55 task, 191 backend/692 frontend, flussi E2E 72–81 su H2
+    temporaneo, database condiviso invariato).
 11. **R27–R28:** slice successive di ISSUE-016: Finale → gioco da posizione. R27 riusa i
     componenti R26.1/R26.2 ma deve verificarne tutti i correttivi con fase `ENDGAME`, rotte
     `/endgame` e regressioni.
@@ -111,13 +114,35 @@ di questa cadenza di rilasci evolutivi.
 
 ## In pianificazione
 
-- **R26.3 — Studio guidato del Mediogioco:** le change OpenSpec attive
-  `issue-016-middlegame-guided-study-model` (40 task) e
-  `issue-016-middlegame-guided-study-flows` (55 task) hanno proposal, design, spec e task completi
-  e validi in strict. L'implementazione deve procedere nell'ordine modello → flussi; R27 viene dopo
-  la loro chiusura.
+- **R27 — Finale reale:** `issue-016-endgame-section` è il prossimo rilascio dopo R26.3 completa;
+  riusa i componenti comuni e deve verificare uno per uno i correttivi R26.1/R26.2 con fase
+  `ENDGAME`. Non eredita automaticamente la tipologia tattica/strategica né i flussi guidati di
+  R26.3: un'eventuale estensione richiede una decisione di prodotto dedicata ed esplicita.
 
 ## Completati
+
+- **`issue-016-middlegame-guided-study-flows` — R26.3 change flussi** ✅ Implementata, verificata
+  e archiviata il 2026-08-19 (gate B9, 55/55 task): esercizio tattico (mainline con risposte
+  automatiche e validazione server) e strategico (mainline + motore esplorativo dopo deviazione,
+  soluzione con replay manuale prima dell'esito), modalità manuale e sequenziale (ordine/filtro
+  obbligatori, skip con conferma, riepilogo non persistito) condividono storico e riepiloghi con
+  la change modello. Suite 191 backend/692 frontend, build Angular e flussi E2E 72–81 (inclusa
+  regressione 68–71, verifica motore spento/non disponibile/callback obsoleta e cascade di
+  eliminazione) verdi su H2 temporaneo; database condiviso invariato. Con questa change **R26.3 è
+  rilasciata** come prodotto. Change archiviata in
+  `openspec/changes/archive/2026-08-19-issue-016-middlegame-guided-study-flows/`.
+
+- **`issue-016-middlegame-guided-study-model` — R26.3 change modello** ✅ Implementata,
+  verificata e archiviata il 2026-08-17: tipologia tattica/strategica dello studio Mediogioco con
+  classificazione legacy una tantum e immutabilità successiva, catalogo temi normalizzato per ID
+  (14 tattici, 13 strategici), metadati/difficoltà/fonte/ordine delle posizioni con riordino
+  atomico, storico minimo dei tentativi con validazione tattica autorevole lato backend e
+  riepiloghi derivati senza percentuali. UI di classificazione, selezione tema, riordino
+  numerico/drag-and-drop e pannelli di dettaglio; nessun flusso di esercizio guidato (fuori scope,
+  demandato a `issue-016-middlegame-guided-study-flows`, sopra). Suite 191 backend/503 frontend,
+  build Angular e flussi E2E 68–71 verdi su H2 temporaneo; database condiviso invariato. Change
+  archiviata in
+  `openspec/changes/archive/2026-08-17-issue-016-middlegame-guided-study-model/`.
 
 - **`issue-016-position-editor-contextual-actions` — R26.2** ✅ Implementata e verificata il
   2026-08-14: breadcrumb non interattivo, rimozione di kicker, comando «Posizioni», pulsante

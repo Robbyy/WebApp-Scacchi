@@ -18,6 +18,8 @@ import { PositionEditor } from './positions/position-editor';
 import { MIDDLEGAME_SECTION_CONTEXT, SECTION_CONTEXT_DATA } from './core/study-sections';
 import { PositionStudyList } from './sections/position-study-list';
 import { PositionStudyNew } from './sections/position-study-new';
+import { GuidedStudyPosition } from './guided-study/guided-study-position';
+import { GuidedStudySequence } from './guided-study/guided-study-sequence';
 
 export const routes: Routes = [
   { path: '', component: StudyList },
@@ -34,6 +36,9 @@ export const routes: Routes = [
       // Creazione manuale, senza il flusso Lichess di `StudyNew` (ISSUE-016).
       // Dichiarata prima di `studies/:id`, così `new` non è letto come id.
       { path: 'studies/new', component: PositionStudyNew },
+      // Studio guidato sequenziale (R26.3, design decisione 1): canonica e
+      // precedente a `studies/:id`, così `study` non viene letto come id.
+      { path: 'studies/:id/study', component: GuidedStudySequence },
       { path: 'studies/:id', component: StudyDetail },
       // Le route statiche precedono le dinamiche e `setup`/`edit` precedono il
       // dettaglio della posizione: `new` non viene catturato come id e la route
@@ -41,6 +46,9 @@ export const routes: Routes = [
       { path: 'positions/new', component: PositionEditor, canDeactivate: [canLeaveEditor] },
       { path: 'positions/:id/setup', component: PositionEditor, canDeactivate: [canLeaveEditor] },
       { path: 'positions/:id/edit', component: VariantEditor, canDeactivate: [canLeaveEditor] },
+      // Tentativo manuale dello studio guidato (R26.3): canonica e precedente
+      // a `positions/:id`, così `study` non viene letto come id.
+      { path: 'positions/:id/study', component: GuidedStudyPosition },
       { path: 'positions/:id', component: VariantDetail },
     ],
   },

@@ -1,0 +1,17 @@
+# Fixture di test (non usata dall'app): applica solo i changeset fino a 0005-position-theme,
+# per poter inserire dati Mediogioco legacy PRIMA che 0006 esegua il backfill di
+# `position_order`, poi riprendere con il changelog master reale (LiquibaseMigrationTest).
+# I changeset condividono lo stesso `file:` dei changes/*.yaml reali: Liquibase li registra in
+# DATABASECHANGELOG con quel percorso, quindi il changelog master reale li riconosce come già
+# applicati e prosegue da 0006 senza rieseguirli.
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/0001-baseline.yaml
+  - include:
+      file: db/changelog/changes/0002-cap-review-schedules.yaml
+  - include:
+      file: db/changelog/changes/0003-study-phase.yaml
+  - include:
+      file: db/changelog/changes/0004-study-type.yaml
+  - include:
+      file: db/changelog/changes/0005-position-theme.yaml

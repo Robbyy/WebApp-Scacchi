@@ -1,4 +1,5 @@
 import { CreateVariantRequest, Variant } from './variant.model';
+import type { StudyType } from './position-theme.model';
 
 /** Colore/orientamento di uno studio: per colore singolo o repertorio misto. */
 export type StudyColor = 'WHITE' | 'BLACK' | 'MIXED';
@@ -9,6 +10,8 @@ export type StudyColor = 'WHITE' | 'BLACK' | 'MIXED';
  * alla creazione e non modificabile in seguito.
  */
 export type GamePhase = 'OPENING' | 'MIDDLEGAME' | 'ENDGAME';
+
+export type { StudyType };
 
 /**
  * Studio che raggruppa più varianti, allineato a StudyDto del backend
@@ -21,6 +24,12 @@ export interface Study {
   description?: string | null;
   color?: StudyColor | null;
   phase: GamePhase;
+  /**
+   * Tipologia Mediogioco (ISSUE-016/R26.3): `null` per Aperture/Finale e per
+   * un Mediogioco legacy «Da classificare»; immutabile dopo la prima
+   * valorizzazione.
+   */
+  studyType?: StudyType | null;
   variantCount: number;
   variants?: Variant[] | null;
   /** Provenienza remota (P15): valorizzati per gli studi importati da Lichess. */
@@ -34,12 +43,16 @@ export interface Study {
 /**
  * Payload per la creazione/aggiornamento di uno studio. `phase` è opzionale in
  * creazione (default `OPENING`) e non modificabile in aggiornamento (ISSUE-016).
+ * `studyType` (R26.3) è obbligatorio in creazione per un Mediogioco, opzionale
+ * in aggiornamento dove rappresenta l'unica transizione da «Da classificare»
+ * a un valore; assente per Aperture/Finale.
  */
 export interface CreateStudyRequest {
   name: string;
   description?: string | null;
   color?: StudyColor | null;
   phase?: GamePhase | null;
+  studyType?: StudyType | null;
 }
 
 /** Payload per l'import in blocco di uno studio con tutte le sue varianti (P14/P15). */

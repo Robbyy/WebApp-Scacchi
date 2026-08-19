@@ -122,6 +122,32 @@ describe('StudyService', () => {
     req.flush({ id: 50, name: 'Importato', variantCount: 1 });
   });
 
+  it('reorders positions via PUT /api/studies/:id/variants/order (R26.3)', () => {
+    let received: unknown;
+    service.reorderVariants(5, [12, 11, 13]).subscribe((r) => (received = r));
+    const req = httpMock.expectOne('/api/studies/5/variants/order');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ variantIds: [12, 11, 13] });
+    req.flush([
+      { id: 12, name: 'B', color: 'WHITE', moves: [], studyId: 5, positionOrder: 1 },
+      { id: 11, name: 'A', color: 'WHITE', moves: [], studyId: 5, positionOrder: 2 },
+      { id: 13, name: 'C', color: 'WHITE', moves: [], studyId: 5, positionOrder: 3 },
+    ]);
+    expect(received).toBeTruthy();
+  });
+
+  it('fetches the attempts summary via GET /api/studies/:id/attempts/summary (R26.3)', () => {
+    let received: unknown;
+    service.getAttemptsSummary(5).subscribe((r) => (received = r));
+    const req = httpMock.expectOne('/api/studies/5/attempts/summary');
+    expect(req.request.method).toBe('GET');
+    const summary = [
+      { variantId: 11, lastOutcome: 'UNDERSTOOD', attemptCount: 2, lastUnderstoodAt: '2026-06-01T10:00:00Z' },
+    ];
+    req.flush(summary);
+    expect(received).toEqual(summary);
+  });
+
   it('imports/syncs a Lichess study via POST /api/studies/import/lichess', () => {
     const request = {
       name: 'Da Lichess',

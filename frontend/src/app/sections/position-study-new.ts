@@ -3,8 +3,10 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { StudyService } from '../core/study.service';
 import { ToastService } from '../core/toast.service';
-import { StudyColor } from '../core/study.model';
+import { CreateStudyRequest, StudyColor } from '../core/study.model';
+import { StudyType } from '../core/position-theme.model';
 import { validationMessage } from '../core/variant.model';
+import { studyTypeLabel } from '../core/middlegame-format';
 import { SectionRouteContext, sectionLabel, sectionPaths } from '../core/study-sections';
 import { StudyFormFields } from '../studies/study-form-fields';
 
@@ -44,6 +46,14 @@ export class PositionStudyNew {
   protected readonly description = signal('');
   protected readonly color = signal<StudyColor | ''>('');
 
+  /**
+   * Tipologia dello studio (R26.3): obbligatoria in creazione per un
+   * Mediogioco, non presentata per le altre fasi (es. il futuro Finale, R27).
+   */
+  protected readonly requiresStudyType = computed(() => this.sectionContext().phase === 'MIDDLEGAME');
+  protected readonly studyType = signal<StudyType | ''>('');
+  protected readonly studyTypeLabel = studyTypeLabel;
+
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
 
@@ -56,18 +66,24 @@ export class PositionStudyNew {
       this.error.set('Inserisci un nome per lo studio.');
       return;
     }
+    if (this.requiresStudyType() && !this.studyType()) {
+      this.error.set('Scegli la tipologia dello studio (tattica o strategica).');
+      return;
+    }
     this.error.set(null);
     this.saving.set(true);
-    this.studies
-      .createStudy({
-        name,
-        description: this.description().trim() || null,
-        // Il colore è un metadato delle Aperture e non viene scelto qui.
-        color: null,
-        // Fase imposta dalla sezione e non modificabile in seguito (ISSUE-016).
-        phase: this.sectionContext().phase,
-      })
-      .subscribe({
+    const request: CreateStudyRequest = {
+      name,
+      description: this.description().trim() || null,
+      // Il colore è un metadato delle Aperture e non viene scelto qui.
+      color: null,
+      // Fase imposta dalla sezione e non modificabile in seguito (ISSUE-016).
+      phase: this.sectionContext().phase,
+    };
+    if (this.requiresStudyType()) {
+      request.studyType = this.studyType() as StudyType;
+    }
+    this.studies.createStudy(request).subscribe({
         next: (study) => {
           this.toast.success('Studio creato.');
           void this.router.navigateByUrl(this.paths().study(study.id));

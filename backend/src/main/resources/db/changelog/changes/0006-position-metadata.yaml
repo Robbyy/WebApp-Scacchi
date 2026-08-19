@@ -1,0 +1,51 @@
+# ISSUE-016/R26.3: metadati di studio guidato sulla posizione (design.md decisioni 4-5).
+# Colonne nullable perché `variant` è condivisa con le Aperture (dove restano sempre NULL)
+# e perché i Mediogioco legacy attraversano una regolarizzazione (theme_id resta NULL finché
+# non viene assegnato un tema, vedi StudyService/VariantService, task 2.x-3.x). Il backfill
+# valorizza `position_order` solo per le posizioni MIDDLEGAME, 1..N per studio in ordine di
+# id crescente (l'ordine di lettura già in uso), con una subquery a conteggio correlato
+# portabile H2/PostgreSQL. Il vincolo univoco arriva dopo il backfill: i NULL delle Aperture
+# non collidono (semantica standard SQL, non conteggiati dal vincolo UNIQUE).
+#
+# Nota di atomicità (verificata in LiquibaseMigrationTest): su H2 il DDL va in commit immediato
+# a prescindere dall'esito delle change successive nello stesso changeSet, quindi un fallimento
+# non annulla le colonne/FK/backfill già applicati in questo changeSet. Per questo l'unico passo
+# che dipende dai dati (addUniqueConstraint) è messo per ultimo: è il solo punto realisticamente
+# a rischio, e un suo eventuale fallimento richiede solo correggere position_order e rieseguire.
+databaseChangeLog:
+  - changeSet:
+      id: 0006-position-metadata
+      author: scacchi
+      comment: >
+        Aggiunge tema, descrizioni, difficoltà, fonte e ordine alla posizione; backfill
+        dell'ordine per il solo Mediogioco esistente e vincolo di unicità (study_id, position_order).
+      changes:
+        - addColumn:
+            tableName: variant
+            columns:
+              - column: { name: theme_id, type: BIGINT }
+              - column: { name: theme_description, type: CLOB }
+              - column: { name: description, type: CLOB }
+              - column: { name: difficulty, type: VARCHAR(16) }
+              - column: { name: source, type: CLOB }
+              - column: { name: position_order, type: INT }
+        - addForeignKeyConstraint:
+            constraintName: fk_variant_theme
+            baseTableName: variant
+            baseColumnNames: theme_id
+            referencedTableName: position_theme
+            referencedColumnNames: id
+        - sql:
+            sql: >
+              UPDATE variant
+              SET position_order = (
+                SELECT COUNT(*)
+                FROM variant v2
+                WHERE v2.study_id = variant.study_id
+                  AND v2.id <= variant.id
+              )
+              WHERE variant.study_id IN (SELECT id FROM study WHERE phase = 'MIDDLEGAME')
+        - addUniqueConstraint:
+            tableName: variant
+            columnNames: study_id, position_order
+            constraintName: uk_variant_study_position_order

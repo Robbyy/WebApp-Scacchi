@@ -73,12 +73,18 @@ Nuova entità `PositionTheme`:
 
 ```text
 id             BIGINT PRIMARY KEY
-code           VARCHAR(64) NOT NULL UNIQUE
+code           VARCHAR(64) NOT NULL
 study_type     VARCHAR(16) NOT NULL
 display_label  VARCHAR(128) NOT NULL
 display_order  INT NOT NULL
 active         BOOLEAN NOT NULL DEFAULT TRUE
+UNIQUE (code, study_type)
 ```
+
+L'unicità di `code` è composita con `study_type`, non globale: i due cataloghi sono
+indipendenti e uno stesso codice può comparire in entrambi con significato analogo (il seed
+sotto assegna `KING_ATTACK` sia al tema tattico `1012` sia allo strategico `2011`). L'identità
+referenziata da `Variant.theme_id` resta esclusivamente l'`id`, mai il `code`.
 
 Il seed usa ID espliciti per rendere stabile il riferimento fra ambienti e backup:
 

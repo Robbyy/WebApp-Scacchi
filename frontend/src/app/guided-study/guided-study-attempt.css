@@ -1,0 +1,89 @@
+/* Layout posizionale del tentativo (R26.3, task 8.2). Board e pannello sono
+   figli di questo componente, non del contenitore che lo monta: senza un host
+   che sia esso stesso il contenitore flex, `.board-col` e `.side` finirebbero
+   impilati in flusso normale invece di affiancarsi. Le regole ricalcano quelle
+   di `.detail` in variant-detail.css, così la geometria R26.1 vale identica in
+   modalità manuale e in sequenza, che montano il componente in due pagine
+   diverse. Il wrap manda il pannello sotto la board sui viewport stretti;
+   `.side` è già larga `min(100%, 380px)` e la board `min(90vw, 100vw - 3.5rem,
+   720px)`, quindi nessuna colonna genera overflow orizzontale a 320 px. */
+:host {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* Pulsanti del pannello di tentativo (R26.3, gruppo 2): stesso stile di
+   `.btn`/`.btn--ghost` di study-detail.css, non importato qui per evitare di
+   duplicare l'intero foglio insieme a variant-detail.css. */
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.55rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--board-light);
+  background: linear-gradient(135deg, var(--wood-medium), var(--wood-dark));
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn--ghost {
+  color: var(--wood-dark);
+  background: oklch(0.965 0.018 80);
+  border: 1px solid var(--panel-border);
+}
+
+.attempt-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+/* Larghezza minima dei comandi con etichetta variabile (task 8.2): «Attiva
+   motore»/«Disattiva motore» hanno lunghezze diverse e senza questo vincolo il
+   toggle sposterebbe «Riprova» a ogni accensione. */
+.attempt-action--wide {
+  min-width: 10.5rem;
+}
+
+.attempt-error {
+  color: oklch(0.45 0.16 25);
+}
+
+/* Regione live di stato (task 8.1/8.2): l'altezza riservata copre i messaggi
+   più lunghi del tentativo alla larghezza del pannello, così passare da attesa
+   motore a esplorazione o a soluzione non muove i controlli sottostanti. */
+.attempt-status {
+  min-height: calc(3 * 1.45em);
+  line-height: 1.45;
+}
+
+.attempt-status:focus-visible,
+.attempt-alert:focus-visible,
+.attempt-solution:focus-visible {
+  outline: 2px solid var(--wood-medium);
+  outline-offset: 2px;
+}
+
+/* Regione live assertiva (task 8.1): resta sempre nel DOM e nell'albero di
+   accessibilità perché un `role="alert"` inserito insieme al testo non viene
+   annunciato in modo affidabile. Da vuota è un blocco senza contenuto né
+   margini: altezza zero, nessuno spazio occupato. */
+.attempt-alert {
+  margin: 0.6rem 0 0;
+}
+
+.attempt-alert--empty {
+  margin: 0;
+}

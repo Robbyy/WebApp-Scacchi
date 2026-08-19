@@ -24,6 +24,11 @@
               >{{ colorLabel(s.color) }}</span
             >
           }
+          @if (isMiddlegame()) {
+            <span class="study-type-badge" [class.study-type-badge--pending]="!classified()">
+              {{ studyTypeLabel(s.studyType) }}
+            </span>
+          }
           <span class="study-count"
             >{{ s.variantCount }} {{ s.variantCount === 1 ? itemLabel() : itemLabelPlural() }}</span
           >
@@ -73,6 +78,44 @@
       </form>
     }
 
+    @if (isMiddlegame() && !classified() && !editing()) {
+      <div class="classify-panel">
+        @if (classifying()) {
+          <p class="classify-note">Scegli la tipologia: una volta salvata non sarà più modificabile.</p>
+          <div class="classify-form">
+            <label class="field">
+              <span class="field-label">Tipologia</span>
+              <select
+                class="field-input"
+                name="classifyType"
+                [ngModel]="classifyType()"
+                (ngModelChange)="classifyType.set($event)"
+                [disabled]="savingClassify()"
+              >
+                <option value="" disabled>Scegli tipologia&#8230;</option>
+                <option value="TACTICAL">{{ studyTypeLabel('TACTICAL') }}</option>
+                <option value="STRATEGIC">{{ studyTypeLabel('STRATEGIC') }}</option>
+              </select>
+            </label>
+            <button class="btn btn--ghost" type="button" (click)="cancelClassify()">Annulla</button>
+            <button
+              class="btn"
+              type="button"
+              (click)="saveClassify()"
+              [disabled]="!classifyType() || savingClassify()"
+            >
+              {{ savingClassify() ? 'Salvataggio…' : 'Classifica studio' }}
+            </button>
+          </div>
+        } @else {
+          <p class="classify-note">
+            Studio «Da classificare»: scegli tattico o strategico per creare nuove posizioni.
+          </p>
+          <button class="btn" type="button" (click)="openClassify()">Classifica studio</button>
+        }
+      </div>
+    }
+
     @if (s.phase === 'OPENING') {
       <nav class="study-subnav">
         <a [routerLink]="['/studies', s.id, 'stats']">
@@ -109,11 +152,24 @@
           </svg>
           Importa da Lichess
         </a>
+        } @else if (isMiddlegame() && !classified()) {
+          <!-- Un Mediogioco «Da classificare» non ammette nuove posizioni finché
+               non riceve una tipologia (task 2.3/5.2): niente CTA di creazione. -->
         } @else {
           <a class="new-cta" [routerLink]="paths.newPosition" [queryParams]="{ studyId: s.id }">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" /></svg>
             Nuova posizione
           </a>
+          @if (isMiddlegame()) {
+            <!-- Lo studio guidato è solo Mediogioco (R26.3, task 8.4): questo
+                 ramo copre anche il Finale, che non deve esporre le azioni
+                 guidate finché R27 non decide il proprio perimetro. La
+                 classificazione è già garantita dal ramo precedente. -->
+            <a class="new-cta new-cta--ghost" [routerLink]="paths.studyStudy(s.id)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+              Studio sequenziale
+            </a>
+          }
         }
       </div>
     }
@@ -124,8 +180,39 @@
       }
     } @else {
       <ul class="variant-cards">
-        @for (v of variants(); track v.id) {
-          <li class="variant-card">
+        @for (v of variants(); track v.id; let i = $index) {
+          <li
+            class="variant-card"
+            [attr.draggable]="isMiddlegame() ? true : null"
+            [class.variant-card--dragging]="isMiddlegame() && dragIndexIs(i)"
+            (dragstart)="onDragStart(i)"
+            (dragover)="onDragOver($event)"
+            (drop)="onDrop(i)"
+          >
+            @if (isMiddlegame()) {
+              <div class="reorder-controls">
+                <button
+                  type="button"
+                  class="reorder-btn"
+                  title="Sposta su"
+                  [attr.aria-label]="'Sposta su ' + v.name"
+                  [disabled]="i === 0 || reordering()"
+                  (click)="moveUp(i)"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6l6 8H6z" /></svg>
+                </button>
+                <button
+                  type="button"
+                  class="reorder-btn"
+                  title="Sposta giù"
+                  [attr.aria-label]="'Sposta giù ' + v.name"
+                  [disabled]="i === variants().length - 1 || reordering()"
+                  (click)="moveDown(i)"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10h12l-6 8z" /></svg>
+                </button>
+              </div>
+            }
             <a class="variant-main" [routerLink]="paths.position(v.id)">
               <span class="variant-name">{{ v.name }}</span>
               <span class="variant-meta">
@@ -136,6 +223,20 @@
                     [class.badge--black]="v.color === 'BLACK'"
                     >{{ v.color === 'WHITE' ? 'Bianco' : 'Nero' }}</span
                   >
+                }
+                @if (isMiddlegame()) {
+                  <span class="order-chip">#{{ v.positionOrder }}</span>
+                  <span class="theme-chip" [class.theme-chip--missing]="!v.theme">{{ themeLabel(v.theme) }}</span>
+                  @if (difficultyLabel(v.difficulty); as diff) {
+                    <span class="difficulty-chip">{{ diff }}</span>
+                  }
+                  <span class="attempt-chip">
+                    {{ lastOutcomeLabel(summaryFor(v.id)?.lastOutcome) }}
+                    &middot; {{ summaryFor(v.id)?.attemptCount ?? 0 }} tentativ{{ (summaryFor(v.id)?.attemptCount ?? 0) === 1 ? 'o' : 'i' }}
+                    @if (summaryFor(v.id)?.lastUnderstoodAt; as last) {
+                      &middot; compresa il {{ formatReviewDate(last) }}
+                    }
+                  </span>
                 }
                 <span class="variant-count">{{ v.moves.length }} mosse</span>
               </span>

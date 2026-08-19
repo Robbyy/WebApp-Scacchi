@@ -1,0 +1,274 @@
+# ISSUE-016/R26.3: catalogo relazionale dei temi di Mediogioco (design.md decisione 3).
+# ID espliciti e stabili (1001-1014 tattici, 2001-2013 strategici) per riferimento
+# stabile fra ambienti e backup. `code` è univoco soltanto insieme a `study_type`, non a
+# livello globale: i due cataloghi sono indipendenti e `KING_ATTACK` compare in entrambi
+# (1012 tattico, 2011 strategico) con significato analogo. L'unico identificativo
+# referenziato dalle posizioni resta l'`id` (Variant.theme_id, changeset 0006).
+databaseChangeLog:
+  - changeSet:
+      id: 0005-position-theme
+      author: scacchi
+      comment: Crea il catalogo dei temi di Mediogioco con seed stabile e vincolo composito su (code, study_type).
+      changes:
+        - createTable:
+            tableName: position_theme
+            columns:
+              - column: { name: id, type: BIGINT, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: code, type: VARCHAR(64), constraints: { nullable: false } }
+              - column: { name: study_type, type: VARCHAR(16), constraints: { nullable: false } }
+              - column: { name: display_label, type: VARCHAR(128), constraints: { nullable: false } }
+              - column: { name: display_order, type: INT, constraints: { nullable: false } }
+              - column: { name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: { nullable: false } }
+        - addUniqueConstraint:
+            tableName: position_theme
+            columnNames: code, study_type
+            constraintName: uk_position_theme_code_study_type
+        - createIndex:
+            tableName: position_theme
+            indexName: idx_position_theme_study_type_order
+            columns:
+              - column: { name: study_type }
+              - column: { name: display_order }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1001 }
+              - column: { name: code, value: DOUBLE_ATTACK }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: doppio attacco }
+              - column: { name: display_order, valueNumeric: 1 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1002 }
+              - column: { name: code, value: PIN }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: inchiodatura }
+              - column: { name: display_order, valueNumeric: 2 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1003 }
+              - column: { name: code, value: SKEWER }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: infilata }
+              - column: { name: display_order, valueNumeric: 3 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1004 }
+              - column: { name: code, value: DISCOVERED_ATTACK }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: attacco di scoperta }
+              - column: { name: display_order, valueNumeric: 4 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1005 }
+              - column: { name: code, value: DEFLECTION }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: deviazione }
+              - column: { name: display_order, valueNumeric: 5 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1006 }
+              - column: { name: code, value: DECOY }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: adescamento }
+              - column: { name: display_order, valueNumeric: 6 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1007 }
+              - column: { name: code, value: REMOVE_DEFENDER }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: eliminazione del difensore }
+              - column: { name: display_order, valueNumeric: 7 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1008 }
+              - column: { name: code, value: OVERLOAD }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: sovraccarico }
+              - column: { name: display_order, valueNumeric: 8 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1009 }
+              - column: { name: code, value: INTERFERENCE }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: interferenza }
+              - column: { name: display_order, valueNumeric: 9 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1010 }
+              - column: { name: code, value: CLEARANCE }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: sgombero }
+              - column: { name: display_order, valueNumeric: 10 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1011 }
+              - column: { name: code, value: SACRIFICE }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: sacrificio }
+              - column: { name: display_order, valueNumeric: 11 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1012 }
+              - column: { name: code, value: KING_ATTACK }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: attacco al re }
+              - column: { name: display_order, valueNumeric: 12 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1013 }
+              - column: { name: code, value: TACTICAL_DEFENSE }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: difesa tattica }
+              - column: { name: display_order, valueNumeric: 13 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 1014 }
+              - column: { name: code, value: COMBINATION }
+              - column: { name: study_type, value: TACTICAL }
+              - column: { name: display_label, value: combinazione }
+              - column: { name: display_order, valueNumeric: 14 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2001 }
+              - column: { name: code, value: PAWN_STRUCTURE }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: struttura pedonale }
+              - column: { name: display_order, valueNumeric: 1 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2002 }
+              - column: { name: code, value: WEAK_AND_STRONG_SQUARES }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: case deboli e case forti }
+              - column: { name: display_order, valueNumeric: 2 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2003 }
+              - column: { name: code, value: FILES_AND_DIAGONALS }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: colonne e diagonali }
+              - column: { name: display_order, valueNumeric: 3 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2004 }
+              - column: { name: code, value: PIECE_ACTIVITY }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: attività dei pezzi }
+              - column: { name: display_order, valueNumeric: 4 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2005 }
+              - column: { name: code, value: GOOD_AND_BAD_PIECE }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: pezzo buono e pezzo cattivo }
+              - column: { name: display_order, valueNumeric: 5 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2006 }
+              - column: { name: code, value: SPACE }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: spazio }
+              - column: { name: display_order, valueNumeric: 6 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2007 }
+              - column: { name: code, value: DEVELOPMENT_AND_INITIATIVE }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: sviluppo e iniziativa }
+              - column: { name: display_order, valueNumeric: 7 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2008 }
+              - column: { name: code, value: PROPHYLAXIS }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: profilassi }
+              - column: { name: display_order, valueNumeric: 8 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2009 }
+              - column: { name: code, value: FAVORABLE_EXCHANGES }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: cambi favorevoli }
+              - column: { name: display_order, valueNumeric: 9 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2010 }
+              - column: { name: code, value: GAME_PLAN }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: piano di gioco }
+              - column: { name: display_order, valueNumeric: 10 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2011 }
+              - column: { name: code, value: KING_ATTACK }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: attacco al re }
+              - column: { name: display_order, valueNumeric: 11 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2012 }
+              - column: { name: code, value: DEFENSE_AND_COUNTERPLAY }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: difesa e controgioco }
+              - column: { name: display_order, valueNumeric: 12 }
+              - column: { name: active, valueBoolean: true }
+        - insert:
+            tableName: position_theme
+            columns:
+              - column: { name: id, valueNumeric: 2013 }
+              - column: { name: code, value: ENDGAME_TRANSITION }
+              - column: { name: study_type, value: STRATEGIC }
+              - column: { name: display_label, value: transizione al finale }
+              - column: { name: display_order, valueNumeric: 13 }
+              - column: { name: active, valueBoolean: true }

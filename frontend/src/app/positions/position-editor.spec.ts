@@ -6,8 +6,10 @@ import { ConfirmService } from '../core/confirm.service';
 import { StudyService } from '../core/study.service';
 import { ToastService } from '../core/toast.service';
 import { VariantService } from '../core/variant.service';
+import { PositionThemeService } from '../core/position-theme.service';
 import { Study } from '../core/study.model';
 import { CreateVariantRequest, Variant } from '../core/variant.model';
+import { PositionTheme } from '../core/position-theme.model';
 import { MIDDLEGAME_SECTION_CONTEXT, SECTION_CONTEXT_DATA } from '../core/study-sections';
 
 const study: Study = { id: 7, name: 'Finali pratici', phase: 'ENDGAME', variantCount: 0 };
@@ -21,22 +23,37 @@ const saved: Variant = {
   studyId: 7,
 };
 
+/** Catalogo tattico minimo (R26.3), usato dal mock di `PositionThemeService`. */
+const TACTICAL_THEMES: PositionTheme[] = [
+  { id: 1001, code: 'DOUBLE_ATTACK', studyType: 'TACTICAL', displayLabel: 'doppio attacco', displayOrder: 1 },
+  { id: 1002, code: 'PIN', studyType: 'TACTICAL', displayLabel: 'inchiodatura', displayOrder: 2 },
+];
+
 interface SetupOptions {
   save?: (request: CreateVariantRequest) => unknown;
   phase?: Study['phase'];
+  /** Tipologia dello studio Mediogioco (R26.3): `null` per un legacy «Da classificare». */
+  studyType?: Study['studyType'];
+  variantCount?: number;
   /** Route di setup di una posizione esistente (`positions/:id/setup`). */
   positionId?: number;
   /** Posizione caricata in modifica, per i contratti R25. */
   position?: Variant;
   /** `data` della route: con il contesto l'editor è quello di sezione. */
   data?: Record<string, unknown>;
+  themes?: PositionTheme[];
 }
 
 function setup(options: SetupOptions = {}) {
   let captured: CreateVariantRequest | null = null;
   let updatedId: number | null = null;
   let asked = 0;
-  const currentStudy = { ...study, phase: options.phase ?? study.phase };
+  const currentStudy: Study = {
+    ...study,
+    phase: options.phase ?? study.phase,
+    studyType: options.studyType,
+    variantCount: options.variantCount ?? study.variantCount,
+  };
   const positionId = options.positionId ?? null;
   TestBed.configureTestingModule({
     imports: [PositionEditor],
@@ -61,6 +78,12 @@ function setup(options: SetupOptions = {}) {
             captured = request;
             return options.save ? options.save(request) : of(saved);
           },
+        },
+      },
+      {
+        provide: PositionThemeService,
+        useValue: {
+          getThemes: () => of(options.themes ?? TACTICAL_THEMES),
         },
       },
       {
@@ -104,10 +127,17 @@ function setup(options: SetupOptions = {}) {
   };
 }
 
-/** Come `setup`, ma montando l'editor sotto le route `/middlegame`. */
+/**
+ * Come `setup`, ma montando l'editor sotto le route `/middlegame` con uno
+ * studio classificato `TACTICAL` di default (R26.3): la maggior parte degli
+ * scenari felici presuppone uno studio già classificato, coerente con il
+ * blocco lato backend/UI di una nuova posizione prima della classificazione
+ * (task 2.3/5.2), verificato a parte.
+ */
 function setupMiddlegame(options: SetupOptions = {}) {
   return setup({
     phase: 'MIDDLEGAME',
+    studyType: 'TACTICAL',
     ...options,
     data: { [SECTION_CONTEXT_DATA]: MIDDLEGAME_SECTION_CONTEXT },
   });
@@ -215,24 +245,118 @@ describe('PositionEditor', () => {
     const { el } = setup({ positionId: 31 });
     expect(link(el, 'Annulla')?.getAttribute('href')).toBe('/studies/7');
   });
+
+  it('does not show the Mediogioco metadata fields for an endgame study (regression)', () => {
+    const { el, cmp } = setup();
+    expect(cmp.isMiddlegame()).toBe(false);
+    expect(el.querySelector('.metadata-fields')).toBeNull();
+    expect(el.textContent).not.toContain('Dati Mediogioco');
+  });
 });
 
-describe('PositionEditor (Mediogioco, ISSUE-016)', () => {
-  it('creates a position in the parent study of the section', () => {
-    const { cmp, captured, navigated } = setupMiddlegame();
+describe('PositionEditor (Mediogioco, ISSUE-016/R26.3)', () => {
+  it('creates a position with its required theme and default order (task 5.3)', () => {
+    const { cmp, captured, navigated } = setupMiddlegame({ variantCount: 2 });
     cmp.useStandardPosition();
     cmp.onNameChange('Struttura Carlsbad');
+    cmp.themeId.set(1001);
     cmp.save();
 
     expect(cmp.ready()).toBe(true);
+    // L'ordine predefinito è fine lista (N+1): 2 posizioni esistenti → 3.
+    expect(cmp.positionOrder()).toBe(3);
     expect(captured()).toEqual({
       name: 'Struttura Carlsbad',
       moves: [],
       tree: [],
       startingFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      themeId: 1001,
+      themeDescription: null,
+      description: null,
+      difficulty: null,
+      source: null,
+      positionOrder: 3,
     });
     // Dopo il salvataggio si apre l'editor delle mosse canonico.
     expect(navigated()).toBe('/middlegame/positions/31/edit');
+  });
+
+  it('sends the optional metadata (theme description, description, difficulty, source)', () => {
+    const { cmp, captured } = setupMiddlegame();
+    cmp.useStandardPosition();
+    cmp.onNameChange('Attacco al re');
+    cmp.themeId.set(1002);
+    cmp.themeDescription.set('  Debolezza in f7  ');
+    cmp.description.set('  Il nero ha appena giocato Ce7?!  ');
+    cmp.difficulty.set('ADVANCED');
+    cmp.source.set('  Partita personale  ');
+    cmp.save();
+
+    expect(captured()).toEqual({
+      name: 'Attacco al re',
+      moves: [],
+      tree: [],
+      startingFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      themeId: 1002,
+      themeDescription: 'Debolezza in f7',
+      description: 'Il nero ha appena giocato Ce7?!',
+      difficulty: 'ADVANCED',
+      source: 'Partita personale',
+      positionOrder: 1,
+    });
+  });
+
+  it('rejects a new position without a theme (task 5.3, spec "Reject a new position without theme")', () => {
+    const { cmp, captured } = setupMiddlegame();
+    cmp.useStandardPosition();
+    cmp.onNameChange('Senza tema');
+    cmp.save();
+
+    expect(captured()).toBeNull();
+    expect(cmp.error()).toContain('tema');
+  });
+
+  it('renders the theme catalog of the classified study type', () => {
+    const { el } = setupMiddlegame();
+    const options = Array.from(
+      el.querySelectorAll<HTMLOptionElement>('select[name="themeId"] option'),
+    ).filter((o) => !o.disabled);
+    expect(options.map((o) => o.textContent?.trim())).toEqual(['doppio attacco', 'inchiodatura']);
+  });
+
+  it('offers the five difficulty levels plus the empty option', () => {
+    const { el } = setupMiddlegame();
+    const options = Array.from(
+      el.querySelectorAll<HTMLOptionElement>('select[name="difficulty"] option'),
+    );
+    expect(options.map((o) => o.textContent?.trim())).toEqual([
+      '—',
+      'Introduttiva',
+      'Facile',
+      'Intermedia',
+      'Avanzata',
+      'Esperta',
+    ]);
+  });
+
+  it('blocks creating a new position in an unclassified legacy study (task 2.3/5.2)', () => {
+    const { cmp, el } = setupMiddlegame({ studyType: null });
+
+    expect(cmp.ready()).toBe(false);
+    expect(cmp.unclassified()).toBe(true);
+    expect(cmp.error()).toContain('Classifica lo studio Mediogioco');
+    expect(el.querySelector('.position-editor')).toBeNull();
+  });
+
+  it('still allows editing an existing position of an unclassified legacy study', () => {
+    const legacy: Variant = { ...saved, themeId: null };
+    const { cmp, el } = setupMiddlegame({ studyType: null, positionId: 31, position: legacy });
+
+    expect(cmp.ready()).toBe(true);
+    expect(cmp.unclassified()).toBe(true);
+    // Nessun catalogo da offrire finché lo studio non è classificato.
+    expect(el.querySelector('select[name="themeId"]')).toBeNull();
+    expect(el.textContent).toContain('Classifica lo studio');
   });
 
   it('updates the starting position from the setup route and opens the move editor', () => {
@@ -241,6 +365,7 @@ describe('PositionEditor (Mediogioco, ISSUE-016)', () => {
       tree: [{ san: 'e4', children: [] }],
       moves: ['e4'],
       startingFen: '4k3/8/8/8/8/8/8/4K3 w - - 0 1',
+      themeId: 1001,
     };
     const { cmp, captured, updatedId, navigated } = setupMiddlegame({
       positionId: 31,
@@ -250,19 +375,38 @@ describe('PositionEditor (Mediogioco, ISSUE-016)', () => {
     expect(cmp.isEdit()).toBe(true);
     // La FEN persistita popola la scacchiera dell'editor (contratto R25).
     expect(cmp.startingFen()).toBe('4k3/8/8/8/8/8/8/4K3 w - - 0 1');
+    // I metadati esistenti popolano il form (task 5.3).
+    expect(cmp.themeId()).toBe(1001);
     cmp.selectPiece('wP');
     cmp.placeOn('e2');
     cmp.save();
 
     expect(updatedId()).toBe(31);
-    // L'albero già salvato non viene scartato dal solo cambio di posizione.
+    // L'albero già salvato non viene scartato dal solo cambio di posizione, e
+    // il riordino non viaggia con l'update (contratto dedicato, task 3.5/5.5).
     expect(captured()).toEqual({
       name: 'Re e pedone',
       moves: ['e4'],
       tree: [{ san: 'e4', children: [] }],
       startingFen: '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1',
+      themeId: 1001,
+      themeDescription: null,
+      description: null,
+      difficulty: null,
+      source: null,
     });
     expect(navigated()).toBe('/middlegame/positions/31/edit');
+  });
+
+  it('assigns the missing theme to a legacy position once the study is classified', () => {
+    const legacy: Variant = { ...saved, themeId: null };
+    const { cmp, captured } = setupMiddlegame({ positionId: 31, position: legacy });
+
+    expect(cmp.themeId()).toBeNull();
+    cmp.themeId.set(1002);
+    cmp.save();
+
+    expect((captured() as CreateVariantRequest).themeId).toBe(1002);
   });
 
   it('refuses an opening parent study without opening the editor', () => {
@@ -322,6 +466,7 @@ describe('PositionEditor (Mediogioco, ISSUE-016)', () => {
 
   it('keeps the R25 FEN contracts inside the section', () => {
     const { cmp } = setupMiddlegame();
+    cmp.themeId.set(1001);
     cmp.selectPiece('wK');
     cmp.placeOn('e1');
     cmp.selectPiece('bK');

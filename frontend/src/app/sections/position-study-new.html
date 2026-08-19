@@ -23,6 +23,24 @@
       [disabled]="saving()"
     />
 
+    @if (requiresStudyType()) {
+      <label class="field">
+        <span class="field-label">Tipologia</span>
+        <select
+          class="field-input"
+          name="studyType"
+          [ngModel]="studyType()"
+          (ngModelChange)="studyType.set($event)"
+          [disabled]="saving()"
+          required
+        >
+          <option value="" disabled>Scegli tipologia&#8230;</option>
+          <option value="TACTICAL">{{ studyTypeLabel('TACTICAL') }}</option>
+          <option value="STRATEGIC">{{ studyTypeLabel('STRATEGIC') }}</option>
+        </select>
+      </label>
+    }
+
     @if (error()) {
       <p class="page-error">{{ error() }}</p>
     }

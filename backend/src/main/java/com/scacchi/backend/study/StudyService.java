@@ -1,8 +1,11 @@
 package com.scacchi.backend.study;
 
+import com.scacchi.backend.attempt.PositionAttemptService;
+import com.scacchi.backend.attempt.PositionAttemptsSummaryDto;
 import com.scacchi.backend.variant.CreateVariantRequest;
 import com.scacchi.backend.variant.ValidationError;
 import com.scacchi.backend.variant.VariantDto;
+import com.scacchi.backend.variant.VariantOrderRequest;
 import com.scacchi.backend.variant.VariantService;
 import java.time.Instant;
 import java.util.List;
@@ -22,10 +25,13 @@ public class StudyService {
 
     private final StudyRepository repository;
     private final VariantService variantService;
+    private final PositionAttemptService attemptService;
 
-    public StudyService(StudyRepository repository, VariantService variantService) {
+    public StudyService(
+        StudyRepository repository, VariantService variantService, PositionAttemptService attemptService) {
         this.repository = repository;
         this.variantService = variantService;
+        this.attemptService = attemptService;
     }
 
     /** Lista studi con solo il conteggio varianti (senza l'elenco completo). */
@@ -45,11 +51,14 @@ public class StudyService {
 
     public StudyDto create(CreateStudyRequest request) {
         validate(request);
+        GamePhase phase = parsePhase(request.phase());
+        StudyType studyType = parseAndRequireStudyTypeForCreate(phase, request.studyType());
         Study entity = new Study();
         entity.setName(request.name().trim());
         entity.setDescription(normalize(request.description()));
         entity.setColor(parseColor(request.color()));
-        entity.setPhase(parsePhase(request.phase()));
+        entity.setPhase(phase);
+        entity.setStudyType(studyType);
         return toDto(repository.save(entity), 0, null);
     }
 
@@ -66,10 +75,40 @@ public class StudyService {
      * del payload resta a carico del controller.
      */
     public Optional<VariantDto> createVariant(Long studyId, CreateVariantRequest request) {
-        if (!repository.existsById(studyId)) {
+        Study study = repository.findById(studyId).orElse(null);
+        if (study == null) {
             return Optional.empty();
         }
+        ensureClassifiedForNewPosition(study);
         return Optional.of(variantService.createInStudy(studyId, request));
+    }
+
+    /**
+     * Riordino atomico delle posizioni di uno studio Mediogioco (R26.3, task 3.5).
+     * {@code empty} se lo studio non esiste (→ 404); la validazione di fase/payload è
+     * a carico di {@code VariantService.reorder}.
+     */
+    public Optional<List<VariantDto>> reorderVariants(Long studyId, VariantOrderRequest request) {
+        return variantService.reorder(studyId, request == null ? null : request.variantIds());
+    }
+
+    /**
+     * Riepilogo dei tentativi per posizione di uno studio (R26.3, task 4.5), incluse
+     * le posizioni mai tentate. {@code empty} se lo studio non esiste (→ 404).
+     */
+    public Optional<List<PositionAttemptsSummaryDto>> getAttemptsSummary(Long studyId) {
+        return attemptService.getStudySummary(studyId);
+    }
+
+    /**
+     * Un Mediogioco «Da classificare» conserva CRUD e cancellazione dello studio,
+     * ma non ammette nuove posizioni finché non riceve una tipologia (R26.3, task 2.3).
+     */
+    private static void ensureClassifiedForNewPosition(Study study) {
+        if (study.getPhase() == GamePhase.MIDDLEGAME && study.getStudyType() == null) {
+            throw new InvalidStudyException(new ValidationError("studyType", null, null,
+                "Classifica lo studio Mediogioco (tattico o strategico) prima di creare posizioni."));
+        }
     }
 
     /**
@@ -145,6 +184,7 @@ public class StudyService {
         validate(request);
         return repository.findById(id).map(entity -> {
             ensurePhaseUnchanged(entity, request.phase());
+            applyStudyTypeTransition(entity, request.studyType());
             entity.setName(request.name().trim());
             entity.setDescription(normalize(request.description()));
             entity.setColor(parseColor(request.color()));
@@ -166,6 +206,54 @@ public class StudyService {
             throw new InvalidStudyException(new ValidationError(
                 "phase", null, null, "La fase dello studio non può essere modificata dopo la creazione."));
         }
+    }
+
+    /**
+     * Tipologia richiesta in creazione (R26.3): obbligatoria per un nuovo Mediogioco,
+     * rifiutata per le altre fasi. {@code validate(CreateStudyRequest)} ha già verificato
+     * che, se presente, {@code request.studyType()} sia un valore enum riconosciuto.
+     */
+    private static StudyType parseAndRequireStudyTypeForCreate(GamePhase phase, String requestedType) {
+        boolean present = requestedType != null && !requestedType.isBlank();
+        if (phase != GamePhase.MIDDLEGAME) {
+            if (present) {
+                throw new InvalidStudyException(new ValidationError("studyType", null, null,
+                    "La tipologia è ammessa solo per gli studi Mediogioco."));
+            }
+            return null;
+        }
+        if (!present) {
+            throw new InvalidStudyException(new ValidationError("studyType", null, null,
+                "La tipologia (tattica o strategica) è obbligatoria per un nuovo studio Mediogioco."));
+        }
+        return StudyType.valueOf(requestedType);
+    }
+
+    /**
+     * Applica in aggiornamento l'unica transizione ammessa per un Mediogioco legacy
+     * «Da classificare» (R26.3): {@code NULL → valore}, una sola volta. Un valore già
+     * persistito è immutabile (guard simmetrica a {@link #ensurePhaseUnchanged}); un
+     * tipo su una fase diversa da {@code MIDDLEGAME} è rifiutato. Nessuna richiesta di
+     * tipologia lascia lo stato invariato, per restare compatibile con i chiamanti
+     * (es. Aperture) che non inviano mai il campo.
+     */
+    private static void applyStudyTypeTransition(Study entity, String requestedType) {
+        if (requestedType == null || requestedType.isBlank()) {
+            return;
+        }
+        if (entity.getPhase() != GamePhase.MIDDLEGAME) {
+            throw new InvalidStudyException(new ValidationError("studyType", null, null,
+                "La tipologia è ammessa solo per gli studi Mediogioco."));
+        }
+        StudyType requested = StudyType.valueOf(requestedType);
+        if (entity.getStudyType() != null) {
+            if (entity.getStudyType() != requested) {
+                throw new InvalidStudyException(new ValidationError("studyType", null, null,
+                    "La tipologia dello studio Mediogioco non può essere modificata dopo la classificazione."));
+            }
+            return;
+        }
+        entity.setStudyType(requested);
     }
 
     /** Cancellazione a cascata: prima le varianti dello studio, poi lo studio stesso. */
@@ -204,6 +292,17 @@ public class StudyService {
                     "phase", null, null, "Fase non valida: \"" + phase + "\"."));
             }
         }
+        // La tipologia (R26.3) è contestuale alla fase (vedi create/update), ma se presente
+        // deve comunque essere un valore enum riconosciuto.
+        String studyType = request.studyType();
+        if (studyType != null && !studyType.isBlank()) {
+            try {
+                StudyType.valueOf(studyType);
+            } catch (IllegalArgumentException e) {
+                throw new InvalidStudyException(new ValidationError(
+                    "studyType", null, null, "Tipologia non valida: \"" + studyType + "\"."));
+            }
+        }
     }
 
     private static StudyColor parseColor(String color) {
@@ -236,6 +335,7 @@ public class StudyService {
             s.getDescription(),
             s.getColor() == null ? null : s.getColor().name(),
             s.getPhase() == null ? null : s.getPhase().name(),
+            s.getStudyType() == null ? null : s.getStudyType().name(),
             variantCount,
             variants,
             s.getSourceProvider(),

@@ -1,0 +1,53 @@
+@if (loading()) {
+  <p class="detail-muted">Caricamento&#8230;</p>
+} @else if (!gate().eligible) {
+  <div class="detail-error">
+    <p>{{ blockMessage() }}</p>
+    <a [routerLink]="returnLink()">&#8592; {{ returnLabel() }}</a>
+  </div>
+} @else if (variant(); as v) {
+  <nav class="crumbs" aria-label="Percorso posizione">
+    <a [routerLink]="paths.studyList">{{ parentLabel }}</a>
+    <span class="crumb-sep">/</span>
+    <a [routerLink]="paths.study(v.studyId!)">{{ study()?.name }}</a>
+    <span class="crumb-sep">/</span>
+    <span class="crumb-current" aria-current="page">{{ v.name }}</span>
+  </nav>
+
+  <!-- Nessun wrapper `.detail` qui (task 8.2): il contenitore posizionale è
+       l'host di `app-guided-study-attempt`, unico per modalità manuale e
+       sequenziale. Un secondo wrapper raddoppierebbe padding e max-width. -->
+  <app-guided-study-attempt
+    [variant]="v"
+    [studyType]="study()!.studyType!"
+    [recordAttempt]="recordAttempt"
+    (attemptRecorded)="onAttemptRecorded($event)"
+  />
+
+  <!-- Storico e uscita sono fratelli del tentativo: il contenitore li allinea
+       alla stessa colonna di board e pannello (task 8.2). -->
+  <div class="guided-study-outro">
+    <section class="panel attempts-summary" aria-label="Storico tentativi">
+      <h2 class="panel-title">Storico tentativi</h2>
+      @if (attemptsSummary(); as summary) {
+        <p class="meta-line">
+          {{ lastOutcomeLabel(summary.lastOutcome) }}
+          &middot; {{ summary.attemptCount }} tentativ{{ summary.attemptCount === 1 ? 'o' : 'i' }}
+        </p>
+        @if (summary.lastUnderstoodAt) {
+          <p class="meta-line">Ultima comprensione: {{ formatReviewDate(summary.lastUnderstoodAt) }}</p>
+        }
+      } @else if (attemptsLoading()) {
+        <p class="meta-line">Caricamento storico&#8230;</p>
+      } @else if (attemptsUnavailable()) {
+        <p class="meta-line">Storico non disponibile.</p>
+      }
+    </section>
+
+    <p class="detail-actions">
+      <a class="back-link guided-study-exit" [routerLink]="paths.study(v.studyId!)">
+        &#8592; Esci e torna allo studio
+      </a>
+    </p>
+  </div>
+}

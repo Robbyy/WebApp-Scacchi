@@ -1,0 +1,21 @@
+# ISSUE-016/R26.3: tipologia dello studio Mediogioco (TACTICAL/STRATEGIC).
+# Colonna nullable e senza defaultValue: a differenza di 0003-study-phase, qui le righe
+# esistenti (Aperture, Finale, Mediogioco legacy) restano NULL. Un Mediogioco legacy
+# "Da classificare" ottiene il tipo con una singola transizione applicativa (StudyService,
+# task 2.x), non con un default di migrazione: il dato non è deducibile dal DB.
+databaseChangeLog:
+  - changeSet:
+      id: 0004-study-type
+      author: scacchi
+      comment: >
+        Aggiunge la tipologia (TACTICAL/STRATEGIC) allo studio Mediogioco; nullable,
+        nessun valore automatico per le righe esistenti.
+      changes:
+        - addColumn:
+            tableName: study
+            columns:
+              - column:
+                  name: study_type
+                  type: VARCHAR(16)
+                  constraints:
+                    nullable: true

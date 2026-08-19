@@ -66,22 +66,29 @@ Il piano esclude volutamente bug, audit e infrastruttura.
 > dettaglio posizionale restano invariati; la change è archiviata in
 > `openspec/changes/archive/2026-08-14-issue-016-position-editor-contextual-actions/`.
 >
-> **R26.3 — Studio guidato del Mediogioco** — prossimo rilascio pianificato. Preflight e analisi
-> sono completati; il rilascio introduce studi tattici/strategici, temi normalizzati, metadati e
-> ordine delle posizioni, tentativi storici, flussi guidati manuali e sequenziali. Verrà realizzato
-> con due change OpenSpec sequenziali: `issue-016-middlegame-guided-study-model` e
-> `issue-016-middlegame-guided-study-flows`. Entrambe sono attive, complete nei quattro artefatti
-> e valide in strict. Restano il triage standalone e i gate indipendenti di governance; dopo i
-> relativi esiti `READY`, i 40 task del modello devono essere implementati prima dei 55 task dei
-> flussi.
+> ✅ **R26.3 — Studio guidato del Mediogioco** — rilasciata il 2026-08-19, costruita con due change
+> OpenSpec sequenziali entrambe archiviate. **Change modello**
+> (`issue-016-middlegame-guided-study-model`) implementata, verificata e archiviata il 2026-08-17:
+> studi tattici/strategici con classificazione legacy una tantum, catalogo temi normalizzato per
+> ID, metadati/difficoltà/ordine delle posizioni con riordino atomico e storico minimo dei
+> tentativi con validazione tattica autorevole lato backend. 191 test backend, 503 frontend, build
+> Angular e flussi E2E 68–71 verdi su H2 temporaneo; database condiviso invariato. **Change
+> flussi** (`issue-016-middlegame-guided-study-flows`): **55/55 task completati**, implementata,
+> verificata e archiviata il 2026-08-19 (gate B9) — 191 test backend, 692 frontend, build Angular e
+> flussi E2E 72–81 (inclusa la regressione 68–71, la verifica motore spento/non
+> disponibile/callback obsoleta e la cascata di eliminazione) verdi su H2 temporaneo; database
+> condiviso invariato.
 >
-> **R27 — Finale reale** — seguirà R26.3. Dovrà riusare i componenti comuni e, insieme,
-> verificare uno per uno tutti i correttivi R26.1 e R26.2 con fase `ENDGAME`, rotte `/endgame`,
-> sei viewport e regressioni Aperture/Mediogioco: la condivisione del codice non vale come
-> accettazione implicita.
+> **R27 — Finale reale** — è il prossimo rilascio dopo R26.3 completa. Dovrà riusare i componenti
+> comuni e, insieme, verificare uno per uno tutti i correttivi R26.1 e R26.2 con fase `ENDGAME`,
+> rotte `/endgame`, sei viewport e regressioni Aperture/Mediogioco: la condivisione del codice non
+> vale come accettazione implicita. R27 **non eredita automaticamente** dalla sezione Mediogioco la
+> tipologia tattica/strategica dello studio né i flussi guidati introdotti da R26.3; un'eventuale
+> estensione dello studio guidato al Finale richiede una decisione di prodotto dedicata ed
+> esplicita, non un'estensione implicita del riuso dei componenti.
 
 In sintesi: navigazione → linea migliore del motore → gestione studi → flusso
-varianti/editor → Mediogioco ✅ → studio guidato Mediogioco → Finale → gioco da posizione →
+varianti/editor → Mediogioco ✅ → studio guidato Mediogioco ✅ → Finale → gioco da posizione →
 impostazioni → parametri motore.
 
 ---

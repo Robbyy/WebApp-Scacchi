@@ -77,11 +77,8 @@
   gap: 0.3rem;
 }
 
-.field-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-muted);
-}
+/* `.field`/`.field-input` (layout e stile base) sono globali in `styles.css`
+   (R26.3): qui restano solo eventuali scostamenti locali, oggi nessuno. */
 
 .url-row {
   display: flex;

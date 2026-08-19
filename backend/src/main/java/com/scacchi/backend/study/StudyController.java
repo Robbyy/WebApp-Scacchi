@@ -1,9 +1,11 @@
 package com.scacchi.backend.study;
 
+import com.scacchi.backend.attempt.PositionAttemptsSummaryDto;
 import com.scacchi.backend.variant.CreateVariantRequest;
 import com.scacchi.backend.variant.InvalidVariantException;
 import com.scacchi.backend.variant.ValidationError;
 import com.scacchi.backend.variant.VariantDto;
+import com.scacchi.backend.variant.VariantOrderRequest;
 import com.scacchi.backend.variant.VariantValidator;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -112,6 +114,27 @@ public class StudyController {
         @PathVariable Long id, @RequestBody CreateVariantRequest request) {
         return service.createVariant(id, request)
             .map(dto -> ResponseEntity.status(HttpStatus.CREATED).body(dto))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Riordino atomico delle posizioni di uno studio Mediogioco (R26.3, task 3.5):
+     * il payload deve contenere la permutazione completa e senza duplicati degli ID
+     * delle posizioni dello studio.
+     */
+    @PutMapping("/{id}/variants/order")
+    public ResponseEntity<List<VariantDto>> reorderVariants(
+        @PathVariable Long id, @RequestBody VariantOrderRequest request) {
+        return service.reorderVariants(id, request)
+            .map(ResponseEntity::ok)
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /** Riepilogo dei tentativi per posizione dello studio (R26.3, task 4.5). */
+    @GetMapping("/{id}/attempts/summary")
+    public ResponseEntity<List<PositionAttemptsSummaryDto>> getAttemptsSummary(@PathVariable Long id) {
+        return service.getAttemptsSummary(id)
+            .map(ResponseEntity::ok)
             .orElseGet(() -> ResponseEntity.notFound().build());
     }
 

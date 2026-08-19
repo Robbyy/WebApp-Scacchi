@@ -1,0 +1,193 @@
+<div class="board-col">
+  <app-chessboard
+    [position]="boardFen()"
+    [interactive]="!locked()"
+    [orientation]="orientation()"
+    (moveMade)="onMoveMade($event)"
+  />
+</div>
+
+<aside class="side">
+  <header class="side-head">
+    <p class="side-kicker">Studio guidato</p>
+    <h2 class="side-title">{{ variant().name }}</h2>
+    <div class="meta-row">
+      <span class="theme-chip">{{ themeLabel(variant().theme) }}</span>
+      @if (difficultyLabel(variant().difficulty); as diff) {
+        <span class="difficulty-chip">{{ diff }}</span>
+      }
+    </div>
+  </header>
+
+  <div class="panel attempt-panel">
+    <h3 class="panel-title">Tentativo</h3>
+
+    <!-- Regioni live persistenti (task 8.1): esistono nel DOM prima di ogni
+         cambio di stato, così l'annuncio è affidabile, e mostrano lo stesso
+         testo che annunciano — nessun duplicato nascosto. `tabindex="-1"` le
+         rende raggiungibili solo via `focus()`, mai con il tab. L'altezza
+         riservata evita che i passaggi di stato spostino i controlli sotto
+         (task 8.2). -->
+    <p
+      #statusRegion
+      class="panel-note attempt-status"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      tabindex="-1"
+    >
+      {{ statusMessage() }}
+    </p>
+
+    <p
+      #alertRegion
+      class="panel-note attempt-error attempt-alert"
+      [class.attempt-alert--empty]="!alertMessage()"
+      role="alert"
+      aria-atomic="true"
+      tabindex="-1"
+    >
+      {{ alertMessage() }}
+    </p>
+
+    @if (solutionRevealed() && studyType() === 'STRATEGIC' && lastOutcome() === null) {
+      <div class="attempt-actions">
+        <button
+          type="button"
+          class="btn"
+          (click)="chooseStrategicOutcome('UNDERSTOOD')"
+          [disabled]="strategicSaving()"
+        >
+          Compresa
+        </button>
+        <button
+          type="button"
+          class="btn btn--ghost"
+          (click)="chooseStrategicOutcome('NOT_UNDERSTOOD')"
+          [disabled]="strategicSaving()"
+        >
+          Non compresa
+        </button>
+      </div>
+    }
+
+    <div class="attempt-actions">
+      @if (studyType() !== 'TACTICAL' || solutionRevealed()) {
+        <button
+          type="button"
+          class="btn btn--ghost attempt-action--wide"
+          (click)="revealSolution()"
+          [disabled]="solutionRevealed()"
+        >
+          Mostra soluzione
+        </button>
+      }
+      @if (studyType() === 'STRATEGIC' && state() !== 'LOADING' && state() !== 'SOLUTION') {
+        <!-- Larghezza fissa: le due etichette del toggle hanno lunghezze
+             diverse e senza `min-width` accenderlo sposterebbe «Riprova»
+             (task 8.2). -->
+        <button
+          type="button"
+          class="btn btn--ghost attempt-action--wide"
+          [attr.aria-pressed]="engineEnabled()"
+          (click)="toggleEngine()"
+        >
+          {{ engineEnabled() ? 'Disattiva motore' : 'Attiva motore' }}
+        </button>
+      }
+      <button type="button" class="btn" (click)="retry()">Riprova</button>
+    </div>
+  </div>
+
+  @if (solutionRevealed()) {
+    <div
+      #solutionRegion
+      class="panel attempt-solution"
+      tabindex="-1"
+      role="group"
+      aria-label="Soluzione"
+    >
+      <h3 class="panel-title">Soluzione</h3>
+      @if (tokens().length === 0) {
+        <p class="panel-note">Nessuna mossa registrata.</p>
+      } @else {
+        <div class="pgn">
+          @for (t of tokens(); track $index) {
+            @switch (t.kind) {
+              @case ('open') {
+                <span class="paren">(</span>
+              }
+              @case ('close') {
+                <span class="paren">)</span>
+              }
+              @default {
+                @if (t.label) {
+                  <span class="move-num">{{ t.label }}</span>
+                }
+                <button
+                  type="button"
+                  class="move"
+                  [class.move--variation]="t.variation"
+                  [class.move--current]="isCurrent(t.path)"
+                  (click)="goTo(t.path)"
+                >
+                  {{ t.san }}@if (t.nag) {<span class="move-nag">{{ t.nag }}</span>}
+                </button>
+                @if (t.comment) {
+                  <span class="move-comment">{{ t.comment }}</span>
+                }
+              }
+            }
+          }
+        </div>
+      }
+
+      <div class="controls">
+        <button
+          type="button"
+          class="ctrl"
+          (click)="first()"
+          title="Vai all'inizio"
+          aria-label="Vai all'inizio"
+          [disabled]="atStart()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h2.2v14H7zM20 5v14L9.6 12z" /></svg>
+        </button>
+        <button
+          type="button"
+          class="ctrl"
+          (click)="prev()"
+          title="Mossa precedente"
+          aria-label="Mossa precedente"
+          [disabled]="atStart()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5v14L6 12z" /></svg>
+        </button>
+        <button
+          type="button"
+          class="ctrl"
+          (click)="next()"
+          title="Mossa successiva"
+          aria-label="Mossa successiva"
+          [disabled]="atLeaf()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l10-7z" /></svg>
+        </button>
+        <button
+          type="button"
+          class="ctrl"
+          (click)="last()"
+          title="Vai alla fine"
+          aria-label="Vai alla fine"
+          [disabled]="atLeaf()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5v14l10.4-7zM14.8 5H17v14h-2.2z" /></svg>
+        </button>
+      </div>
+
+      <p class="move-counter">
+        Semimossa {{ solutionPath().length }} / {{ mainlineLength() }} (mainline)
+      </p>
+    </div>
+  }
+</aside>

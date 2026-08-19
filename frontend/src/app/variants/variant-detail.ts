@@ -24,7 +24,11 @@ import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
 import { numberedPv } from '../core/uci';
 import { MoveNode, Variant } from '../core/variant.model';
+import { Study } from '../core/study.model';
 import { ReviewSchedule } from '../core/review.model';
+import { PositionAttemptsSummary, deriveAttemptsSummary } from '../core/attempt.model';
+import { positionGuidedStudyGate } from '../core/guided-study';
+import { difficultyLabel, lastOutcomeLabel, themeLabel } from '../core/middlegame-format';
 import { sectionContextFrom, sectionLabel, sectionPaths } from '../core/study-sections';
 import { formatReviewDate, reviewLabel } from '../reviews/review-format';
 import {
@@ -104,6 +108,26 @@ export class VariantDetail implements OnDestroy {
    */
   protected readonly isOpening = signal(true);
   protected readonly isPosition = computed(() => !this.isOpening());
+  /**
+   * Solo le posizioni di uno studio `MIDDLEGAME` (R26.3) mostrano tema,
+   * difficoltà, descrizioni e storico dei tentativi: il Finale resta fuori
+   * scope R26.3 pur condividendo `isPosition()` con il Mediogioco.
+   */
+  protected readonly isMiddlegamePosition = signal(false);
+  protected readonly attemptsSummary = signal<PositionAttemptsSummary | null>(null);
+  /**
+   * Studio padre completo (R26.3, task 1.5): serve al solo gate della CTA
+   * «Studia questa posizione», che richiede anche la classificazione dello
+   * studio e non solo la fase — dato non coperto da `isMiddlegamePosition`.
+   */
+  private readonly parentStudy = signal<Study | null>(null);
+  protected readonly guidedStudyEligible = computed(
+    () => positionGuidedStudyGate(this.parentStudy(), this.variant()).eligible,
+  );
+  protected readonly themeLabel = themeLabel;
+  protected readonly difficultyLabel = difficultyLabel;
+  protected readonly lastOutcomeLabel = lastOutcomeLabel;
+  protected readonly formatReviewDate = formatReviewDate;
   /** Nelle sezioni posizionali l'analisi salvata parte nascosta per lo studio attivo. */
   protected readonly analysisRevealed = signal(false);
   protected readonly analysisVisible = computed(
@@ -197,6 +221,9 @@ export class VariantDetail implements OnDestroy {
     this.review.set(null);
     this.currentPath.set([]);
     this.isOpening.set(true);
+    this.isMiddlegamePosition.set(false);
+    this.parentStudy.set(null);
+    this.attemptsSummary.set(null);
     this.analysisRevealed.set(false);
     this.deletingPosition.set(false);
     this.studyVariants.set([]);
@@ -274,6 +301,11 @@ export class VariantDetail implements OnDestroy {
         this.isOpening.set(s.phase === 'OPENING');
         this.studyVariants.set(s.variants ?? []);
         this.studyName.set(s.name);
+        if (s.phase === 'MIDDLEGAME') {
+          this.isMiddlegamePosition.set(true);
+          this.parentStudy.set(s);
+          this.loadAttemptsSummary(pendingVariant.id);
+        }
         if (this.context) {
           // Solo ora la posizione diventa presentabile: prima di questo punto
           // fase, contenuto e azioni restano in stato di caricamento.
@@ -291,6 +323,17 @@ export class VariantDetail implements OnDestroy {
         return EMPTY;
       }),
     );
+  }
+
+  /**
+   * Riepilogo dei tentativi della posizione (R26.3, task 5.6): best-effort,
+   * l'assenza non impedisce la consultazione della posizione.
+   */
+  private loadAttemptsSummary(variantId: number): void {
+    this.service.getAttempts(variantId).subscribe({
+      next: (attempts) => this.attemptsSummary.set(deriveAttemptsSummary(variantId, attempts)),
+      error: () => this.attemptsSummary.set(null),
+    });
   }
 
   /** Accende/spegne il motore sulla posizione corrente. */

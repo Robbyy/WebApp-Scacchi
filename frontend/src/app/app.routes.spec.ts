@@ -14,6 +14,8 @@ import { canLeaveEditor } from './variants/can-deactivate.guard';
 import { MIDDLEGAME_SECTION_CONTEXT, sectionContextFrom } from './core/study-sections';
 import { PositionStudyList } from './sections/position-study-list';
 import { PositionStudyNew } from './sections/position-study-new';
+import { GuidedStudyPosition } from './guided-study/guided-study-position';
+import { GuidedStudySequence } from './guided-study/guided-study-sequence';
 
 function routeFor(path: string): Route {
   const route = routes.find((r) => r.path === path);
@@ -61,6 +63,11 @@ describe('app routes', () => {
     expect(middlegameRouteFor('positions/:id').component).toBe(VariantDetail);
   });
 
+  it('mounts the guided-study entry points on their canonical routes (R26.3, task 1.2)', () => {
+    expect(middlegameRouteFor('positions/:id/study').component).toBe(GuidedStudyPosition);
+    expect(middlegameRouteFor('studies/:id/study').component).toBe(GuidedStudySequence);
+  });
+
   it('mounts the manual creation page on the middlegame section (ISSUE-016)', () => {
     const route = middlegameRouteFor('studies/new');
     expect(route.component).toBe(PositionStudyNew);
@@ -80,6 +87,11 @@ describe('app routes', () => {
     expect(middlegameIndexOf('positions/new')).toBeLessThan(middlegameIndexOf('positions/:id'));
     expect(middlegameIndexOf('positions/:id/setup')).toBeLessThan(middlegameIndexOf('positions/:id'));
     expect(middlegameIndexOf('positions/:id/edit')).toBeLessThan(middlegameIndexOf('positions/:id'));
+  });
+
+  it('declares the guided-study routes before the concurrent dynamic ones (R26.3, design decision 1)', () => {
+    expect(middlegameIndexOf('studies/:id/study')).toBeLessThan(middlegameIndexOf('studies/:id'));
+    expect(middlegameIndexOf('positions/:id/study')).toBeLessThan(middlegameIndexOf('positions/:id'));
   });
 
   it('mounts the shared placeholder on the endgame section (ISSUE-021)', () => {
@@ -182,10 +194,88 @@ describe('app routes (navigation)', () => {
     expect(sectionContextFrom(route.data)).toBeNull();
   });
 
+  it('opens the manual guided-study route and inherits the section context (R26.3)', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/middlegame/positions/4/study');
+    const route = matched(router);
+    expect(route.component).toBe(GuidedStudyPosition);
+    expect(route.paramMap.get('id')).toBe('4');
+    expect(sectionContextFrom(route.data)).toBe(MIDDLEGAME_SECTION_CONTEXT);
+  });
+
+  it('opens the sequential guided-study route and inherits the section context (R26.3)', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/middlegame/studies/6/study');
+    const route = matched(router);
+    expect(route.component).toBe(GuidedStudySequence);
+    expect(route.paramMap.get('id')).toBe('6');
+    expect(sectionContextFrom(route.data)).toBe(MIDDLEGAME_SECTION_CONTEXT);
+  });
+
+  it('still matches the position and study detail routes unchanged (R26.3 regression)', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/middlegame/positions/4');
+    expect(matched(router).component).toBe(VariantDetail);
+    await router.navigateByUrl('/middlegame/studies/6');
+    expect(matched(router).component).toBe(StudyDetail);
+  });
+
   it('still shows the placeholder on the endgame section (ISSUE-016)', async () => {
     const router = TestBed.inject(Router);
     await router.navigateByUrl('/endgame');
     expect(router.url).toBe('/endgame');
+    expect(matched(router).component).toBe(ComingSoon);
+  });
+});
+
+describe('app routes — perimetro dello studio guidato (R26.3, task 8.3/8.4)', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()],
+    });
+  });
+
+  /** Ultima route attraversata dalla navigazione corrente. */
+  function matched(router: Router): ActivatedRouteSnapshot {
+    let route = router.routerState.snapshot.root;
+    while (route.firstChild) {
+      route = route.firstChild;
+    }
+    return route;
+  }
+
+  it('declares the guided-study components only under the middlegame section', () => {
+    const guided = [GuidedStudyPosition, GuidedStudySequence];
+    const outside = routes.filter(
+      (r) => r.path !== 'middlegame' && r.component && guided.includes(r.component as never),
+    );
+    expect(outside).toEqual([]);
+    // E nessuna route figlia di un'altra sezione monta gli stessi componenti.
+    expect(
+      middlegameChildren().filter((r) => guided.includes(r.component as never)).length,
+    ).toBe(2);
+  });
+
+  it('does not expose a guided-study route on the openings paths', async () => {
+    const router = TestBed.inject(Router);
+    for (const url of ['/studies/6/study', '/variants/4/study', '/positions/4/study']) {
+      await router.navigateByUrl(url).catch(() => undefined);
+      const component = matched(router).component;
+      expect(component).not.toBe(GuidedStudyPosition);
+      expect(component).not.toBe(GuidedStudySequence);
+    }
+  });
+
+  it('does not expose a guided-study route on the endgame section (R27 perimeter)', async () => {
+    const router = TestBed.inject(Router);
+    for (const url of ['/endgame/studies/6/study', '/endgame/positions/4/study']) {
+      await router.navigateByUrl(url).catch(() => undefined);
+      const component = matched(router).component;
+      expect(component).not.toBe(GuidedStudyPosition);
+      expect(component).not.toBe(GuidedStudySequence);
+    }
+    // La sezione resta sul segnaposto pianificato per R27.
+    await router.navigateByUrl('/endgame');
     expect(matched(router).component).toBe(ComingSoon);
   });
 });

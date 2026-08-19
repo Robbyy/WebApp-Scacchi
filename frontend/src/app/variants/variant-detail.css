@@ -349,6 +349,11 @@
   color: var(--text-muted);
 }
 
+/* Dati di posizione Mediogioco (R26.3): il chip di tema/difficoltà è condiviso
+   in styles.css con la lista dello studio, qui solo il layout locale. */
+.meta-row { display: flex; align-items: center; gap: .5rem; margin: 0 0 .4rem; }
+.meta-line { margin: .3rem 0 0; font-size: .85rem; color: var(--text-muted); }
+
 .study-gate {
   display: grid;
   gap: 0.75rem;

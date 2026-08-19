@@ -25,6 +25,19 @@
   --panel-border: oklch(0.85 0.04 70);
 }
 
+/* Chip di tema/difficoltà Mediogioco (R26.3): stessa forma nella lista dello
+   studio e nel dettaglio della posizione, per non duplicarla nei due CSS. */
+.theme-chip, .difficulty-chip { padding: .15rem .7rem; border-radius: 999px; font-size: .78rem; font-weight: 600; background: var(--wood-light); color: var(--wood-dark); }
+.theme-chip--missing { background: transparent; border: 1px dashed var(--panel-border); font-style: italic; font-weight: 500; }
+
+/* Campo di form generico (etichetta + input/select), riusato da più pagine di
+   studio oltre a `study-form-fields` per non duplicarne lo stile (R26.3). */
+.field { display: flex; flex-direction: column; gap: .3rem; }
+.field-label { font-size: .78rem; font-weight: 700; color: var(--text-muted); }
+.field-input { padding: .5rem .65rem; border: 1px solid var(--panel-border); border-radius: .5rem; background: oklch(.99 .005 90); font: inherit; color: var(--text-main); }
+.field-input:focus { outline: 2px solid var(--wood-medium); outline-offset: 1px; }
+.field-input:disabled { opacity: .65; background: oklch(.96 .01 90); cursor: not-allowed; }
+
 * {
   box-sizing: border-box;
 }

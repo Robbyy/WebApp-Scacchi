@@ -1,5 +1,9 @@
 package com.scacchi.backend.variant;
 
+import com.scacchi.backend.attempt.InvalidAttemptException;
+import com.scacchi.backend.attempt.PositionAttemptDto;
+import com.scacchi.backend.attempt.PositionAttemptService;
+import com.scacchi.backend.attempt.RecordAttemptRequest;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,8 +27,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class VariantController {
 
     private final VariantService service;
-    public VariantController(VariantService service) {
+    private final PositionAttemptService attemptService;
+
+    public VariantController(VariantService service, PositionAttemptService attemptService) {
         this.service = service;
+        this.attemptService = attemptService;
     }
 
     @GetMapping
@@ -60,9 +67,36 @@ public class VariantController {
             : ResponseEntity.notFound().build();
     }
 
+    /**
+     * Registra un tentativo su una posizione (ISSUE-016/R26.3, task 4.2): un solo
+     * endpoint, discriminato dallo {@code studyType} persistito. Nessun endpoint per
+     * modificare o eliminare il singolo tentativo (task 4.6).
+     */
+    @PostMapping("/{id}/attempts")
+    public ResponseEntity<PositionAttemptDto> recordAttempt(
+        @PathVariable Long id, @RequestBody RecordAttemptRequest request) {
+        return attemptService.recordAttempt(id, request)
+            .map(dto -> ResponseEntity.status(HttpStatus.CREATED).body(dto))
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /** Storico dei tentativi di una posizione, più recente prima (task 4.5). */
+    @GetMapping("/{id}/attempts")
+    public ResponseEntity<List<PositionAttemptDto>> listAttempts(@PathVariable Long id) {
+        return attemptService.findByVariantId(id)
+            .map(ResponseEntity::ok)
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     /** Payload non valido (struttura o legalità): risposta 400 con dettaglio. */
     @ExceptionHandler(InvalidVariantException.class)
     public ResponseEntity<ValidationError> handleInvalid(InvalidVariantException ex) {
+        return ResponseEntity.badRequest().body(ex.getError());
+    }
+
+    /** Tentativo non valido (fase, classificazione, tema, mossa o esito): 400 con dettaglio. */
+    @ExceptionHandler(InvalidAttemptException.class)
+    public ResponseEntity<ValidationError> handleInvalidAttempt(InvalidAttemptException ex) {
         return ResponseEntity.badRequest().body(ex.getError());
     }
 }

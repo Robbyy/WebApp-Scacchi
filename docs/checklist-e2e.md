@@ -2,8 +2,12 @@
 
 > Checklist ripetibile per la validazione manuale end-to-end, verificata fino alla release
 > evolutiva R26.2 (2026-08-14); il follow-up del setup editor è registrato nel flusso 67.
-> I flussi 68–81 sono il gate pianificato di R26.3 e non sono ancora eseguibili né inclusi nel
-> conteggio corrente dei **67 flussi completati**.
+> I flussi 68–71, gate della change modello di R26.3 (`issue-016-middlegame-guided-study-model`),
+> sono stati verificati il 2026-08-17 su H2 temporaneo. I flussi 72–81, gate B9 della change flussi
+> (`issue-016-middlegame-guided-study-flows`), sono stati verificati il 2026-08-19 su H2 temporaneo,
+> incluse la riesecuzione di regressione dei flussi 68–71 e la verifica esplicita motore
+> spento/non disponibile/callback obsoleta. Il conteggio corrente è di **81 flussi completati**;
+> con questo gate la change flussi è completa e **R26.3 è rilasciata** come prodotto.
 > Eseguibile in pochi minuti dopo ogni rilascio significativo, prima di dichiararlo completato.
 > Complementare ai test automatici (vedi sezione "Copertura automatica" in fondo).
 
@@ -188,29 +192,112 @@
 > Evidenza del 2026-08-16: il correttivo è presente nel commit `f5bbb25`; test frontend (462) e build
 > sono verdi. Il flusso browser 67 è superato su H2 temporaneo; il database condiviso non è stato toccato.
 
-### Gate futuro R26.3 — Studio guidato del Mediogioco
+## Flussi aggiunti (R26.3 change modello — verificata il 2026-08-17)
 
-Questi flussi sono pianificati ma non ancora eseguibili: sono recepiti nelle due change OpenSpec
-attive e validate dalla CLI di R26.3. Dopo triage e gate indipendenti di governance con esito
-`READY`, devono essere implementati nell'ordine modello → flussi e verificati su H2 temporaneo.
-Fino alla loro chiusura il conteggio della checklist resta **67**.
+- [x] **68. Classificazione di uno studio Mediogioco legacy** — verificato su H2 temporaneo con uno
+  studio `MIDDLEGAME` inserito via SQL diretto con `study_type` nullo (stato post-backfill):
+  `/middlegame/studies/{id}` mostra «Da classificare», nessuna CTA «Nuova posizione» e il pulsante
+  «Classifica studio». Scelto «Tattica», il badge diventa «Tattica», compare «Nuova posizione» e
+  contenuto/metadati restano gli stessi. Una successiva `PUT` con `studyType: STRATEGIC` è
+  rifiutata con `400` («non può essere modificata dopo la classificazione»).
+- [x] **69. Studi tattici e strategici, incluso uno vuoto** — verificato da `/middlegame/studies/new`:
+  submit senza tipologia mostra l'errore e non crea nulla; creati uno studio «Tattica» e uno
+  «Strategica» **vuoto** (badge tipologia, 0 posizioni, CTA di creazione subito attiva). Verificato
+  che `/studies/new` (Aperture) non mostra il campo Tipologia e che l'API rifiuta `studyType` per
+  `OPENING` ed `ENDGAME` (`400`) e lo richiede per un nuovo `MIDDLEGAME` (`400` se assente).
+- [x] **70. Catalogo temi, metadati e ordine di una posizione** — verificato il catalogo filtrato per
+  tipologia (14 temi tattici, 13 strategici, incluso «case deboli e case forti»; stesso codice
+  `KING_ATTACK` su ID distinti 1012/2011). Assegnati a una posizione tema, descrizione del tema,
+  descrizione, difficoltà e fonte dall'editor di setup; verificato l'ordine predefinito `N+1` in
+  creazione su uno studio vuoto (positionOrder 1).
+- [x] **71. Migrazione e ordine delle posizioni legacy** — le due posizioni legacy inserite (con
+  `position_order` valorizzato e `theme_id` nullo, come da backfill) sono comparse nell'ordine
+  preservato (`#1`/`#2`) con «Tema da assegnare» e `eligibleForGuidedStudy: false`; assegnato un
+  tema a una di esse, l'etichetta è sparita e l'eleggibilità è passata a `true`. Riordino numerico
+  (▲/▼) verificato dal dettaglio studio con persistenza via `PUT .../variants/order` e lettura
+  aggiornata sia UI sia API.
 
-| # | Flusso futuro obbligatorio |
-|---|---|
-| 68 | Classificare uno studio Mediogioco legacy «Da classificare» come tattico o strategico; dopo la scelta la tipologia è immutabile e il contenuto resta consultabile/modificabile. |
-| 69 | Creare studi tattici e strategici, compreso uno studio vuoto valido; Aperture e studi Finale non ricevono la tipologia di R26.3. |
-| 70 | Creare/modificare una posizione con tema selezionato per ID dal catalogo compatibile, descrizioni, difficoltà a cinque livelli, fonte e ordine; il cambio della label del tema non spezza il riferimento. |
-| 71 | Migrare posizioni legacy preservando l'ordine per ID, mostrarle come «Tema da assegnare» ed escluderle dal guidato finché non ricevono un tema valido. |
-| 72 | Salvare una bozza senza mainline, usarla come scacchiera libera senza esito e verificarne l'esclusione dalle sequenze. |
-| 73 | Completare la mainline tattica: risposte avversarie automatiche, validazione server delle mosse inviate e registrazione automatica di `compresa`. |
-| 74 | Deviare dalla mainline tattica: interruzione immediata, validazione server, esito `errata`, soluzione automatica e replay sotto controllo dell'utente. |
-| 75 | Nel flusso strategico seguire la mainline e poi deviare con motore spento: deviazione segnalata, risposta automatica sospesa e comando «Attiva motore per continuare», lasciando disponibili soluzione e uscita. |
-| 76 | Attivare il motore dopo una deviazione strategica: una sola mossa di risposta tramite Stockfish, senza PV/barra obbligatorie e senza persistenza nell'albero autore o nello storico. Gestire anche il motore non disponibile. |
-| 77 | Mostrare la soluzione strategica dalla FEN iniziale: prima nulla dell'albero autore è visibile, dopo è disponibile l'intero albero in sola lettura; replay controllato dall'utente ed esito manuale `compresa`/`non compresa`. |
-| 78 | Registrare tentativi multipli e verificare ultimo esito, totale tentativi e data dell'ultima comprensione; modificare FEN o mainline preservando lo storico senza versionare la soluzione. |
-| 79 | Aprire manualmente una posizione completa e verificare che il relativo tentativo alimenti lo stesso storico e riepilogo della modalità sequenziale. |
-| 80 | Avviare sequenze con ordine autore/casuale e filtri «Tutte», «Mai tentate», «Da rivedere», «Comprese»; usare «Salta posizione» senza salvare un tentativo e verificare il riepilogo finale non persistito. |
-| 81 | Eliminare posizione/studio verificando le cascade sui tentativi; ripetere responsive ai sei viewport e regressioni Aperture, setup/editor/dettaglio R26.1/R26.2. |
+> Evidenza del 2026-08-17: backend avviato su un file H2 temporaneo separato dal database
+> condiviso (`H2_DB_PATH` su scratchpad di sessione); frontend su `http://localhost:4200`. Suite
+> automatica 191 backend/503 frontend e build Angular verdi. Nessun errore in console durante i
+> quattro flussi. Il database condiviso `backend/data/scacchi.mv.db` non è stato avviato né
+> modificato: invariato prima e dopo il gate a `155648` byte, timestamp `2026-08-16 06:15`,
+> SHA-256 `4117D9D8E773D9D871C14775842DF835F62AD60FDA4A7985DE154F20A59C19FF`. La change
+> `issue-016-middlegame-guided-study-model` è archiviata in
+> `openspec/changes/archive/2026-08-17-issue-016-middlegame-guided-study-model/`.
+
+## Flussi aggiunti (R26.3 change flussi — gate B9, verificata il 2026-08-19)
+
+- [x] **72. Bozza senza mainline come scacchiera libera** — una posizione Mediogioco senza mosse
+  (`moves: []`) mostra nel dettaglio la sola scacchiera libera, «Nessuna analisi salvata» e nessuna
+  CTA «Studia questa posizione»; `eligibleForGuidedStudy: false` via API e la posizione non compare
+  in nessuna sequenza con filtro «Tutte le posizioni».
+- [x] **73. Mainline tattica completata** — giocando tutte le mosse utente corrette della mainline,
+  ogni risposta avversaria si applica automaticamente, l'invio di `userMoves` produce `POST
+  /api/variants/{id}/attempts` (`201`) e l'esito `compresa` è mostrato solo dopo conferma server, con
+  soluzione rivelata e replay manuale (`Semimossa 0/N` all'apertura, nessun autoplay).
+- [x] **74. Deviazione tattica** — una mossa diversa dalla mainline blocca subito l'input, invia
+  `userMoves` (`POST` `201`), mostra `errata` («Da rivedere») e rivela automaticamente la soluzione
+  con replay sotto controllo dell'utente.
+- [x] **75. Deviazione strategica con motore spento** — dopo la mainline, una mossa diversa segnala
+  la deviazione, sospende la risposta automatica, mostra «Attiva il motore per continuare a
+  esplorare» e lascia disponibili «Mostra soluzione» e uscita senza registrare un esito.
+- [x] **76. Motore dopo deviazione strategica** — attivando il motore, Stockfish risponde con una
+  sola mossa valida (verificata via mossa reale applicata alla board, es. cattura `exd4`), senza PV
+  o barra di valutazione e senza chiamate a `/attempts` (mossa esplorativa non persistita).
+- [x] **77. Soluzione strategica dalla FEN iniziale** — «Mostra soluzione» riporta la board alla
+  `startingFen`, rivela l'intero albero in sola lettura con replay manuale (`Vai all'inizio` /
+  `Mossa precedente` / `Mossa successiva` / `Vai alla fine`) e abilita `Compresa`/`Non compresa`
+  solo dopo la rivelazione; la scelta invia l'esito (`POST` `201`) e aggiorna lo storico.
+- [x] **78. Tentativi multipli e modifica della mainline** — un secondo tentativo con esito diverso
+  aggiorna «ultimo esito» e conteggio mantenendo la data dell'ultima comprensione precedente;
+  modificare la mainline via `PUT /api/variants/{id}` non altera storico/conteggio (nessuna
+  versione della soluzione salvata negli eventi).
+- [x] **79. Modalità manuale e riepilogo condiviso** — un tentativo aperto manualmente da
+  `/middlegame/positions/{id}/study` alimenta lo stesso `GET /api/studies/{id}/attempts/summary`
+  letto dalla modalità sequenziale (stesso `lastOutcome`/`attemptCount`/`lastUnderstoodAt`).
+- [x] **80. Configurazione e riepilogo sequenziale** — ordine e filtro sono entrambi obbligatori
+  (submit bloccato finché non scelti); ordine autore rispettato; filtro «Tutte» esclude le bozze;
+  «Mai tentate» e «Comprese» restituiscono i sottoinsiemi corretti; «Salta posizione» senza mosse
+  locali avanza senza chiamare l'API tentativi, con mosse locali chiede conferma («Hai già giocato
+  delle mosse in questa posizione: saltarla comunque?»); il riepilogo finale (proposte/comprese/non
+  comprese/errate/senza esito, mutuamente esclusive e sommanti alle proposte) non è persistito: un
+  reload o accesso diretto alla route riparte dalla configurazione.
+- [x] **81. Cascade, responsive e regressioni** — l'eliminazione di una posizione e di uno studio
+  rimuove i relativi tentativi (`404` su entrambi dopo l'eliminazione, nessun orfano), con dialog di
+  conferma che nomina il conteggio delle posizioni coinvolte. A 1600/1440/1024/768/375/320px le
+  schermate di tentativo, soluzione rivelata e configurazione sequenziale non hanno overflow
+  orizzontale (`scrollWidth == clientWidth` a tutte le larghezze, incluso lo stato con albero
+  rivelato a 320px). Regressioni verificate senza errori console: Aperture (dettaglio variante con
+  Motore, «Gioca contro il computer», Allena, drawer Varianti) e Mediogioco (editor R26.2 senza
+  kicker/Motore/Posizioni con breadcrumb non interattivo; dettaglio con Motore, «Mostra analisi» e
+  «Studia questa posizione» coesistenti, pannello Storico tentativi).
+
+> Evidenza del 2026-08-19 (gate B9, `issue-016-middlegame-guided-study-flows`): backend avviato su
+> file H2 temporaneo nello scratchpad di sessione (mai `backend/data/scacchi.mv.db`), frontend su
+> `http://localhost:4200`. Suite automatica **191 test backend / 692 test frontend** (45 file) e
+> build Angular verdi; i soli warning sono i budget CSS/bundle preesistenti (bundle iniziale 661 KB
+> contro 500 KB, quattro fogli di stile oltre i 4 KB) e gli avvisi jsdom «Not implemented:
+> HTMLMediaElement's play()/pause()» sui test audio, nessuno dei due è un errore di compilazione o
+> di test. Dati di prova: due studi Mediogioco («Gate B9 Tattica»/`TACTICAL`, «Gate B9
+> Strategica»/`STRATEGIC`) con sei posizioni create via API (bozza, mainline tattica lineare,
+> mainline tattica con deviazione, mainline strategica) più un settimo studio legacy con
+> `study_type` nullo e due posizioni (`position_order` valorizzato, `theme_id` nullo) inseriti via
+> H2 Shell per la regressione 68–71 sullo stesso file temporaneo. Motore verificato in tre stati:
+> spento (75), attivo con risposta reale del motore (76) ed esplicitamente non disponibile,
+> simulato sostituendo `window.Worker` prima di ogni istanziazione su un caricamento pagina pulito
+> — «Motore non disponibile.» mostrato senza fallback né errori console, soluzione e uscita restano
+> disponibili. Callback obsoleta verificata attivando il motore e premendo subito «Riprova» prima
+> della risposta: alla risposta tardiva la board è rimasta nella posizione di reset, nessun errore
+> console. Regressione 68–71 rieseguita sullo stesso file temporaneo con uno studio legacy e due
+> posizioni legacy inserite via SQL diretto: classificazione una tantum, immutabilità (`PUT` con
+> tipologia diversa rifiutato `400`), validazione tipologia obbligatoria in creazione, catalogo
+> tema STRATEGIC con le 13 voci attese e ordine/eleggibilità delle posizioni legacy confermati.
+> `backend/data/scacchi.mv.db` verificato invariato prima e dopo l'intero gate: `155648` byte,
+> timestamp `2026-08-16 06:15:50`, SHA-256
+> `4117D9D8E773D9D871C14775842DF835F62AD60FDA4A7985DE154F20A59C19FF`; Git non segnala differenze sul
+> file. Il database temporaneo e i relativi studi/posizioni di prova sono stati eliminati a fine
+> gate insieme al processo backend temporaneo.
 
 ### Gate futuro R27 — equivalenza Finale obbligatoria
 
@@ -256,6 +343,14 @@ rotte `/endgame` ai sei viewport.
 - [x] I record di prova R26.1 (due posizioni e lo studio padre) sono stati eliminati dal database
   temporaneo, esterno al workspace. Il database condiviso è rimasto invariato rispetto alla baseline
   del gate e resta escluso da staging, ripristini e sovrascritture.
+- [x] I dati di prova della change modello R26.3 (studio legacy classificato, due studi nuovi e le
+  relative posizioni) vivevano su un file H2 temporaneo nello scratchpad di sessione, mai avviato
+  contro `backend/data/scacchi.mv.db`; il processo backend temporaneo è stato terminato a fine
+  gate e il file temporaneo non fa parte del workspace versionato.
+- [x] I dati di prova del gate B9 della change flussi (due studi Mediogioco, sei posizioni via API,
+  uno studio legacy e due posizioni legacy via H2 Shell) vivevano su un nuovo file H2 temporaneo
+  nello scratchpad di sessione, mai avviato contro `backend/data/scacchi.mv.db`; processo backend
+  e file temporaneo sono stati terminati/eliminati a fine gate.
 
 ---
 
@@ -263,8 +358,8 @@ rotte `/endgame` ai sei viewport.
 
 Questi flussi sono coperti anche da test automatici (da eseguire prima della checklist manuale):
 
-- **Backend** (`mvnw.cmd test` — **120 test**): CRUD varianti, validazione legalità (mainline e albero, `400` strutturato), FEN custom R25 (normalizzazione, FEN mancante/vuota, re, pedoni, arrocco, en-passant, lato che ha appena mosso, mosse dalla FEN e aggiornamento atomico), round-trip albero `tree → DB → DTO`, annotazioni R24 (`MoveNodeTest` costruttore a due argomenti e normalizzazione del commento, `TreeConverterTest` lettura di JSON legacy e assenza dei campi per un albero non annotato, `VariantValidatorTest`/`VariantControllerTest` limite del commento e insieme dei NAG), `MoveNode`/mainline, CRUD studi (creazione variante nello studio, cancellazione a cascata, import bulk e upsert Lichess), sessioni di allenamento (`TrainingSessionControllerTest`), statistiche (`StatsControllerTest`), spaced repetition (`ReviewSchedulerTest` SM-2 puro + `ReviewControllerTest`).
-- **Frontend** (`npm test` — **462 test**): oltre alla copertura R20–R26, R26.1 verifica CTA e colore contestuali, modalità modifica dello studio, navigazione posizionale compatta, analisi nascosta/rivelata/reset e albero vuoto, cancellazione dal dettaglio con successo/annullamento/errore, griglia FEN strutturale 8×8, breadcrumb, collocazione dei controlli nell'aside e filtro esplicito `OPENING` della home, preservando le regressioni delle Aperture. R26.2 aggiunge sei test sull'editor posizionale contestuale: breadcrumb senza voci focalizzabili con `aria-current`, assenza di kicker/«Posizioni»/motore/label anche con posizioni sorelle disponibili, ordine DOM del pannello con «Mosse & rami» nello slot del motore, replay/badge di ramo/azioni sui nodi/Salva/Annulla ancora operativi, stesso contratto per uno studio `ENDGAME` e ordine invariato dell'editor Aperture. Il follow-up `f5bbb25` porta la suite a 462 test; misure geometriche reali e flussi multi-viewport sono stati completati manualmente nei punti 59–67.
+- **Backend** (`mvnw.cmd test` — **191 test**): CRUD varianti, validazione legalità (mainline e albero, `400` strutturato), FEN custom R25 (normalizzazione, FEN mancante/vuota, re, pedoni, arrocco, en-passant, lato che ha appena mosso, mosse dalla FEN e aggiornamento atomico), round-trip albero `tree → DB → DTO`, annotazioni R24 (`MoveNodeTest` costruttore a due argomenti e normalizzazione del commento, `TreeConverterTest` lettura di JSON legacy e assenza dei campi per un albero non annotato, `VariantValidatorTest`/`VariantControllerTest` limite del commento e insieme dei NAG), `MoveNode`/mainline, CRUD studi (creazione variante nello studio, cancellazione a cascata, import bulk e upsert Lichess), sessioni di allenamento (`TrainingSessionControllerTest`), statistiche (`StatsControllerTest`), spaced repetition (`ReviewSchedulerTest` SM-2 puro + `ReviewControllerTest`). La change modello R26.3 aggiunge le migrazioni Liquibase su H2 temporaneo (schema vuoto/legacy, seed, backfill, vincoli, rollback), tipologia/classificazione dello studio, catalogo temi (`PositionThemeServiceTest`/`ControllerTest`), metadati/ordine delle posizioni e riordino atomico, validazione tattica/strategica dei tentativi (`PositionAttemptService`/`ControllerTest`) e riepiloghi derivati.
+- **Frontend** (`npm test -- --watch=false` — **692 test**, 45 file, Vitest headless): oltre alla copertura R20–R26, R26.1 verifica CTA e colore contestuali, modalità modifica dello studio, navigazione posizionale compatta, analisi nascosta/rivelata/reset e albero vuoto, cancellazione dal dettaglio con successo/annullamento/errore, griglia FEN strutturale 8×8, breadcrumb, collocazione dei controlli nell'aside e filtro esplicito `OPENING` della home, preservando le regressioni delle Aperture. R26.2 aggiunge sei test sull'editor posizionale contestuale e il follow-up `f5bbb25` porta la suite a 462 test; misure geometriche reali e flussi multi-viewport sono stati completati manualmente nei punti 59–67. La change modello R26.3 porta la suite a 503 test. B1–B9 della change flussi aggiungono route/CTA, macchina a stati, esercizi tattici/strategici, storico tentativi, configurazione/snapshot sequenziale, avanzamento, skip e riepilogo fino a 692 test; i flussi manuali 72–81 sono stati verificati nel gate B9 del 2026-08-19 (vedi sopra).
 
 ### Runner E2E browser (rinviato)
 Un runner E2E completo (Playwright/Cypress) è **rinviato**: richiede tooling e download aggiuntivi non prioritari in questa fase. La combinazione *test unit/integrazione + questa checklist + verifica live nel preview* copre i percorsi critici. Da rivalutare quando l'app si avvicina all'uso reale o all'integrazione CI/CD (terza tornata).

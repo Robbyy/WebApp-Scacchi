@@ -103,6 +103,10 @@ export interface SectionPaths {
   positionSetup(positionId: number): string;
   /** Editor dell'albero di mosse. */
   positionEdit(positionId: number): string;
+  /** Tentativo manuale dello studio guidato (R26.3), una sola posizione. */
+  positionStudy(positionId: number): string;
+  /** Configurazione ed esecuzione dello studio guidato sequenziale (R26.3). */
+  studyStudy(studyId: number): string;
 }
 
 /** Costruisce i percorsi della sezione dal contesto di route (o dalle Aperture). */
@@ -116,6 +120,11 @@ export function sectionPaths(context: SectionRouteContext | null | undefined): S
       position: (positionId) => `/variants/${positionId}`,
       positionSetup: (positionId) => `/positions/${positionId}/edit`,
       positionEdit: (positionId) => `/variants/${positionId}/edit`,
+      // Nessuna route generica di studio guidato (R26.3): esiste soltanto
+      // sotto `/middlegame`. Simmetrico agli altri metodi per non rendere
+      // opzionale l'interfaccia; mai linkato fuori sezione (gate a monte).
+      positionStudy: (positionId) => `/positions/${positionId}/study`,
+      studyStudy: (studyId) => `/studies/${studyId}/study`,
     };
   }
   const base = context.base;
@@ -127,5 +136,7 @@ export function sectionPaths(context: SectionRouteContext | null | undefined): S
     position: (positionId) => `${base}/positions/${positionId}`,
     positionSetup: (positionId) => `${base}/positions/${positionId}/setup`,
     positionEdit: (positionId) => `${base}/positions/${positionId}/edit`,
+    positionStudy: (positionId) => `${base}/positions/${positionId}/study`,
+    studyStudy: (studyId) => `${base}/studies/${studyId}/study`,
   };
 }

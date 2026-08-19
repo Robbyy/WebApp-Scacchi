@@ -8,6 +8,12 @@ public interface VariantRepository extends JpaRepository<Variant, Long> {
     /** Varianti di uno studio, ordinate per id (Prototipo 11). */
     List<Variant> findByStudyIdOrderByIdAsc(Long studyId);
 
+    /** Posizioni Mediogioco di uno studio, ordinate per ordine esplicito (ISSUE-016/R26.3). */
+    List<Variant> findByStudyIdOrderByPositionOrderAsc(Long studyId);
+
+    /** Posizioni da spostare in un inserimento/eliminazione con compattazione (R26.3). */
+    List<Variant> findByStudyIdAndPositionOrderGreaterThanEqual(Long studyId, Integer positionOrder);
+
     /** Conteggio varianti di uno studio (Prototipo 11). */
     long countByStudyId(Long studyId);
 

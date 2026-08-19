@@ -104,11 +104,14 @@ function setup(
   } = {},
 ) {
   const paramMap = new BehaviorSubject(convertToParamMap({ id: String(v.id) }));
+  // Una posizione Mediogioco chiede sempre lo storico dei tentativi al
+  // caricamento (R26.3, task 5.6): stub di default innocuo, sovrascrivibile.
+  const finalVariantService: Partial<VariantService> = { getAttempts: () => of([]), ...variantService };
   TestBed.configureTestingModule({
     imports: [VariantDetail],
     providers: [
       provideRouter([]),
-      { provide: VariantService, useValue: variantService },
+      { provide: VariantService, useValue: finalVariantService },
       { provide: ReviewService, useValue: reviewService },
       { provide: StockfishService, useValue: engine },
       { provide: StudyService, useValue: studyService },
@@ -1045,6 +1048,137 @@ describe('VariantDetail (Mediogioco, ISSUE-016)', () => {
     expect(el.querySelector('.engine-line')).not.toBeNull();
   });
 
+  it('shows the assigned theme, difficulty and notes of a regularized position (R26.3)', () => {
+    const themed: Variant = {
+      ...position,
+      themeId: 1001,
+      theme: { id: 1001, code: 'DOUBLE_ATTACK', studyType: 'TACTICAL', displayLabel: 'doppio attacco', displayOrder: 1 },
+      themeDescription: 'Debolezza in f7',
+      description: 'Il nero ha appena giocato Ce7?!',
+      difficulty: 'ADVANCED',
+      source: 'Partita personale',
+    };
+    const { el } = middlegame(themed, undefined, undefined, undefined, { getVariant: () => of(themed) });
+    expect(el.querySelector('.theme-chip')?.textContent?.trim()).toBe('doppio attacco');
+    expect(el.querySelector('.difficulty-chip')?.textContent?.trim()).toBe('Avanzata');
+    expect(el.textContent).toContain('Debolezza in f7');
+    expect(el.textContent).toContain('Il nero ha appena giocato Ce7?!');
+    expect(el.textContent).toContain('Fonte: Partita personale');
+  });
+
+  it('labels a legacy position without a theme as "Tema da assegnare" (R26.3, task 5.4)', () => {
+    const legacy: Variant = { ...sibling, themeId: null, theme: null };
+    const { el } = middlegame(legacy, undefined, undefined, undefined, { getVariant: () => of(legacy) });
+    expect(el.querySelector('.theme-chip--missing')?.textContent?.trim()).toBe('Tema da assegnare');
+    // Consultazione e azioni restano disponibili: nessun blocco (task 5.4).
+    expect(el.querySelector('.edit-link')).not.toBeNull();
+    expect(el.querySelector('a.back-link')).not.toBeNull();
+  });
+
+  it('shows the attempts summary: last outcome, count and last understood date (task 5.6)', () => {
+    const { el } = middlegame(position, undefined, undefined, undefined, {
+      getVariant: () => of(position),
+      getAttempts: () =>
+        of([
+          { id: 2, variantId: 41, outcome: 'UNDERSTOOD', occurredAt: '2026-06-02T10:00:00Z' },
+          { id: 1, variantId: 41, outcome: 'FAILED', occurredAt: '2026-06-01T10:00:00Z' },
+        ]),
+    });
+    expect(el.textContent).toContain('Compresa');
+    expect(el.textContent).toContain('2 tentativi');
+    expect(el.textContent).toContain('Ultima comprensione: 02/06/2026');
+  });
+
+  it('shows "Mai tentata" for a position with no recorded attempts, without a percentage', () => {
+    const { el } = middlegame(sibling, undefined, undefined, undefined, {
+      getVariant: () => of(sibling),
+      getAttempts: () => of([]),
+    });
+    expect(el.textContent).toContain('Mai tentata');
+    expect(el.textContent).not.toContain('%');
+  });
+
+  it('shows the guided-study CTA for a classified, themed, non-draft position (R26.3, task 1.5)', () => {
+    const themedPosition: Variant = {
+      ...position,
+      themeId: 1001,
+      theme: {
+        id: 1001,
+        code: 'KING_ATTACK',
+        studyType: 'TACTICAL',
+        displayLabel: 'attacco al re',
+        displayOrder: 1,
+      },
+      eligibleForGuidedStudy: true,
+    };
+    const { el } = middlegame(
+      themedPosition,
+      { getStudy: () => of({ ...study('MIDDLEGAME'), studyType: 'TACTICAL' }) },
+      undefined,
+      undefined,
+      { getVariant: () => of(themedPosition) },
+    );
+    const cta = el.querySelector<HTMLAnchorElement>('a.train-cta');
+    expect(cta?.textContent).toContain('Studia questa posizione');
+    expect(cta?.getAttribute('href')).toBe('/middlegame/positions/41/study');
+  });
+
+  it('hides the guided-study CTA when the parent study is not classified (R26.3, task 1.5)', () => {
+    const themedPosition: Variant = {
+      ...position,
+      themeId: 1001,
+      theme: {
+        id: 1001,
+        code: 'KING_ATTACK',
+        studyType: 'TACTICAL',
+        displayLabel: 'attacco al re',
+        displayOrder: 1,
+      },
+      eligibleForGuidedStudy: true,
+    };
+    // Studio «Da classificare»: la fixture di sezione predefinita non valorizza `studyType`.
+    const { el } = middlegame(themedPosition, undefined, undefined, undefined, {
+      getVariant: () => of(themedPosition),
+    });
+    expect(el.querySelector('a.train-cta')).toBeNull();
+  });
+
+  it('hides the guided-study CTA when the position has no assigned theme (R26.3, task 1.5)', () => {
+    const { el } = middlegame(
+      position,
+      { getStudy: () => of({ ...study('MIDDLEGAME'), studyType: 'TACTICAL' }) },
+      undefined,
+      undefined,
+      { getVariant: () => of(position) },
+    );
+    expect(el.querySelector('a.train-cta')).toBeNull();
+  });
+
+  it('hides the guided-study CTA for a draft position without moves (R26.3, task 1.5)', () => {
+    const draftThemed: Variant = {
+      ...sibling,
+      themeId: 1001,
+      theme: {
+        id: 1001,
+        code: 'KING_ATTACK',
+        studyType: 'TACTICAL',
+        displayLabel: 'attacco al re',
+        displayOrder: 1,
+      },
+      moves: [],
+      tree: [],
+      eligibleForGuidedStudy: false,
+    };
+    const { el } = middlegame(
+      draftThemed,
+      { getStudy: () => of({ ...study('MIDDLEGAME'), studyType: 'TACTICAL' }) },
+      undefined,
+      undefined,
+      { getVariant: () => of(draftThemed) },
+    );
+    expect(el.querySelector('a.train-cta')).toBeNull();
+  });
+
   it('keeps play, training, review and stats for an opening variant', () => {
     const openingStudy: Study = { id: 5, name: 'Repertorio', phase: 'OPENING', variantCount: 1 };
     const schedule: ReviewSchedule = {
@@ -1068,6 +1202,10 @@ describe('VariantDetail (Mediogioco, ISSUE-016)', () => {
     expect(el.querySelector('.engine-sub')?.textContent).toContain('Gioca contro il computer');
     expect(el.querySelector('.train-cta')?.getAttribute('href')).toBe('/variants/1/train');
     expect(el.querySelector('.review-hint')).not.toBeNull();
+    // Nessun dato Mediogioco (tema/difficoltà/tentativi) su una variante di
+    // apertura (regressione R26.3).
+    expect(el.querySelector('.position-meta')).toBeNull();
+    expect(el.querySelector('.attempts-summary')).toBeNull();
     const actions = Array.from(
       el.querySelectorAll<HTMLAnchorElement>('.detail-actions a.edit-link'),
     );
@@ -1076,5 +1214,98 @@ describe('VariantDetail (Mediogioco, ISSUE-016)', () => {
       '/variants/1/stats',
     ]);
     expect(el.querySelector('.back-link')?.getAttribute('href')).toBe('/studies/5');
+  });
+});
+
+describe('VariantDetail (perimetro dello studio guidato, R26.3 task 8.4)', () => {
+  const CUSTOM_FEN = '4k3/8/8/3pP3/8/8/8/4K3 w - - 0 1';
+
+  const eligible: Variant = {
+    id: 41,
+    name: 'Centro bloccato',
+    color: 'WHITE',
+    moves: ['Ke2'],
+    tree: [{ san: 'Ke2', children: [] }],
+    startingFen: CUSTOM_FEN,
+    studyId: 6,
+    themeId: 1001,
+    eligibleForGuidedStudy: true,
+  };
+
+  function studyOf(phase: Study['phase'], overrides: Partial<Study> = {}): Study {
+    return {
+      id: 6,
+      name: 'Strutture di pedoni',
+      phase,
+      studyType: 'TACTICAL',
+      variantCount: 1,
+      variants: [eligible],
+      ...overrides,
+    };
+  }
+
+  function guidedLinks(el: HTMLElement): string[] {
+    return Array.from(el.querySelectorAll('a'))
+      .map((a) => a.getAttribute('href') ?? '')
+      .filter((h) => h.endsWith('/study'));
+  }
+
+  it('offers the manual guided study on an eligible middlegame position', () => {
+    const { fixture } = setup(
+      eligible,
+      { getStudy: () => of(studyOf('MIDDLEGAME')) },
+      fakeEngine(),
+      { getVariant: () => of(eligible) },
+      { getForVariant: () => of(null) },
+      { [SECTION_CONTEXT_DATA]: MIDDLEGAME_SECTION_CONTEXT },
+    );
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.textContent).toContain('Studia questa posizione');
+    expect(guidedLinks(el)).toEqual(['/middlegame/positions/41/study']);
+  });
+
+  it('does not offer the manual guided study for an unclassified study or a themeless position', () => {
+    for (const [study, position] of [
+      [studyOf('MIDDLEGAME', { studyType: null }), eligible],
+      [studyOf('MIDDLEGAME'), { ...eligible, themeId: null }],
+      [studyOf('MIDDLEGAME'), { ...eligible, moves: [], tree: [] }],
+    ] as [Study, Variant][]) {
+      // Tre montaggi nello stesso `it`: il modulo va resettato fra l'uno e l'altro.
+      TestBed.resetTestingModule();
+      const { fixture } = setup(
+        position,
+        { getStudy: () => of(study) },
+        fakeEngine(),
+        { getVariant: () => of(position) },
+        { getForVariant: () => of(null) },
+        { [SECTION_CONTEXT_DATA]: MIDDLEGAME_SECTION_CONTEXT },
+      );
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.textContent).not.toContain('Studia questa posizione');
+      expect(guidedLinks(el)).toEqual([]);
+    }
+  });
+
+  it('never offers the guided study on an opening variant, keeping training and review', () => {
+    const opening: Variant = {
+      id: 11,
+      name: 'Italiana',
+      color: 'WHITE',
+      moves: ['e4', 'e5'],
+      startingFen: '',
+      studyId: 1,
+      themeId: 1001,
+      eligibleForGuidedStudy: true,
+    };
+    const { fixture } = setup(opening, {
+      getStudy: () => of({ id: 1, name: 'Repertorio', phase: 'OPENING', variantCount: 1, variants: [opening] } as Study),
+    });
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.textContent).not.toContain('Studia questa posizione');
+    expect(guidedLinks(el)).toEqual([]);
+    // Le Aperture conservano il proprio comando di allenamento (R26.3, task 8.4).
+    expect(el.textContent).toContain('Allena questa variante');
   });
 });

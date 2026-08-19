@@ -6,7 +6,11 @@ import { ConfirmService } from '../core/confirm.service';
 import { StudyService } from '../core/study.service';
 import { ToastService } from '../core/toast.service';
 import { VariantService } from '../core/variant.service';
-import { CreateVariantRequest, MoveNode, Variant, validationMessage } from '../core/variant.model';
+import { PositionThemeService } from '../core/position-theme.service';
+import { CreateVariantRequest, Difficulty, DIFFICULTIES, MoveNode, Variant, validationMessage } from '../core/variant.model';
+import { PositionTheme, StudyType } from '../core/position-theme.model';
+import { GamePhase } from '../core/study.model';
+import { difficultyLabel } from '../core/middlegame-format';
 import { fromLine } from '../core/move-tree';
 import { sectionContextFrom, sectionLabel, sectionPaths } from '../core/study-sections';
 import { CanComponentDeactivate } from '../variants/can-deactivate.guard';
@@ -49,6 +53,7 @@ export class PositionEditor implements CanComponentDeactivate {
   private readonly router = inject(Router);
   private readonly studies = inject(StudyService);
   private readonly variants = inject(VariantService);
+  private readonly themes = inject(PositionThemeService);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
 
@@ -71,6 +76,27 @@ export class PositionEditor implements CanComponentDeactivate {
   protected readonly saving = signal(false);
   protected readonly dirty = signal(false);
   protected readonly error = signal<string | null>(null);
+
+  /** Fase e tipologia dello studio padre (R26.3), risolte dopo il caricamento. */
+  private readonly studyPhase = signal<GamePhase | null>(null);
+  private readonly parentStudyType = signal<StudyType | null>(null);
+  private readonly existingPositionCount = signal(0);
+  /** I metadati di posizione (tema, difficoltà, ordine, ...) valgono solo in Mediogioco. */
+  protected readonly isMiddlegame = computed(() => this.studyPhase() === 'MIDDLEGAME');
+  /** Mediogioco legacy «Da classificare»: nessun catalogo temi da offrire ancora. */
+  protected readonly unclassified = computed(
+    () => this.isMiddlegame() && this.parentStudyType() == null,
+  );
+  protected readonly availableThemes = signal<PositionTheme[]>([]);
+  protected readonly themeId = signal<number | null>(null);
+  protected readonly themeDescription = signal('');
+  protected readonly description = signal('');
+  protected readonly difficulty = signal<Difficulty | null>(null);
+  protected readonly source = signal('');
+  protected readonly positionOrder = signal(1);
+  protected readonly maxOrder = computed(() => this.existingPositionCount() + 1);
+  protected readonly difficulties = DIFFICULTIES;
+  protected readonly difficultyLabel = difficultyLabel;
 
   protected readonly name = signal('');
   protected readonly selectedPiece = signal<PieceCode | null>('wK');
@@ -261,6 +287,18 @@ export class PositionEditor implements CanComponentDeactivate {
       tree: this.tree(),
       startingFen: this.startingFen(),
     };
+    if (this.isMiddlegame()) {
+      request.themeId = this.themeId();
+      request.themeDescription = this.themeDescription().trim() || null;
+      request.description = this.description().trim() || null;
+      request.difficulty = this.difficulty();
+      request.source = this.source().trim() || null;
+      if (!this.isEdit()) {
+        // Il riordino successivo passa dal contratto dedicato (task 3.5/5.5):
+        // qui solo l'indice di inserimento iniziale.
+        request.positionOrder = this.positionOrder();
+      }
+    }
     const id = this.editId();
     const request$ = id === null
       ? this.studies.addVariant(studyId, request)
@@ -296,6 +334,13 @@ export class PositionEditor implements CanComponentDeactivate {
         this.name.set(position.name);
         this.tree.set(position.tree && position.tree.length ? position.tree : fromLine(position.moves));
         this.applyFen(position.startingFen);
+        // Metadati Mediogioco (R26.3): ignorati fuori sezione/fase, ma innocui da
+        // leggere qui perché il backend li restituisce `null` per Aperture/Finale.
+        this.themeId.set(position.themeId ?? null);
+        this.themeDescription.set(position.themeDescription ?? '');
+        this.description.set(position.description ?? '');
+        this.difficulty.set(position.difficulty ?? null);
+        this.source.set(position.source ?? '');
         this.loadStudy(position.studyId);
       },
       error: () => {
@@ -316,6 +361,23 @@ export class PositionEditor implements CanComponentDeactivate {
           this.error.set(this.phaseError());
           return;
         }
+        this.studyPhase.set(study.phase);
+        this.parentStudyType.set(study.studyType ?? null);
+        this.existingPositionCount.set(study.variantCount);
+        // Un Mediogioco «Da classificare» resta consultabile/modificabile nelle
+        // sue posizioni esistenti, ma non ammette nuove posizioni (task 2.3/5.2).
+        if (study.phase === 'MIDDLEGAME' && study.studyType == null && !this.isEdit()) {
+          this.error.set(
+            'Classifica lo studio Mediogioco (tattico o strategico) prima di creare posizioni.',
+          );
+          return;
+        }
+        if (!this.isEdit()) {
+          this.positionOrder.set(study.variantCount + 1);
+        }
+        if (study.phase === 'MIDDLEGAME' && study.studyType != null) {
+          this.loadThemes(study.studyType);
+        }
         this.studyName.set(study.name);
         this.ready.set(true);
       },
@@ -323,6 +385,14 @@ export class PositionEditor implements CanComponentDeactivate {
         this.loading.set(false);
         this.error.set('Studio non trovato.');
       },
+    });
+  }
+
+  /** Catalogo temi della tipologia dello studio (R26.3), filtrato dal backend. */
+  private loadThemes(studyType: StudyType): void {
+    this.themes.getThemes(studyType).subscribe({
+      next: (list) => this.availableThemes.set(list),
+      error: () => this.availableThemes.set([]),
     });
   }
 
@@ -401,6 +471,11 @@ export class PositionEditor implements CanComponentDeactivate {
   private validate(name: string): string | null {
     if (!name) {
       return 'Inserisci un titolo per la posizione.';
+    }
+    // Il tema è obbligatorio solo per una nuova posizione Mediogioco classificata
+    // (design.md decisione 4); l'assegnazione a una posizione legacy è facoltativa.
+    if (this.isMiddlegame() && !this.isEdit() && this.themeId() == null) {
+      return 'Seleziona un tema per la posizione.';
     }
     const placed = this.pieces();
     const whiteKing = Object.entries(placed).filter(([, p]) => p === 'wK').map(([s]) => s);

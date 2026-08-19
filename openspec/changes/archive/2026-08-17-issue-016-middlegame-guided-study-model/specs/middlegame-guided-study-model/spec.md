@@ -48,6 +48,10 @@ nuove posizioni o tentativi guidati.
 Il sistema SHALL fornire un catalogo persistente di temi con ID e codice stabili, tipologia,
 label e ordine. Ogni posizione Mediogioco regolarizzata SHALL referenziare il tema principale per
 ID e il sistema SHALL accettare soltanto temi attivi compatibili con la tipologia dello studio.
+Il codice SHALL essere univoco soltanto insieme alla tipologia (`code`, `study_type`) e non a
+livello globale del catalogo: lo stesso codice può comparire sia nel catalogo `TACTICAL` sia in
+quello `STRATEGIC` con ID distinti. L'unico identificativo referenziato dalle posizioni SHALL
+essere l'ID del tema.
 
 Il catalogo tattico iniziale SHALL contenere, nell'ordine: doppio attacco, inchiodatura, infilata,
 attacco di scoperta, deviazione, adescamento, eliminazione del difensore, sovraccarico,
@@ -72,6 +76,12 @@ transizione al finale.
 #### Scenario: Reject an incompatible theme
 - **WHEN** una posizione di uno studio strategico viene salvata con l'ID di un tema tattico, inesistente o inattivo
 - **THEN** il sistema rifiuta la richiesta senza modificare la posizione
+
+#### Scenario: Same code exists in both catalogs
+- **WHEN** il catalogo tattico e quello strategico contengono entrambi un tema con codice
+  `KING_ATTACK` (ID `1012` tattico, ID `2011` strategico)
+- **THEN** il sistema mantiene entrambi i temi distinti per ID e non tratta la duplicazione del
+  codice come un conflitto
 
 #### Scenario: Theme catalog has no user management flow
 - **WHEN** R26.3 espone il catalogo temi

@@ -26,6 +26,9 @@ class StudyControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private StudyRepository studyRepository;
+
     @Test
     void listReturnsTheDefaultStudyWithItsSeededVariants() throws Exception {
         // Il seed crea lo studio di default "Repertorio" e vi aggancia le 2 varianti seed.
@@ -323,7 +326,8 @@ class StudyControllerTest {
         int studyId = createStudyWithPhase("Posizioni", "MIDDLEGAME");
         String originalFen = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
         String create = """
-            {"name":"Re in movimento","moves":["Ke2"],"startingFen":"%s"}""".formatted(originalFen);
+            {"name":"Re in movimento","moves":["Ke2"],"startingFen":"%s","themeId":1001}"""
+            .formatted(originalFen);
         int variantId = JsonPath.read(mockMvc.perform(post("/api/studies/" + studyId + "/variants")
                 .contentType(MediaType.APPLICATION_JSON).content(create))
             .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.id");
@@ -347,7 +351,8 @@ class StudyControllerTest {
         int studyId = createStudyWithPhase("Posizioni", "MIDDLEGAME");
         String originalFen = "4k3/8/8/8/8/8/8/4K3 w - - 0 1";
         String create = """
-            {"name":"Posizione originale","moves":[],"startingFen":"%s"}""".formatted(originalFen);
+            {"name":"Posizione originale","moves":[],"startingFen":"%s","themeId":1001}"""
+            .formatted(originalFen);
         int variantId = JsonPath.read(mockMvc.perform(post("/api/studies/" + studyId + "/variants")
                 .contentType(MediaType.APPLICATION_JSON).content(create))
             .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.id");
@@ -543,6 +548,171 @@ class StudyControllerTest {
             .andExpect(jsonPath("$.length()").value(0));
     }
 
+    // --- R26.3 (ISSUE-016, change A2): tipologia dello studio Mediogioco ---
+
+    @Test
+    void createPersistsATacticalMiddlegameStudy() throws Exception {
+        String body = """
+            {"name":"Attacchi di scoperta","phase":"MIDDLEGAME","studyType":"TACTICAL"}""";
+        mockMvc.perform(post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.phase").value("MIDDLEGAME"))
+            .andExpect(jsonPath("$.studyType").value("TACTICAL"))
+            .andExpect(jsonPath("$.color").doesNotExist());
+    }
+
+    @Test
+    void createPersistsAStrategicEmptyMiddlegameStudy() throws Exception {
+        String body = """
+            {"name":"Pianificazione","phase":"MIDDLEGAME","studyType":"STRATEGIC"}""";
+        mockMvc.perform(post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.studyType").value("STRATEGIC"))
+            .andExpect(jsonPath("$.variantCount").value(0));
+    }
+
+    @Test
+    void createRejectsANewUnclassifiedMiddlegameStudy() throws Exception {
+        int before = studyCount();
+        String body = """
+            {"name":"Senza tipo","phase":"MIDDLEGAME"}""";
+        mockMvc.perform(post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("studyType"));
+
+        org.junit.jupiter.api.Assertions.assertEquals(before, studyCount());
+    }
+
+    @Test
+    void createRejectsAStudyTypeOnAnOpeningStudy() throws Exception {
+        String body = """
+            {"name":"Apertura con tipo","studyType":"TACTICAL"}""";
+        mockMvc.perform(post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("studyType"));
+    }
+
+    @Test
+    void createRejectsAStudyTypeOnAnEndgameStudy() throws Exception {
+        String body = """
+            {"name":"Finale con tipo","phase":"ENDGAME","studyType":"STRATEGIC"}""";
+        mockMvc.perform(post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("studyType"));
+    }
+
+    @Test
+    void createRejectsAnInvalidStudyType() throws Exception {
+        String body = """
+            {"name":"Boh","phase":"MIDDLEGAME","studyType":"BOH"}""";
+        mockMvc.perform(post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("studyType"));
+    }
+
+    @Test
+    void legacyUnclassifiedMiddlegameStudyIsReadableAndEditableWithoutAType() throws Exception {
+        int id = saveLegacyUnclassifiedMiddlegameStudy("Mediogioco legacy");
+
+        mockMvc.perform(get("/api/studies/" + id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.phase").value("MIDDLEGAME"))
+            .andExpect(jsonPath("$.studyType").doesNotExist());
+
+        String update = """
+            {"name":"Mediogioco legacy rinominato"}""";
+        mockMvc.perform(put("/api/studies/" + id).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Mediogioco legacy rinominato"))
+            .andExpect(jsonPath("$.studyType").doesNotExist());
+    }
+
+    @Test
+    void classifyingALegacyStudyPersistsTheChoiceAndMakesItImmutable() throws Exception {
+        int id = saveLegacyUnclassifiedMiddlegameStudy("Legacy da classificare");
+
+        String classify = """
+            {"name":"Legacy classificato","studyType":"STRATEGIC"}""";
+        mockMvc.perform(put("/api/studies/" + id).contentType(MediaType.APPLICATION_JSON).content(classify))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.studyType").value("STRATEGIC"));
+
+        // Una seconda transizione verso un altro tipo è rifiutata...
+        String change = """
+            {"name":"Provo a cambiare","studyType":"TACTICAL"}""";
+        mockMvc.perform(put("/api/studies/" + id).contentType(MediaType.APPLICATION_JSON).content(change))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("studyType"));
+
+        // ...e il tipo persistito resta invariato.
+        mockMvc.perform(get("/api/studies/" + id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.studyType").value("STRATEGIC"));
+    }
+
+    @Test
+    void updateAcceptingTheSameStudyTypeSucceeds() throws Exception {
+        int id = createTacticalMiddlegameStudy("Ripetizione tipo");
+
+        String update = """
+            {"name":"Rinominato","studyType":"TACTICAL"}""";
+        mockMvc.perform(put("/api/studies/" + id).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.studyType").value("TACTICAL"));
+    }
+
+    @Test
+    void updateRejectsAStudyTypeOnAnOpeningStudy() throws Exception {
+        int id = createStudy("""
+            {"name":"Apertura senza tipo"}""");
+
+        String update = """
+            {"name":"Provo a classificarla","studyType":"TACTICAL"}""";
+        mockMvc.perform(put("/api/studies/" + id).contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("studyType"));
+    }
+
+    @Test
+    void blocksCreatingAPositionInAnUnclassifiedMiddlegameStudy() throws Exception {
+        int id = saveLegacyUnclassifiedMiddlegameStudy("Da classificare per posizioni");
+
+        String variant = """
+            {"name":"Posizione","moves":[],"startingFen":"4k3/8/8/8/8/8/8/4K3 w - - 0 1"}""";
+        mockMvc.perform(post("/api/studies/" + id + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(variant))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("studyType"));
+
+        mockMvc.perform(get("/api/studies/" + id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.variantCount").value(0));
+    }
+
+    @Test
+    void allowsCreatingAPositionAfterClassification() throws Exception {
+        int id = createTacticalMiddlegameStudy("Classificato per posizioni");
+
+        String variant = """
+            {"name":"Posizione","moves":[],"startingFen":"4k3/8/8/8/8/8/8/4K3 w - - 0 1","themeId":1001}""";
+        mockMvc.perform(post("/api/studies/" + id + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(variant))
+            .andExpect(status().isCreated());
+    }
+
+    private int createTacticalMiddlegameStudy(String name) throws Exception {
+        String body = "{\"name\":\"%s\",\"phase\":\"MIDDLEGAME\",\"studyType\":\"TACTICAL\"}".formatted(name);
+        return createStudy(body);
+    }
+
+    /** Simula una riga Mediogioco preesistente alla R26.3, priva di tipologia. */
+    private int saveLegacyUnclassifiedMiddlegameStudy(String name) {
+        Study legacy = new Study();
+        legacy.setName(name);
+        legacy.setPhase(GamePhase.MIDDLEGAME);
+        return studyRepository.save(legacy).getId().intValue();
+    }
+
     private int defaultStudyId() throws Exception {
         MvcResult result = mockMvc.perform(get("/api/studies"))
             .andExpect(status().isOk())
@@ -566,8 +736,14 @@ class StudyControllerTest {
         return JsonPath.read(result.getResponse().getContentAsString(), "$.id");
     }
 
+    /**
+     * Un nuovo Mediogioco richiede la tipologia (R26.3, task 2.2): qui i test che non
+     * riguardano la classificazione ricevono un default {@code TACTICAL} per restare
+     * concentrati sul proprio comportamento (posizioni, ordine, filtri).
+     */
     private int createStudyWithPhase(String name, String phase) throws Exception {
-        String body = "{\"name\":\"%s\",\"phase\":\"%s\"}".formatted(name, phase);
+        String type = "MIDDLEGAME".equals(phase) ? ",\"studyType\":\"TACTICAL\"" : "";
+        String body = "{\"name\":\"%s\",\"phase\":\"%s\"%s}".formatted(name, phase, type);
         return createStudy(body);
     }
 }

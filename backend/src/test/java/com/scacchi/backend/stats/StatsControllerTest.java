@@ -115,16 +115,20 @@ class StatsControllerTest {
 
     /** Crea uno studio della fase indicata con una variante agganciata, e ne restituisce l'id. */
     private int createVariantInStudyWithPhase(String phase) throws Exception {
-        String studyBody = "{\"name\":\"Studio %s\",\"phase\":\"%s\"}".formatted(phase, phase);
+        // Un nuovo Mediogioco richiede la tipologia (R26.3): default TACTICAL, non pertinente qui.
+        String type = "MIDDLEGAME".equals(phase) ? ",\"studyType\":\"TACTICAL\"" : "";
+        String studyBody = "{\"name\":\"Studio %s\",\"phase\":\"%s\"%s}".formatted(phase, phase, type);
         MvcResult study = mockMvc.perform(
                 post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(studyBody))
             .andExpect(status().isCreated())
             .andReturn();
         int studyId = JsonPath.read(study.getResponse().getContentAsString(), "$.id");
 
+        // Una nuova posizione Mediogioco richiede un tema attivo (R26.3): 1001 è TACTICAL.
+        String themeField = "MIDDLEGAME".equals(phase) ? ",\"themeId\":1001" : "";
         String variantBody = """
             {"name":"Posizione","moves":[],
-             "startingFen":"4k3/8/8/8/8/8/8/4K3 w - - 0 1"}""";
+             "startingFen":"4k3/8/8/8/8/8/8/4K3 w - - 0 1"%s}""".formatted(themeField);
         MvcResult variant = mockMvc.perform(post("/api/studies/" + studyId + "/variants")
                 .contentType(MediaType.APPLICATION_JSON).content(variantBody))
             .andExpect(status().isCreated())
@@ -135,7 +139,7 @@ class StatsControllerTest {
     @Test
     void studyStatsReturns404ForANonOpeningStudy() throws Exception {
         String studyBody = """
-            {"name":"Studio mediogioco","phase":"MIDDLEGAME"}""";
+            {"name":"Studio mediogioco","phase":"MIDDLEGAME","studyType":"TACTICAL"}""";
         MvcResult study = mockMvc.perform(
                 post("/api/studies").contentType(MediaType.APPLICATION_JSON).content(studyBody))
             .andExpect(status().isCreated())

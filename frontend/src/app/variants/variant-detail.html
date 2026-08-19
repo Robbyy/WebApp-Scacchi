@@ -50,6 +50,42 @@
         }
       </header>
 
+      @if (isMiddlegamePosition()) {
+        <div class="panel position-meta">
+          <h3 class="panel-title">Dati posizione</h3>
+          <p class="meta-row">
+            <span class="theme-chip" [class.theme-chip--missing]="!v.theme">{{ themeLabel(v.theme) }}</span>
+            @if (difficultyLabel(v.difficulty); as diff) {
+              <span class="difficulty-chip">{{ diff }}</span>
+            }
+          </p>
+          @if (v.themeDescription) {
+            <p class="meta-line">{{ v.themeDescription }}</p>
+          }
+          @if (v.description) {
+            <p class="meta-line">{{ v.description }}</p>
+          }
+          @if (v.source) {
+            <p class="meta-line">Fonte: {{ v.source }}</p>
+          }
+        </div>
+
+        <div class="panel attempts-summary">
+          <h3 class="panel-title">Storico tentativi</h3>
+          @if (attemptsSummary(); as summary) {
+            <p class="meta-line">
+              {{ lastOutcomeLabel(summary.lastOutcome) }}
+              &middot; {{ summary.attemptCount }} tentativ{{ summary.attemptCount === 1 ? 'o' : 'i' }}
+            </p>
+            @if (summary.lastUnderstoodAt) {
+              <p class="meta-line">Ultima comprensione: {{ formatReviewDate(summary.lastUnderstoodAt) }}</p>
+            }
+          } @else {
+            <p class="meta-line">Nessun tentativo registrato.</p>
+          }
+        </div>
+      }
+
       @if (hasVariantNav()) {
         <button
           type="button"
@@ -102,6 +138,13 @@
           </section>
         }
       </div>
+
+      @if (isMiddlegamePosition() && guidedStudyEligible()) {
+        <a class="train-cta" [routerLink]="paths.positionStudy(v.id)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+          Studia questa posizione
+        </a>
+      }
 
       @if (isOpening()) {
         <a class="train-cta" routerLink="/variants/{{ v.id }}/train">

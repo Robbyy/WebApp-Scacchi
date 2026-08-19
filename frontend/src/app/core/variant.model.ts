@@ -1,4 +1,21 @@
+import type { PositionTheme } from './position-theme.model';
+
 export type VariantColor = 'WHITE' | 'BLACK';
+
+/**
+ * Difficoltà di una posizione Mediogioco (ISSUE-016/R26.3), facoltativa e
+ * sempre modificabile; non influisce su tema, FEN, albero o storico.
+ */
+export type Difficulty = 'INTRODUCTORY' | 'EASY' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+
+/** I cinque livelli, nell'ordine in cui compaiono nei form (dal più semplice). */
+export const DIFFICULTIES: readonly Difficulty[] = [
+  'INTRODUCTORY',
+  'EASY',
+  'INTERMEDIATE',
+  'ADVANCED',
+  'EXPERT',
+];
 
 /** Annotazione scacchistica sintetica di una mossa: una sola per nodo (R24). */
 export type MoveNag = '!' | '?' | '!!' | '??' | '!?' | '?!';
@@ -21,7 +38,16 @@ export interface MoveNode {
   nag?: MoveNag;
 }
 
-/** Variante di apertura, allineata a VariantDto del backend (sezione 6 planning). */
+/**
+ * Variante di apertura, allineata a VariantDto del backend (sezione 6 planning).
+ *
+ * <p>I campi da `themeId` a `eligibleForGuidedStudy` (ISSUE-016/R26.3) sono
+ * valorizzati soltanto per le posizioni di studi `MIDDLEGAME`; restano
+ * assenti/`null` per Aperture, Finale e posizioni legacy senza tema («Tema da
+ * assegnare» in UI). `theme` è il dato leggibile del catalogo risolto da
+ * `themeId` dal backend (mai duplicato in un campo scrivibile).
+ * `eligibleForGuidedStudy` è derivato: tema assegnato e mainline non vuota.
+ */
 export interface Variant {
   id: number;
   name: string;
@@ -31,10 +57,25 @@ export interface Variant {
   startingFen: string;
   sourcePgn?: string | null;
   studyId?: number | null;
+  themeId?: number | null;
+  theme?: PositionTheme | null;
+  themeDescription?: string | null;
+  description?: string | null;
+  difficulty?: Difficulty | null;
+  source?: string | null;
+  positionOrder?: number | null;
+  eligibleForGuidedStudy?: boolean;
   createdAt?: string | null;
 }
 
-/** Payload per la creazione/aggiornamento di una variante. */
+/**
+ * Payload per la creazione/aggiornamento di una variante. I campi da
+ * `themeId` a `positionOrder` (ISSUE-016/R26.3) si applicano soltanto alle
+ * posizioni di studi Mediogioco: `themeId` è l'unico riferimento al catalogo
+ * temi (mai il `code`), obbligatorio in creazione; `positionOrder` è
+ * l'indice 1..N+1 richiesto solo in creazione (il riordino successivo passa
+ * da {@link VariantOrderRequest}).
+ */
 export interface CreateVariantRequest {
   name: string;
   /**
@@ -47,6 +88,21 @@ export interface CreateVariantRequest {
   sourcePgn?: string | null;
   /** FEN iniziale opzionale; ammessa dal backend solo fuori dagli studi OPENING. */
   startingFen?: string;
+  themeId?: number | null;
+  themeDescription?: string | null;
+  description?: string | null;
+  difficulty?: Difficulty | null;
+  source?: string | null;
+  positionOrder?: number | null;
+}
+
+/**
+ * Payload del riordino atomico delle posizioni di uno studio Mediogioco
+ * (ISSUE-016/R26.3): la permutazione completa, senza duplicati né ID
+ * estranei, degli ID delle posizioni dello studio nell'ordine desiderato.
+ */
+export interface VariantOrderRequest {
+  variantIds: number[];
 }
 
 /** Errore di validazione restituito dal backend con stato 400 (Prototipo 7). */

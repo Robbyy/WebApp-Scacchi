@@ -1,0 +1,19 @@
+# Fixture di test (non usata dall'app): un changeset sintetico con due change nello stesso
+# changeSet, la seconda destinata a fallire (PK duplicata su un seed reale). Verifica che
+# Liquibase tratti il changeSet come una singola transazione: se la seconda change fallisce,
+# anche la prima (la colonna di scarto) non deve restare applicata (LiquibaseMigrationTest).
+databaseChangeLog:
+  - changeSet:
+      id: test-failing-changeset
+      author: test
+      changes:
+        - addColumn:
+            tableName: position_theme
+            columns:
+              - column:
+                  name: migration_test_scratch
+                  type: VARCHAR(8)
+        - sql:
+            sql: >
+              INSERT INTO position_theme (id, code, study_type, display_label, display_order, active)
+              VALUES (1001, 'DUPLICATE_ID_TEST', 'TACTICAL', 'x', 999, TRUE)

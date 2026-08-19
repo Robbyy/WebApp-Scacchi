@@ -40,7 +40,7 @@ function captureNavigate(): { url: () => string | null } {
 const created: Study = { id: 9, name: 'Strutture di pedoni', phase: 'MIDDLEGAME', variantCount: 0 };
 
 describe('PositionStudyNew (ISSUE-016)', () => {
-  it('creates the study with the phase of its section', () => {
+  it('creates the study with the phase of its section and the chosen study type (R26.3)', () => {
     let captured: CreateStudyRequest | null = null;
     const { cmp } = setup({
       createStudy: (req: CreateStudyRequest) => {
@@ -54,6 +54,7 @@ describe('PositionStudyNew (ISSUE-016)', () => {
     cmp.description.set('Schemi tipici');
     // Un valore residuo nel model non deve diventare un metadato posizionale.
     cmp.color.set('WHITE');
+    cmp.studyType.set('TACTICAL');
     cmp.submit();
 
     expect(captured).toEqual({
@@ -61,6 +62,7 @@ describe('PositionStudyNew (ISSUE-016)', () => {
       description: 'Schemi tipici',
       color: null,
       phase: 'MIDDLEGAME',
+      studyType: 'TACTICAL',
     });
     expect(nav.url()).toBe('/middlegame/studies/9');
   });
@@ -76,6 +78,7 @@ describe('PositionStudyNew (ISSUE-016)', () => {
     captureNavigate();
 
     cmp.name.set('Solo nome');
+    cmp.studyType.set('STRATEGIC');
     cmp.submit();
 
     expect(captured).toEqual({
@@ -83,7 +86,27 @@ describe('PositionStudyNew (ISSUE-016)', () => {
       description: null,
       color: null,
       phase: 'MIDDLEGAME',
+      studyType: 'STRATEGIC',
     });
+  });
+
+  it('requires a study type for a Mediogioco study and blocks submission without it (R26.3)', () => {
+    let called = false;
+    const { cmp, el, fixture } = setup({
+      createStudy: () => {
+        called = true;
+        return of(created);
+      },
+    });
+    const nav = captureNavigate();
+
+    cmp.name.set('Senza tipologia');
+    cmp.submit();
+    fixture.detectChanges();
+
+    expect(called).toBe(false);
+    expect(nav.url()).toBeNull();
+    expect(el.querySelector('.page-error')?.textContent).toContain('tipologia');
   });
 
   it('takes the phase and the target route from the context, so the page is reusable', () => {
@@ -145,6 +168,7 @@ describe('PositionStudyNew (ISSUE-016)', () => {
     const nav = captureNavigate();
 
     cmp.name.set('Duplicato');
+    cmp.studyType.set('TACTICAL');
     cmp.submit();
     fixture.detectChanges();
 
@@ -186,8 +210,29 @@ describe('PositionStudyNew (ISSUE-016)', () => {
   it('never lets the user choose the phase', () => {
     const { el } = setup();
     const selects = Array.from(el.querySelectorAll('select')).map((s) => s.getAttribute('name'));
-    expect(selects).toEqual([]);
+    // Il solo select è la tipologia (R26.3): niente fase, niente colore.
+    expect(selects).toEqual(['studyType']);
     expect(el.textContent).not.toContain('Fase');
     expect(el.textContent).not.toContain('Colore');
+  });
+
+  it('offers the mandatory study type choice for a Mediogioco study (R26.3)', () => {
+    const { el } = setup();
+    const select = el.querySelector<HTMLSelectElement>('select[name="studyType"]');
+    expect(select).not.toBeNull();
+    const options = Array.from(select?.querySelectorAll('option') ?? []).map((o) => o.value);
+    expect(options).toEqual(['', 'TACTICAL', 'STRATEGIC']);
+    expect(el.textContent).toContain('Tattica');
+    expect(el.textContent).toContain('Strategica');
+  });
+
+  it('does not offer a study type choice outside Mediogioco (regression, future Finale)', () => {
+    const { el, cmp } = setup(
+      {},
+      { section: 'endgame', phase: 'ENDGAME', base: '/endgame', positionMode: true },
+    );
+    expect(cmp.requiresStudyType()).toBe(false);
+    expect(el.querySelector('select[name="studyType"]')).toBeNull();
+    expect(el.textContent).not.toContain('Tipologia');
   });
 });

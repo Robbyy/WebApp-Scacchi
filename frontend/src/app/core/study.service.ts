@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CreateStudyRequest, GamePhase, ImportStudyRequest, Study } from './study.model';
 import { CreateVariantRequest, Variant } from './variant.model';
+import { PositionAttemptsSummary } from './attempt.model';
 
 /** Accesso alle API degli studi (/api/studies) - Prototipo 11. */
 @Injectable({ providedIn: 'root' })
@@ -49,6 +50,20 @@ export class StudyService {
   /** Crea una variante già agganciata allo studio (endpoint nidificato). */
   addVariant(studyId: number, request: CreateVariantRequest): Observable<Variant> {
     return this.http.post<Variant>(`${this.baseUrl}/${studyId}/variants`, request);
+  }
+
+  /**
+   * Riordino atomico delle posizioni di uno studio Mediogioco (R26.3): il
+   * payload deve contenere la permutazione completa e senza duplicati degli
+   * ID delle posizioni dello studio.
+   */
+  reorderVariants(studyId: number, variantIds: number[]): Observable<Variant[]> {
+    return this.http.put<Variant[]>(`${this.baseUrl}/${studyId}/variants/order`, { variantIds });
+  }
+
+  /** Riepilogo dei tentativi per posizione dello studio (R26.3). */
+  getAttemptsSummary(studyId: number): Observable<PositionAttemptsSummary[]> {
+    return this.http.get<PositionAttemptsSummary[]>(`${this.baseUrl}/${studyId}/attempts/summary`);
   }
 
   /** Import in blocco: crea uno studio con tutte le sue varianti (Prototipo 14). */

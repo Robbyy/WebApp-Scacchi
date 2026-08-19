@@ -81,6 +81,9 @@ describe('section route context (ISSUE-016)', () => {
     expect(paths.position(4)).toBe('/middlegame/positions/4');
     expect(paths.positionSetup(4)).toBe('/middlegame/positions/4/setup');
     expect(paths.positionEdit(4)).toBe('/middlegame/positions/4/edit');
+    // R26.3, task 1.2: rotte canoniche dello studio guidato.
+    expect(paths.positionStudy(4)).toBe('/middlegame/positions/4/study');
+    expect(paths.studyStudy(7)).toBe('/middlegame/studies/7/study');
   });
 
   it('keeps every canonical path inside the middlegame section', () => {
@@ -93,6 +96,8 @@ describe('section route context (ISSUE-016)', () => {
       paths.position(4),
       paths.positionSetup(4),
       paths.positionEdit(4),
+      paths.positionStudy(4),
+      paths.studyStudy(7),
     ];
     expect(all.map(sectionFromUrl)).toEqual(all.map(() => 'middlegame'));
   });

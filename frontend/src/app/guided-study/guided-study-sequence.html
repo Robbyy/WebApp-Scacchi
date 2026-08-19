@@ -1,0 +1,142 @@
+@if (loading()) {
+  <p class="detail-muted">Caricamento&#8230;</p>
+} @else if (!gate().eligible) {
+  <div class="detail-error">
+    <p>{{ blockMessage() }}</p>
+    <a [routerLink]="paths.studyList">&#8592; torna a {{ parentLabel }}</a>
+  </div>
+} @else if (summariesError()) {
+  <div class="detail-error">
+    <p>Impossibile caricare lo storico dei tentativi. Riprova più tardi.</p>
+    <a [routerLink]="paths.study(study()!.id)">&#8592; torna allo studio</a>
+  </div>
+} @else if (study(); as s) {
+  <section class="study">
+    <nav class="crumbs">
+      <a [routerLink]="paths.studyList">{{ parentLabel }}</a>
+      <span class="crumb-sep">/</span>
+      <a [routerLink]="paths.study(s.id)">{{ s.name }}</a>
+      <span class="crumb-sep">/</span>
+      <span class="crumb-current">Studio sequenziale</span>
+    </nav>
+
+    <header class="study-head">
+      <div class="study-head-main">
+        <h2 class="study-title">Studio sequenziale</h2>
+        <p class="study-desc">{{ s.name }}</p>
+        <span class="study-type-badge">{{ studyTypeLabel(s.studyType) }}</span>
+      </div>
+    </header>
+
+    <!-- Regione live persistente dell'avanzamento (task 8.1): fuori dallo
+         `@switch` per restare nel DOM a ogni cambio di fase, così l'annuncio
+         della nuova posizione è affidabile. `tabindex="-1"` la rende
+         raggiungibile solo via `focus()`, mai con il tab. -->
+    <p
+      #progressRegion
+      class="sequence-progress"
+      [class.sequence-progress--empty]="!sequenceStatus()"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      tabindex="-1"
+    >
+      {{ sequenceStatus() }}
+    </p>
+
+    @switch (phase()) {
+      @case ('CONFIG') {
+        <form #configRegion class="panel sequence-config" tabindex="-1" (ngSubmit)="startSequence()">
+          <label class="field">
+            <span class="field-label">Ordine</span>
+            <select
+              class="field-input"
+              name="order"
+              [ngModel]="orderChoice()"
+              (ngModelChange)="orderChoice.set($event)"
+              required
+            >
+              <option value="" disabled>Scegli ordine&#8230;</option>
+              @for (order of orders; track order) {
+                <option [value]="order">{{ sequenceOrderLabel(order) }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Filtro</span>
+            <select
+              class="field-input"
+              name="filter"
+              [ngModel]="filterChoice()"
+              (ngModelChange)="filterChoice.set($event)"
+              required
+            >
+              <option value="" disabled>Scegli filtro&#8230;</option>
+              @for (filter of filters; track filter) {
+                <option [value]="filter">{{ sequenceFilterLabel(filter) }}</option>
+              }
+            </select>
+          </label>
+
+          @if (startError()) {
+            <p class="sequence-error" role="alert">{{ startError() }}</p>
+          }
+
+          <div class="form-actions">
+            <button class="btn" type="submit">Avvia</button>
+          </div>
+        </form>
+      }
+      @case ('EMPTY') {
+        <div #emptyRegion class="panel sequence-empty" tabindex="-1">
+          <p class="panel-note">Nessuna posizione trovata per questo filtro.</p>
+          <button class="btn btn--ghost" type="button" (click)="backToConfig()">
+            &#8592; Torna alla configurazione
+          </button>
+        </div>
+      }
+      @case ('SUMMARY') {
+        <div class="panel sequence-summary">
+          <h3 #summaryRegion class="sequence-summary-title" tabindex="-1">Sequenza completata</h3>
+          <ul class="summary-list">
+            <li>Proposte: {{ summary().proposed }}</li>
+            <li>Comprese: {{ summary().understood }}</li>
+            <li>Non comprese: {{ summary().notUnderstood }}</li>
+            <li>Errate: {{ summary().failed }}</li>
+            <li>Senza esito: {{ summary().noOutcome }}</li>
+          </ul>
+          <button class="btn btn--ghost" type="button" (click)="backToConfig()">Nuova sequenza</button>
+        </div>
+      }
+    }
+  </section>
+
+  <!-- Il tentativo vive fuori dalla colonna `.study` (max 720 px): board e
+       pannello usano il contenitore posizionale largo dell'host, lo stesso
+       della modalità manuale, così la geometria R26.1 è identica nelle due
+       modalità (task 8.2). L'ordine DOM resta quello di lettura: intestazione,
+       avanzamento, tentativo, comandi di sequenza, uscita. -->
+  @if (phase() === 'RUNNING') {
+    @if (currentVariant(); as v) {
+      <app-guided-study-attempt
+        [variant]="v"
+        [studyType]="s.studyType!"
+        [recordAttempt]="recordAttempt"
+        (attemptRecorded)="onAttemptRecorded($event)"
+      />
+
+      <div class="sequence-nav">
+        @if (hasOutcomeForCurrent()) {
+          <button class="btn" type="button" (click)="next()">Posizione successiva</button>
+        } @else {
+          <button class="btn btn--ghost" type="button" (click)="skip()">Salta posizione</button>
+        }
+      </div>
+    }
+  }
+
+  <p class="sequence-exit" [class.sequence-exit--stage]="phase() === 'RUNNING'">
+    <a class="back-link" [routerLink]="paths.study(s.id)">&#8592; Torna allo studio</a>
+  </p>
+}

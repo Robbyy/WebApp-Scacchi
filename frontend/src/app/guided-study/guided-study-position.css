@@ -1,0 +1,15 @@
+/* Sezioni sotto il tentativo in modalità manuale (R26.3, task 8.2). Storico e
+   uscita sono fratelli di `app-guided-study-attempt`, non figli del suo host:
+   senza questo contenitore occuperebbero l'intera larghezza della pagina mentre
+   board e pannello restano dentro il contenitore posizionale da 1280 px,
+   disallineando la colonna. Stessi max-width e padding orizzontale dell'host
+   del tentativo, così i tre blocchi condividono lo stesso asse; il padding sta
+   sul wrapper e non sul pannello, che conserva il proprio padding interno. */
+.guided-study-outro {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem 2rem;
+}

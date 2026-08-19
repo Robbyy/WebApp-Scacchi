@@ -14,14 +14,21 @@ const v1: Variant = { id: 11, name: 'Italiana', color: 'WHITE', moves: ['e4', 'e
 const v2: Variant = { id: 12, name: 'Spagnola', color: 'WHITE', moves: ['e4'], startingFen: '', studyId: 1 };
 const study: Study = { id: 1, name: 'Repertorio', phase: 'OPENING', variantCount: 2, variants: [v1, v2] };
 
-/** Studio Mediogioco con le stesse due schede, usate qui come posizioni. */
-function middlegameStudy(variants: Variant[] = [v1, v2]): Study {
+/**
+ * Studio Mediogioco con le stesse due schede, usate qui come posizioni.
+ * Classificato `TACTICAL` di default (R26.3): la maggior parte degli
+ * scenari felici presuppone uno studio già classificato — lo stato «Da
+ * classificare» è coperto a parte dai suoi test dedicati.
+ */
+function middlegameStudy(variants: Variant[] = [v1, v2], overrides: Partial<Study> = {}): Study {
   return {
     id: 1,
     name: 'Strutture di pedoni',
     phase: 'MIDDLEGAME',
+    studyType: 'TACTICAL',
     variantCount: variants.length,
     variants: structuredClone(variants),
+    ...overrides,
   };
 }
 
@@ -32,11 +39,19 @@ function setup(
   /** `data` della route: con il contesto di sezione il dettaglio è Mediogioco. */
   data: Record<string, unknown> = {},
 ) {
+  // Un Mediogioco chiede sempre il riepilogo dei tentativi al caricamento
+  // (task 5.6): stub di default innocuo, sovrascrivibile dal singolo test.
+  const service: Partial<StudyService> = {
+    getAttemptsSummary: () => of([]),
+    reorderVariants: (_id: number, variantIds: number[]) =>
+      of(variantIds.map((id) => ({ id }) as unknown as Variant)),
+    ...studyService,
+  };
   TestBed.configureTestingModule({
     imports: [StudyDetail],
     providers: [
       provideRouter([]),
-      { provide: StudyService, useValue: studyService },
+      { provide: StudyService, useValue: service },
       { provide: VariantService, useValue: variantService },
       { provide: ConfirmService, useValue: { ask: () => Promise.resolve(confirmResult) } },
       { provide: ToastService, useValue: { success() {}, error() {}, info() {} } },
@@ -109,8 +124,10 @@ describe('StudyDetail', () => {
   });
 
   it('offers the visual position editor only for a non-opening study (R25)', () => {
-    const middlegameStudy: Study = { ...structuredClone(study), phase: 'MIDDLEGAME' };
-    const { fixture } = setup({ getStudy: () => of(middlegameStudy) });
+    // Classificato (R26.3): un Mediogioco «Da classificare» non offre la CTA
+    // di creazione, coperto a parte dai test dedicati alla classificazione.
+    const classifiedMiddlegame: Study = { ...structuredClone(study), phase: 'MIDDLEGAME', studyType: 'TACTICAL' };
+    const { fixture } = setup({ getStudy: () => of(classifiedMiddlegame) });
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).not.toContain('Importa da Lichess');
     expect(text).not.toContain('Statistiche dello studio');
@@ -288,6 +305,24 @@ describe('StudyDetail (Mediogioco, ISSUE-016)', () => {
     expect(cta?.getAttribute('href')).toBe('/middlegame/positions/new?studyId=1');
   });
 
+  it('shows the sequential guided-study CTA for a classified study (R26.3, task 1.5)', () => {
+    const { el } = setupMiddlegame({ getStudy: () => of(middlegameStudy()) });
+    const cta = Array.from(el.querySelectorAll<HTMLAnchorElement>('a.new-cta')).find((a) =>
+      a.textContent?.includes('Studio sequenziale'),
+    );
+    expect(cta?.getAttribute('href')).toBe('/middlegame/studies/1/study');
+  });
+
+  it('hides the sequential guided-study CTA for an unclassified study (R26.3, task 1.5)', () => {
+    const { el } = setupMiddlegame({ getStudy: () => of(middlegameStudy([], { studyType: null })) });
+    expect(el.textContent).not.toContain('Studio sequenziale');
+  });
+
+  it('hides the sequential guided-study CTA for an opening study (R26.3, task 1.5)', () => {
+    const { fixture } = setup({ getStudy: () => of(study) });
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Studio sequenziale');
+  });
+
   it('shows an empty state with the creation action', () => {
     const { el } = setupMiddlegame({ getStudy: () => of(middlegameStudy([])) });
     expect(el.querySelector('.list-muted')?.textContent).toContain('Nessuna posizione in questo studio');
@@ -396,5 +431,257 @@ describe('StudyDetail (Mediogioco, ISSUE-016)', () => {
   it('reports a missing study without claiming a wrong section', () => {
     const { el } = setupMiddlegame({ getStudy: () => throwError(() => new Error('404')) });
     expect(el.querySelector('.detail-error')?.textContent).toContain('Studio non trovato');
+  });
+
+  it('does not show Mediogioco-only elements for an endgame study (regression, Finale)', () => {
+    const endgame: Study = { id: 3, name: 'Finali di torre', phase: 'ENDGAME', variantCount: 0, variants: [] };
+    const { fixture } = setup({ getStudy: () => of(endgame) });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.study-type-badge')).toBeNull();
+    expect(el.querySelector('.classify-panel')).toBeNull();
+    expect(el.textContent).not.toContain('Da classificare');
+  });
+});
+
+describe('StudyDetail (classificazione Mediogioco, R26.3 task 2.3/5.2)', () => {
+  function unclassifiedStudy(variants: Variant[] = []): Study {
+    return middlegameStudy(variants, { studyType: null });
+  }
+
+  it('labels an unclassified legacy study as "Da classificare" and hides the creation CTA', () => {
+    const { el } = setupMiddlegame({ getStudy: () => of(unclassifiedStudy()) });
+    expect(el.querySelector('.study-type-badge')?.textContent?.trim()).toBe('Da classificare');
+    expect(el.querySelector('a.new-cta')).toBeNull();
+  });
+
+  it('keeps consultation and metadata editing available while unclassified', () => {
+    const { el, cmp } = setupMiddlegame({ getStudy: () => of(unclassifiedStudy([v1])) });
+    expect(cmp.study()).not.toBeNull();
+    expect(el.querySelector('.detail-error')).toBeNull();
+    expect(el.querySelector('a.variant-main')).not.toBeNull();
+    expect(el.querySelector('.study-edit')).not.toBeNull();
+  });
+
+  it('classifies the study once and unlocks the creation CTA', () => {
+    let captured: unknown = null;
+    const classified = middlegameStudy([], { studyType: 'STRATEGIC' });
+    const { cmp, el, fixture } = setupMiddlegame({
+      getStudy: () => of(unclassifiedStudy()),
+      updateStudy: (_id: number, req: unknown) => {
+        captured = req;
+        return of(classified);
+      },
+    });
+
+    expect(el.querySelector('a.new-cta')).toBeNull();
+    cmp.openClassify();
+    cmp.classifyType.set('STRATEGIC');
+    cmp.saveClassify();
+    fixture.detectChanges();
+
+    expect(captured).toEqual({
+      name: 'Strutture di pedoni',
+      description: null,
+      color: null,
+      studyType: 'STRATEGIC',
+    });
+    expect(cmp.study()?.studyType).toBe('STRATEGIC');
+    expect(cmp.classifying()).toBe(false);
+    expect(el.querySelector('.classify-panel')).toBeNull();
+    expect(el.querySelector('a.new-cta')).not.toBeNull();
+  });
+
+  it('does not classify without choosing a type', () => {
+    let called = false;
+    const { cmp } = setupMiddlegame({
+      getStudy: () => of(unclassifiedStudy()),
+      updateStudy: () => {
+        called = true;
+        return of(unclassifiedStudy());
+      },
+    });
+    cmp.openClassify();
+    cmp.saveClassify();
+    expect(called).toBe(false);
+  });
+});
+
+describe('StudyDetail (tema e difficoltà delle posizioni, R26.3 task 5.4)', () => {
+  it('labels a position without a theme as "Tema da assegnare" without disabling its links', () => {
+    const legacy: Variant = { ...v1, themeId: null, theme: null };
+    const { el } = setupMiddlegame({ getStudy: () => of(middlegameStudy([legacy])) });
+    expect(el.textContent).toContain('Tema da assegnare');
+    expect(el.querySelector<HTMLAnchorElement>('a.variant-main')?.getAttribute('href')).toBe(
+      '/middlegame/positions/11',
+    );
+  });
+
+  it('shows the assigned theme label and difficulty for a regularized position', () => {
+    const themed: Variant = {
+      ...v1,
+      themeId: 1001,
+      theme: { id: 1001, code: 'DOUBLE_ATTACK', studyType: 'TACTICAL', displayLabel: 'doppio attacco', displayOrder: 1 },
+      difficulty: 'EASY',
+      positionOrder: 1,
+    };
+    const { el } = setupMiddlegame({ getStudy: () => of(middlegameStudy([themed])) });
+    expect(el.textContent).toContain('doppio attacco');
+    expect(el.textContent).toContain('Facile');
+    expect(el.textContent).not.toContain('Tema da assegnare');
+  });
+});
+
+describe('StudyDetail (riepilogo tentativi, R26.3 task 5.6)', () => {
+  it('shows the last outcome and the attempt count per position', () => {
+    const { el } = setupMiddlegame({
+      getStudy: () => of(middlegameStudy([v1])),
+      getAttemptsSummary: () =>
+        of([{ variantId: 11, lastOutcome: 'UNDERSTOOD', attemptCount: 3, lastUnderstoodAt: '2026-06-01T10:00:00Z' }]),
+    });
+    expect(el.textContent).toContain('Compresa');
+    expect(el.textContent).toContain('3 tentativi');
+  });
+
+  it('shows "Mai tentata" for a position without attempts, with no percentage anywhere', () => {
+    const { el } = setupMiddlegame({
+      getStudy: () => of(middlegameStudy([v1])),
+      getAttemptsSummary: () => of([]),
+    });
+    expect(el.textContent).toContain('Mai tentata');
+    expect(el.textContent).not.toContain('%');
+  });
+
+  it('does not fetch the attempts summary for an opening study (regression)', () => {
+    let called = false;
+    setup({
+      getStudy: () => of(study),
+      getAttemptsSummary: () => {
+        called = true;
+        return of([]);
+      },
+    });
+    expect(called).toBe(false);
+  });
+});
+
+describe('StudyDetail (riordino, R26.3 task 5.5)', () => {
+  const p1: Variant = { ...v1, positionOrder: 1 };
+  const p2: Variant = { ...v2, positionOrder: 2 };
+
+  it('moves a position down and persists the new order via PUT .../variants/order', () => {
+    let captured: number[] | null = null;
+    const { cmp } = setupMiddlegame({
+      getStudy: () => of(middlegameStudy([p1, p2])),
+      reorderVariants: (_id: number, ids: number[]) => {
+        captured = ids;
+        return of([
+          { ...p2, positionOrder: 1 },
+          { ...p1, positionOrder: 2 },
+        ]);
+      },
+    });
+
+    cmp.moveDown(0);
+
+    expect(captured).toEqual([12, 11]);
+    expect(cmp.variants().map((v: Variant) => v.id)).toEqual([12, 11]);
+    expect(cmp.reordering()).toBe(false);
+  });
+
+  it('does not move the first position further up nor the last further down', () => {
+    const { cmp } = setupMiddlegame({ getStudy: () => of(middlegameStudy([p1, p2])) });
+    cmp.moveUp(0);
+    cmp.moveDown(1);
+    expect(cmp.variants().map((v: Variant) => v.id)).toEqual([11, 12]);
+  });
+
+  it('rolls back to the previous order when the reorder request fails', () => {
+    const { cmp } = setupMiddlegame({
+      getStudy: () => of(middlegameStudy([p1, p2])),
+      reorderVariants: () => throwError(() => new Error('conflict')),
+    });
+
+    cmp.moveDown(0);
+
+    expect(cmp.variants().map((v: Variant) => v.id)).toEqual([11, 12]);
+    expect(cmp.reordering()).toBe(false);
+  });
+
+  it('reorders via drag-and-drop using the same atomic contract', () => {
+    let captured: number[] | null = null;
+    const { cmp } = setupMiddlegame({
+      getStudy: () => of(middlegameStudy([p1, p2])),
+      reorderVariants: (_id: number, ids: number[]) => {
+        captured = ids;
+        return of([
+          { ...p2, positionOrder: 1 },
+          { ...p1, positionOrder: 2 },
+        ]);
+      },
+    });
+
+    cmp.onDragStart(0);
+    cmp.onDrop(1);
+
+    expect(captured).toEqual([12, 11]);
+  });
+
+  it('does not reorder for an opening study (regression)', () => {
+    let called = false;
+    const { cmp } = setup({
+      getStudy: () => of(study),
+      reorderVariants: () => {
+        called = true;
+        return of([]);
+      },
+    });
+    cmp.moveDown(0);
+    expect(called).toBe(false);
+  });
+});
+
+describe('StudyDetail (perimetro dello studio guidato, R26.3 task 8.4)', () => {
+  function ctas(el: HTMLElement): string[] {
+    return Array.from(el.querySelectorAll<HTMLAnchorElement>('.actions a')).map(
+      (a) => a.textContent?.trim() ?? '',
+    );
+  }
+
+  it('offers the sequential guided study only on a classified middlegame study', () => {
+    const { fixture } = setupMiddlegame({ getStudy: () => of(middlegameStudy()) });
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(ctas(el)).toEqual(['Nuova posizione', 'Studio sequenziale']);
+    expect(hrefs(el)).toContain('/middlegame/studies/1/study');
+  });
+
+  it('does not offer the sequential guided study on an unclassified middlegame study', () => {
+    const { fixture } = setupMiddlegame({
+      getStudy: () => of(middlegameStudy([v1, v2], { studyType: null })),
+    });
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(ctas(el)).toEqual([]);
+    expect(hrefs(el).some((h) => h.endsWith('/study'))).toBe(false);
+  });
+
+  it('does not offer the sequential guided study on an opening study', () => {
+    const { fixture } = setup({ getStudy: () => of(study) });
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(ctas(el)).toEqual(['Nuova variante', 'Importa PGN', 'Importa da Lichess']);
+    expect(el.textContent).not.toContain('Studio sequenziale');
+    expect(hrefs(el).some((h) => h.endsWith('/study'))).toBe(false);
+  });
+
+  it('does not offer the sequential guided study on an endgame study (R27 perimeter)', () => {
+    // Il Finale non è Aperture né Mediogioco: senza il gate esplicito
+    // ricadrebbe nel ramo posizionale e mostrerebbe la CTA guidata.
+    const endgame = middlegameStudy([v1, v2], { phase: 'ENDGAME', studyType: null });
+    const { fixture } = setup({ getStudy: () => of(endgame) });
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.textContent).not.toContain('Studio sequenziale');
+    expect(hrefs(el).some((h) => h.endsWith('/study'))).toBe(false);
   });
 });

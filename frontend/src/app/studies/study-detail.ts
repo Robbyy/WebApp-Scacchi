@@ -11,6 +11,10 @@ import { StudyService } from '../core/study.service';
 import { VariantService } from '../core/variant.service';
 import { Study, StudyColor } from '../core/study.model';
 import { Variant, validationMessage } from '../core/variant.model';
+import { StudyType } from '../core/position-theme.model';
+import { PositionAttemptsSummary } from '../core/attempt.model';
+import { difficultyLabel, lastOutcomeLabel, studyTypeLabel, themeLabel } from '../core/middlegame-format';
+import { formatReviewDate } from '../reviews/review-format';
 import { ConfirmService } from '../core/confirm.service';
 import { ToastService } from '../core/toast.service';
 import { sectionContextFrom, sectionLabel, sectionPaths } from '../core/study-sections';
@@ -63,12 +67,32 @@ export class StudyDetail {
   protected readonly itemLabel = computed(() => (this.isOpening() ? 'variante' : 'posizione'));
   protected readonly itemLabelPlural = computed(() => (this.isOpening() ? 'varianti' : 'posizioni'));
 
+  /** Metadati e catalogo Mediogioco (R26.3): non si applicano ad Aperture/Finale. */
+  protected readonly isMiddlegame = computed(() => this.study()?.phase === 'MIDDLEGAME');
+  protected readonly classified = computed(() => this.study()?.studyType != null);
+  protected readonly studyTypeLabel = studyTypeLabel;
+  protected readonly themeLabel = themeLabel;
+  protected readonly difficultyLabel = difficultyLabel;
+  protected readonly lastOutcomeLabel = lastOutcomeLabel;
+  protected readonly formatReviewDate = formatReviewDate;
+
   /** Form inline di modifica dei metadati (ISSUE-012). */
   protected readonly editing = signal(false);
   protected readonly savingEdit = signal(false);
   protected readonly editName = signal('');
   protected readonly editDescription = signal('');
   protected readonly editColor = signal<StudyColor | ''>('');
+
+  /** Classificazione una tantum di un Mediogioco «Da classificare» (R26.3, task 2.3/5.2). */
+  protected readonly classifying = signal(false);
+  protected readonly savingClassify = signal(false);
+  protected readonly classifyType = signal<StudyType | ''>('');
+
+  /** Riepilogo dei tentativi per posizione (R26.3, task 5.6), indicizzato per posizione. */
+  protected readonly attemptsSummary = signal<Map<number, PositionAttemptsSummary>>(new Map());
+  /** Riordino numerico e drag-and-drop (R26.3, task 5.5): una richiesta alla volta. */
+  protected readonly reordering = signal(false);
+  private readonly dragIndex = signal<number | null>(null);
 
   constructor() {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -82,9 +106,27 @@ export class StudyDetail {
           return;
         }
         this.study.set(s);
+        if (s.phase === 'MIDDLEGAME') {
+          this.loadAttemptsSummary(s.id);
+        }
       },
       error: () => this.error.set('Studio non trovato.'),
     });
+  }
+
+  /** Best-effort: l'assenza del riepilogo non impedisce di consultare lo studio. */
+  private loadAttemptsSummary(studyId: number): void {
+    this.service.getAttemptsSummary(studyId).subscribe({
+      next: (summary) => {
+        this.attemptsSummary.set(new Map(summary.map((s) => [s.variantId, s])));
+      },
+      error: () => this.attemptsSummary.set(new Map()),
+    });
+  }
+
+  /** Riepilogo di una posizione, o `undefined` se non ancora caricato/mai tentata. */
+  protected summaryFor(variantId: number): PositionAttemptsSummary | undefined {
+    return this.attemptsSummary().get(variantId);
   }
 
   /** Apre il form inline precompilato con i metadati correnti. */
@@ -204,6 +246,117 @@ export class StudyDetail {
       error: () => {
         this.deletingStudy.set(false);
         this.toast.error('Eliminazione non riuscita.');
+      },
+    });
+  }
+
+  /** Apre il pannello di classificazione una tantum (R26.3). */
+  protected openClassify(): void {
+    this.classifyType.set('');
+    this.classifying.set(true);
+  }
+
+  protected cancelClassify(): void {
+    this.classifying.set(false);
+  }
+
+  /**
+   * Persiste la scelta `TACTICAL`/`STRATEGIC` su un Mediogioco «Da
+   * classificare» (R26.3): unica transizione ammessa, poi immutabile. Il
+   * resto dei metadati non cambia, quindi viaggia invariato con l'update.
+   */
+  protected saveClassify(): void {
+    const s = this.study();
+    const type = this.classifyType();
+    if (!s || !type || this.savingClassify()) {
+      return;
+    }
+    this.savingClassify.set(true);
+    this.service
+      .updateStudy(s.id, {
+        name: s.name,
+        description: s.description ?? null,
+        color: null,
+        studyType: type,
+      })
+      .subscribe({
+        next: (updated) => {
+          this.study.update((cur) => (cur ? { ...cur, studyType: updated.studyType } : cur));
+          this.savingClassify.set(false);
+          this.classifying.set(false);
+          this.toast.success('Studio classificato.');
+        },
+        error: (err) => {
+          this.savingClassify.set(false);
+          this.toast.error(validationMessage(err) ?? 'Classificazione non riuscita.');
+        },
+      });
+  }
+
+  /** Sposta una posizione di una riga verso l'inizio (riordino numerico, task 5.5). */
+  protected moveUp(index: number): void {
+    this.reorder(index, index - 1);
+  }
+
+  /** Sposta una posizione di una riga verso la fine (riordino numerico, task 5.5). */
+  protected moveDown(index: number): void {
+    this.reorder(index, index + 1);
+  }
+
+  protected onDragStart(index: number): void {
+    this.dragIndex.set(index);
+  }
+
+  protected dragIndexIs(index: number): boolean {
+    return this.dragIndex() === index;
+  }
+
+  protected onDragOver(event: DragEvent): void {
+    // Necessario per rendere la riga una destinazione di drop valida (API nativa).
+    event.preventDefault();
+  }
+
+  protected onDrop(index: number): void {
+    const from = this.dragIndex();
+    this.dragIndex.set(null);
+    if (from === null || from === index) {
+      return;
+    }
+    this.reorder(from, index);
+  }
+
+  /**
+   * Riordino atomico via `PUT .../variants/order` (R26.3, task 5.5): aggiorna
+   * subito la vista, poi ripristina l'ordine precedente se l'API fallisce.
+   */
+  private reorder(from: number, to: number): void {
+    const s = this.study();
+    const current = s?.variants ?? null;
+    if (
+      !s ||
+      s.phase !== 'MIDDLEGAME' ||
+      !current ||
+      this.reordering() ||
+      to < 0 ||
+      to >= current.length ||
+      from === to
+    ) {
+      return;
+    }
+    const next = [...current];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    this.reordering.set(true);
+    this.study.set({ ...s, variants: next });
+    this.service.reorderVariants(s.id, next.map((v) => v.id)).subscribe({
+      next: (updated) => {
+        this.reordering.set(false);
+        this.study.update((cur) => (cur ? { ...cur, variants: updated } : cur));
+      },
+      error: () => {
+        this.reordering.set(false);
+        this.study.update((cur) => (cur ? { ...cur, variants: current } : cur));
+        this.toast.error("Riordino non riuscito: ripristinato l'ordine precedente.");
       },
     });
   }

@@ -90,6 +90,82 @@
           <textarea readonly rows="3" [value]="startingFen()"></textarea>
         </label>
 
+        @if (isMiddlegame()) {
+          <fieldset class="metadata-fields">
+            <legend>Dati Mediogioco</legend>
+            @if (unclassified()) {
+              <small>Classifica lo studio (tattico o strategico) per poter assegnare un tema.</small>
+            } @else {
+              <label>
+                Tema
+                <select
+                  name="themeId"
+                  [ngModel]="themeId()"
+                  (ngModelChange)="themeId.set($event); dirty.set(true)"
+                >
+                  <option [ngValue]="null" disabled>Scegli un tema&#8230;</option>
+                  @for (theme of availableThemes(); track theme.id) {
+                    <option [ngValue]="theme.id">{{ theme.displayLabel }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Descrizione del tema (facoltativa)
+                <input
+                  name="themeDescription"
+                  [ngModel]="themeDescription()"
+                  (ngModelChange)="themeDescription.set($event); dirty.set(true)"
+                  maxlength="500"
+                />
+              </label>
+            }
+            <label>
+              Descrizione della posizione (facoltativa)
+              <input
+                name="description"
+                [ngModel]="description()"
+                (ngModelChange)="description.set($event); dirty.set(true)"
+                maxlength="1000"
+              />
+            </label>
+            <label>
+              Difficoltà (facoltativa)
+              <select
+                name="difficulty"
+                [ngModel]="difficulty()"
+                (ngModelChange)="difficulty.set($event); dirty.set(true)"
+              >
+                <option [ngValue]="null">&#8212;</option>
+                @for (d of difficulties; track d) {
+                  <option [ngValue]="d">{{ difficultyLabel(d) }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              Fonte (facoltativa)
+              <input
+                name="source"
+                [ngModel]="source()"
+                (ngModelChange)="source.set($event); dirty.set(true)"
+                maxlength="300"
+              />
+            </label>
+            @if (!isEdit()) {
+              <label>
+                Ordine
+                <input
+                  type="number"
+                  name="positionOrder"
+                  min="1"
+                  [max]="maxOrder()"
+                  [ngModel]="positionOrder()"
+                  (ngModelChange)="positionOrder.set($event); dirty.set(true)"
+                />
+              </label>
+            }
+          </fieldset>
+        }
+
         @if (error()) { <p class="editor-error">{{ error() }}</p> }
 
         <div class="form-actions">
