@@ -272,7 +272,12 @@ describe('PositionEditor', () => {
 });
 
 describe('PositionEditor (Mediogioco, ISSUE-016/R26.3)', () => {
-  it('creates a position with its required theme and default order (task 5.3)', () => {
+  /**
+   * L'ordine non è più un campo del form: il payload non lo porta e il backend
+   * assegna la coda della lista. Si cambia soltanto riordinando le posizioni nel
+   * dettaglio dello studio.
+   */
+  it('creates a position with its required theme and no explicit order (task 5.3)', () => {
     const { cmp, captured, navigated } = setupMiddlegame({ variantCount: 2 });
     cmp.useStandardPosition();
     cmp.onNameChange('Struttura Carlsbad');
@@ -280,8 +285,6 @@ describe('PositionEditor (Mediogioco, ISSUE-016/R26.3)', () => {
     cmp.save();
 
     expect(cmp.ready()).toBe(true);
-    // L'ordine predefinito è fine lista (N+1): 2 posizioni esistenti → 3.
-    expect(cmp.positionOrder()).toBe(3);
     expect(captured()).toEqual({
       name: 'Struttura Carlsbad',
       moves: [],
@@ -292,7 +295,6 @@ describe('PositionEditor (Mediogioco, ISSUE-016/R26.3)', () => {
       description: null,
       difficulty: null,
       source: null,
-      positionOrder: 3,
     });
     // Dopo il salvataggio si apre l'editor delle mosse canonico.
     expect(navigated()).toBe('/middlegame/positions/31/edit');
@@ -319,7 +321,6 @@ describe('PositionEditor (Mediogioco, ISSUE-016/R26.3)', () => {
       description: 'Il nero ha appena giocato Ce7?!',
       difficulty: 'ADVANCED',
       source: 'Partita personale',
-      positionOrder: 1,
     });
   });
 
@@ -366,83 +367,48 @@ describe('PositionEditor (Mediogioco, ISSUE-016/R26.3)', () => {
     expect(cmp.enPassant()).toBe('-');
   });
 
-  // --- ordine modificabile anche dalla modifica ---
-
-  /** Le tre posizioni dello studio, con quella in modifica (31) al secondo posto. */
-  function threeSiblings(): Variant[] {
-    return [
-      { ...saved, id: 30, name: 'Prima' },
-      { ...saved, id: 31, name: 'Seconda' },
-      { ...saved, id: 32, name: 'Terza' },
-    ];
-  }
+  // --- l'ordine non è un campo del form ---
 
   function editingSecondOfThree(extra: Partial<SetupOptions> = {}) {
     return setupMiddlegame({
       positionId: 31,
       position: { ...saved, id: 31, themeId: 1001 },
-      siblings: threeSiblings(),
+      siblings: [
+        { ...saved, id: 30, name: 'Prima' },
+        { ...saved, id: 31, name: 'Seconda' },
+        { ...saved, id: 32, name: 'Terza' },
+      ],
       variantCount: 3,
       ...extra,
     });
   }
 
-  it('shows the current order while editing, bounded by the existing positions', () => {
-    const { cmp, el } = editingSecondOfThree();
-
-    expect(cmp.positionOrder()).toBe(2);
-    // In modifica la posizione è già in elenco: ci si sposta dentro 1..N, non N+1.
-    expect(cmp.maxOrder()).toBe(3);
-    expect(el.querySelector<HTMLInputElement>('[name="positionOrder"]')?.getAttribute('max'))
-      .toBe('3');
+  /**
+   * L'ordine è assegnato dal backend e si cambia soltanto riordinando le
+   * posizioni nel dettaglio dello studio: qui non deve esistere né il campo né
+   * un percorso alternativo per modificarlo.
+   */
+  it('offers no order field when creating a position', () => {
+    const { el } = setupMiddlegame();
+    expect(el.querySelector('[name="positionOrder"]')).toBeNull();
+    expect(el.textContent).not.toContain('Ordine');
   });
 
-  /**
-   * Lo spostamento non viaggia nel PUT della posizione — che ignora di proposito
-   * `positionOrder` — ma nel contratto atomico del riordino.
-   */
-  it('moves the position through the dedicated reorder contract, not the position PUT', () => {
+  it('offers no order field when editing a position', () => {
+    const { el } = editingSecondOfThree();
+    expect(el.querySelector('[name="positionOrder"]')).toBeNull();
+    expect(el.textContent).not.toContain('Ordine');
+  });
+
+  it('never reorders when saving an existing position', () => {
     const { cmp, captured, reordered, navigated } = editingSecondOfThree();
 
-    cmp.positionOrder.set(1);
+    cmp.onNameChange('Seconda rinominata');
     cmp.save();
 
     expect((captured() as CreateVariantRequest | null)?.positionOrder).toBeUndefined();
-    expect(reordered()).toEqual([31, 30, 32]);
-    expect(navigated()).toBe('/middlegame/positions/31/edit');
-  });
-
-  it('does not reorder when the order is left untouched', () => {
-    const { cmp, reordered } = editingSecondOfThree();
-
-    cmp.save();
-
     expect(reordered()).toBeNull();
-  });
-
-  /** La posizione è salvata comunque: solo lo spostamento è fallito. */
-  it('reports a failed move without claiming the save was lost', () => {
-    const { cmp, navigated } = editingSecondOfThree({
-      reorder: () => throwError(() => new Error('conflitto')),
-    });
-
-    cmp.positionOrder.set(3);
-    cmp.save();
-
-    expect(cmp.dirty()).toBe(false);
-    expect(cmp.saving()).toBe(false);
     expect(navigated()).toBe('/middlegame/positions/31/edit');
-  });
-
-  it('rejects an order outside the existing positions', () => {
-    const { cmp, captured, reordered } = editingSecondOfThree();
-
-    cmp.positionOrder.set(4);
-    cmp.save();
-
-    expect(cmp.error()).toContain('tra 1 e 3');
-    expect(captured()).toBeNull();
-    expect(reordered()).toBeNull();
   });
 
   it('disables the submit until the position has a title', () => {
