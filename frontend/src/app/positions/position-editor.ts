@@ -166,11 +166,15 @@ export class PositionEditor implements CanComponentDeactivate {
     { code: 'bN' as const, label: 'Cavallo nero' },
     { code: 'bP' as const, label: 'Pedone nero' },
   ];
-  protected readonly enPassantOptions = [
+  /**
+   * Bersagli possibili per il lato al tratto: col bianco la casa è in sesta, col
+   * nero in terza. Offrirle tutte e sedici significava proporne otto che la
+   * validazione avrebbe comunque rifiutato al salvataggio.
+   */
+  protected readonly enPassantOptions = computed(() => [
     '-',
-    ...FILES.map((file) => `${file}3`),
-    ...FILES.map((file) => `${file}6`),
-  ];
+    ...FILES.map((file) => `${file}${this.sideToMove() === 'w' ? '6' : '3'}`),
+  ]);
 
   protected readonly squares = computed<SetupSquare[]>(() => {
     const placed = this.pieces();
@@ -259,6 +263,11 @@ export class PositionEditor implements CanComponentDeactivate {
 
   protected onSideChange(value: 'w' | 'b'): void {
     this.sideToMove.set(value);
+    // Cambiando lato il bersaglio scelto finisce sulla traversa sbagliata:
+    // lasciarlo selezionato produrrebbe una FEN che la validazione rifiuta.
+    if (!this.enPassantOptions().includes(this.enPassant())) {
+      this.enPassant.set('-');
+    }
     this.dirty.set(true);
   }
 
@@ -464,7 +473,8 @@ export class PositionEditor implements CanComponentDeactivate {
     this.whiteQueenSide.set(rights.includes('Q'));
     this.blackKingSide.set(rights.includes('k'));
     this.blackQueenSide.set(rights.includes('q'));
-    this.enPassant.set(this.enPassantOptions.includes(fields[3]) ? fields[3] : '-');
+    // `sideToMove` è già stato applicato sopra, quindi le opzioni sono quelle giuste.
+    this.enPassant.set(this.enPassantOptions().includes(fields[3]) ? fields[3] : '-');
   }
 
   private placement(): string {

@@ -49,6 +49,25 @@ small { color: var(--muted, #697386); font-weight: 400; line-height: 1.35; }
 .btn { background: var(--accent, #946f50); border: 1px solid var(--accent, #946f50); border-radius: .35rem; color: white; cursor: pointer; display: inline-block; font: inherit; font-weight: 700; padding: .6rem .85rem; text-decoration: none; }
 .btn--ghost { background: transparent; color: inherit; }.btn:disabled { cursor: wait; opacity: .6; }
 .editor-error { color: #b42318; margin: 1rem 0; }.editor-muted { color: var(--muted, #697386); padding: 1.5rem; }
+/* Viewport basso (laptop 1366×768 e simili): con il pannello dei metadati chiuso
+   il form resta la colonna più alta e i pulsanti finiscono sotto la piega. Si
+   comprimono le spaziature e la FEN, e le azioni restano ancorate in fondo alla
+   colonna: così «Annulla» e «Salva posizione» sono sempre raggiungibili senza
+   cercarli. Dove l'altezza c'è, nulla cambia. */
+@media (min-width: 761px) and (max-height: 860px) {
+  .setup-form { gap: .45rem; padding: .7rem; }
+  .setup-form label:not(.choice) { gap: .25rem; }
+  fieldset { gap: .45rem; padding: .3rem .5rem; }
+  textarea { height: 2.6rem; }
+  .form-actions {
+    position: sticky;
+    bottom: 0;
+    margin-top: 0;
+    padding: .5rem 0;
+    background: var(--panel, #fff);
+  }
+}
+
 /* Sotto 760px la pagina scorre comunque: la scacchiera torna piena e smette di
    dipendere dall'altezza del viewport. */
 @media (max-width: 760px) { .position-editor { padding: 1rem; }.editor-layout { grid-template-columns: 1fr; }.setup-board { max-width: 620px; }

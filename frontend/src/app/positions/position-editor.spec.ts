@@ -327,6 +327,50 @@ describe('PositionEditor (Mediogioco, ISSUE-016/R26.3)', () => {
    * impediscono di digitare oltre, là sono il contratto. Il test li lega alle
    * costanti condivise, così non tornano a essere numeri magici nel template.
    */
+  /**
+   * Col bianco al tratto la casa en passant sta in sesta, col nero in terza:
+   * offrire tutte e sedici significava proporne otto che la validazione avrebbe
+   * poi rifiutato.
+   */
+  it('offers only the en passant targets reachable by the side to move', () => {
+    const { el, cmp, fixture } = setupMiddlegame();
+    const targets = () =>
+      Array.from(el.querySelectorAll<HTMLOptionElement>('select[name="enPassant"] option')).map(
+        (o) => o.value,
+      );
+
+    expect(targets()).toEqual(['-', 'a6', 'b6', 'c6', 'd6', 'e6', 'f6', 'g6', 'h6']);
+
+    cmp.onSideChange('b');
+    fixture.detectChanges();
+    expect(targets()).toEqual(['-', 'a3', 'b3', 'c3', 'd3', 'e3', 'f3', 'g3', 'h3']);
+  });
+
+  it('drops an en passant target that the new side to move cannot reach', () => {
+    const { cmp } = setupMiddlegame();
+    cmp.onEnPassantChange('d6');
+    expect(cmp.enPassant()).toBe('d6');
+
+    cmp.onSideChange('b');
+    expect(cmp.enPassant()).toBe('-');
+  });
+
+  it('disables the submit until the position has a title', () => {
+    const { el, cmp, fixture } = setupMiddlegame();
+    const submit = () => el.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+    expect(submit()?.disabled).toBe(true);
+
+    cmp.onNameChange('Struttura Carlsbad');
+    fixture.detectChanges();
+    expect(submit()?.disabled).toBe(false);
+
+    // Solo spazi: il titolo resta vuoto una volta ripulito.
+    cmp.onNameChange('   ');
+    fixture.detectChanges();
+    expect(submit()?.disabled).toBe(true);
+  });
+
   it('caps the metadata fields with the shared limits', () => {
     const { el } = setupMiddlegame();
     const maxOf = (name: string) =>

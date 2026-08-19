@@ -82,7 +82,7 @@
         <label>
           Bersaglio en passant
           <select name="enPassant" [ngModel]="enPassant()" (ngModelChange)="onEnPassantChange($event)">
-            @for (target of enPassantOptions; track target) { <option [value]="target">{{ target }}</option> }
+            @for (target of enPassantOptions(); track target) { <option [value]="target">{{ target }}</option> }
           </select>
           <small>Disponibile solo dopo una doppia mossa immediata e se un pedone avversario può catturare.</small>
         </label>
@@ -178,7 +178,10 @@
 
         <div class="form-actions">
           <a class="btn btn--ghost" [routerLink]="cancelLink()">Annulla</a>
-          <button class="btn" type="submit" [disabled]="saving()">{{ saving() ? 'Salvataggio…' : (isEdit() ? 'Salva posizione' : 'Crea posizione') }}</button>
+          <!-- Il titolo è l'unico obbligatorio sempre visibile: disabilitare il
+               submit lo dice prima del click, invece di rispondere con un errore.
+               La validazione in `save()` resta comunque, non è la UI a garantirla. -->
+          <button class="btn" type="submit" [disabled]="saving() || !name().trim()">{{ saving() ? 'Salvataggio…' : (isEdit() ? 'Salva posizione' : 'Crea posizione') }}</button>
         </div>
       </form>
     </div>
