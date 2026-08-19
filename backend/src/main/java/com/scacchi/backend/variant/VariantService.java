@@ -64,7 +64,7 @@ public class VariantService {
 
     private VariantDto create(CreateVariantRequest request, Long studyId) {
         Study study = studyFor(studyId);
-        GamePhase phase = study != null ? study.getPhase() : GamePhase.OPENING;
+        GamePhase phase = phaseOf(study);
         PreparedVariant prepared = prepare(request, phase, study);
 
         Variant entity = new Variant();
@@ -96,7 +96,7 @@ public class VariantService {
     public Optional<VariantDto> update(Long id, CreateVariantRequest request) {
         return repository.findById(id).map(entity -> {
             Study study = studyFor(entity.getStudyId());
-            GamePhase phase = study != null ? study.getPhase() : GamePhase.OPENING;
+            GamePhase phase = phaseOf(study);
             PreparedVariant prepared = prepare(request, phase, study);
             entity.setName(prepared.request().name().trim());
             entity.setColor(prepared.color());
@@ -113,6 +113,41 @@ public class VariantService {
                 entity.setSource(prepared.source());
                 // positionOrder invariato: il riordino passa solo dal contratto dedicato (task 3.5).
             }
+            return toDto(repository.save(entity));
+        });
+    }
+
+    /**
+     * Aggiorna nome, colore (solo Aperture) e albero lasciando invariati la FEN
+     * iniziale e i metadati Mediogioco. È il contratto dell'editor delle mosse,
+     * che non possiede quei campi: con il full-replace di {@link #update} ogni
+     * salvataggio delle mosse azzerava tema, descrizioni, difficoltà e fonte,
+     * facendo uscire la posizione dallo studio guidato.
+     *
+     * <p>L'albero è validato dalla FEN già persistita, non da una inviata dal
+     * client: qui la posizione iniziale non è modificabile.
+     */
+    @Transactional
+    public Optional<VariantDto> updateTree(Long id, UpdateVariantTreeRequest request) {
+        if (request == null) {
+            throw new InvalidVariantException(new ValidationError(
+                "request", null, null, "Richiesta mancante."));
+        }
+        return repository.findById(id).map(entity -> {
+            boolean opening = phaseOf(studyFor(entity.getStudyId())) == GamePhase.OPENING;
+            // Il validatore lavora sul contratto di creazione: gli si passa solo ciò
+            // che questo endpoint possiede, con la FEN persistita come radice.
+            CreateVariantRequest asCreate = new CreateVariantRequest(
+                request.name(), request.color(), request.moves(), request.tree(), null, null);
+            validator.validate(asCreate, entity.getStartingFen(), !opening, opening);
+
+            entity.setName(request.name().trim());
+            if (opening) {
+                entity.setColor(Color.valueOf(request.color()));
+            }
+            List<MoveNode> tree = resolveTree(asCreate);
+            entity.setTree(tree);
+            entity.setMoves(MoveNode.mainline(tree));
             return toDto(repository.save(entity));
         });
     }
@@ -269,6 +304,11 @@ public class VariantService {
 
     private Study studyFor(Long studyId) {
         return studyId == null ? null : studyRepository.findById(studyId).orElse(null);
+    }
+
+    /** Fase dello studio padre; le varianti legacy senza studio restano Aperture. */
+    private static GamePhase phaseOf(Study study) {
+        return study != null ? study.getPhase() : GamePhase.OPENING;
     }
 
     private VariantDto toDto(Variant v) {

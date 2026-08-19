@@ -29,8 +29,8 @@ import { ToastService } from '../core/toast.service';
 import { CanComponentDeactivate } from './can-deactivate.guard';
 import { sectionContextFrom, sectionLabel, sectionPaths } from '../core/study-sections';
 import {
-  CreateVariantRequest,
   MoveNode,
+  UpdateVariantTreeRequest,
   Variant,
   VariantColor,
   validationMessage,
@@ -704,20 +704,20 @@ export class VariantEditor implements CanComponentDeactivate, OnDestroy {
     }
     this.error.set(null);
     this.saving.set(true);
-    const request: CreateVariantRequest = {
+    // Questo editor possiede soltanto nome, colore (Aperture) e albero: la FEN
+    // iniziale e i metadati Mediogioco appartengono all'editor di setup. In
+    // modifica si usa quindi il contratto dedicato all'albero, che li lascia
+    // intatti; il full-replace li azzererebbe a ogni salvataggio delle mosse.
+    const request: UpdateVariantTreeRequest = {
       name,
       ...(this.isPosition() ? {} : { color: this.color() }),
       moves: mainline(this.tree()),
       tree: this.tree(),
-      // Conserva la FEN della posizione quando si modifica una voce esistente.
-      // Per le aperture resta la FEN standard e il backend continua a trattarla
-      // con il contratto legacy; per R25 evita di sovrascrivere una FEN custom.
-      startingFen: this.isEdit() && this.startingFen() ? this.startingFen() : undefined,
     };
     const id = this.editId();
     const studyId = this.studyId();
     const save$ = id !== null
-      ? this.service.updateVariant(id, request)
+      ? this.service.updateVariantTree(id, request)
       : studyId !== null
         ? this.studyService.addVariant(studyId, request)
         : this.service.createVariant(request);

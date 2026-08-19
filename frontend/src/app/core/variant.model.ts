@@ -97,6 +97,21 @@ export interface CreateVariantRequest {
 }
 
 /**
+ * Payload dell'aggiornamento del solo albero (`PUT /api/variants/{id}/tree`):
+ * nome, colore (solo Aperture) e mosse. FEN iniziale e metadati Mediogioco
+ * restano quelli persistiti — l'editor delle mosse non li possiede, e con il
+ * contratto full-replace di {@link CreateVariantRequest} li azzerava a ogni
+ * salvataggio, facendo uscire la posizione dallo studio guidato.
+ */
+export interface UpdateVariantTreeRequest {
+  name: string;
+  /** Solo Aperture: per una posizione il colore resta derivato dalla FEN. */
+  color?: VariantColor;
+  moves: string[];
+  tree?: MoveNode[];
+}
+
+/**
  * Payload del riordino atomico delle posizioni di uno studio Mediogioco
  * (ISSUE-016/R26.3): la permutazione completa, senza duplicati né ID
  * estranei, degli ID delle posizioni dello studio nell'ordine desiderato.

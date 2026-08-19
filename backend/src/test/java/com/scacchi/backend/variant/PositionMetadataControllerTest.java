@@ -172,6 +172,75 @@ class PositionMetadataControllerTest {
             .andExpect(jsonPath("$.startingFen").value(FEN));
     }
 
+    // --- editor delle mosse: PUT .../tree non tocca i metadati ---
+
+    /**
+     * Regressione: l'editor delle mosse invia solo nome e albero. Con il
+     * full-replace di {@code PUT /api/variants/{id}} ogni salvataggio delle
+     * mosse azzerava tema, descrizioni, difficoltà e fonte, facendo uscire la
+     * posizione dallo studio guidato; il contratto dedicato le lascia intatte.
+     */
+    @Test
+    void updateTreeKeepsEveryMiddlegameMetadataAndEligibility() throws Exception {
+        int studyId = createClassifiedStudy("Editor mosse", "TACTICAL");
+        String create = """
+            {"name":"Posizione","moves":["Kd2"],"startingFen":"%s",
+             "themeId":1001,"themeDescription":"tema descritto","description":"nota",
+             "difficulty":"EASY","source":"Libro"}""".formatted(FEN);
+        MvcResult created = mockMvc.perform(post("/api/studies/" + studyId + "/variants")
+                .contentType(MediaType.APPLICATION_JSON).content(create))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.eligibleForGuidedStudy").value(true))
+            .andReturn();
+        int id = JsonPath.read(created.getResponse().getContentAsString(), "$.id");
+
+        String treeOnly = """
+            {"name":"Posizione","moves":["Kd2","Kd7"],
+             "tree":[{"san":"Kd2","children":[{"san":"Kd7","children":[]}]}]}""";
+        mockMvc.perform(put("/api/variants/" + id + "/tree")
+                .contentType(MediaType.APPLICATION_JSON).content(treeOnly))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.moves.length()").value(2))
+            .andExpect(jsonPath("$.themeId").value(1001))
+            .andExpect(jsonPath("$.theme.code").value("DOUBLE_ATTACK"))
+            .andExpect(jsonPath("$.themeDescription").value("tema descritto"))
+            .andExpect(jsonPath("$.description").value("nota"))
+            .andExpect(jsonPath("$.difficulty").value("EASY"))
+            .andExpect(jsonPath("$.source").value("Libro"))
+            .andExpect(jsonPath("$.positionOrder").value(1))
+            .andExpect(jsonPath("$.eligibleForGuidedStudy").value(true));
+    }
+
+    /** La posizione iniziale non è modificabile da questo contratto: resta la persistita. */
+    @Test
+    void updateTreeKeepsThePersistedStartingFenAndIgnoresAnyOtherField() throws Exception {
+        int studyId = createClassifiedStudy("FEN intatta", "TACTICAL");
+        int id = createPositionReturningId(studyId, "Posizione", null);
+
+        String body = """
+            {"name":"Posizione","moves":["Kd2"],
+             "startingFen":"8/8/8/8/8/8/4k3/4K3 w - - 0 1","themeId":1002}""";
+        mockMvc.perform(put("/api/variants/" + id + "/tree")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.startingFen").value(FEN))
+            .andExpect(jsonPath("$.themeId").value(1001));
+    }
+
+    /** L'albero continua a essere validato, ma dalla FEN persistita della posizione. */
+    @Test
+    void updateTreeStillRejectsAnIllegalMoveFromThePersistedPosition() throws Exception {
+        int studyId = createClassifiedStudy("Mossa illegale", "TACTICAL");
+        int id = createPositionReturningId(studyId, "Posizione", null);
+
+        String body = """
+            {"name":"Posizione","moves":["e4"]}""";
+        mockMvc.perform(put("/api/variants/" + id + "/tree")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("moves"));
+    }
+
     // --- posizione legacy senza tema ---
 
     @Test

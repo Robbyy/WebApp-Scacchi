@@ -92,7 +92,8 @@ Base URL: `/api`. Per dettagli di request/response → controller e DTO nel codi
 | GET | `/api/variants` | Lista varianti |
 | GET | `/api/variants/{id}` | Dettaglio variante |
 | POST | `/api/variants` | Crea variante |
-| PUT | `/api/variants/{id}` | Aggiorna variante |
+| PUT | `/api/variants/{id}` | Aggiorna variante per intero (**sostituisce** anche FEN iniziale e metadati Mediogioco) |
+| PUT | `/api/variants/{id}/tree` | Aggiorna solo nome, colore (Aperture) e albero; FEN iniziale e metadati Mediogioco restano invariati |
 | DELETE | `/api/variants/{id}` | Elimina variante |
 | POST | `/api/variants/{id}/attempts` | Registra un tentativo di studio Mediogioco |
 | GET | `/api/variants/{id}/attempts` | Storico tentativi della posizione |
@@ -116,6 +117,13 @@ Base URL: `/api`. Per dettagli di request/response → controller e DTO nel codi
 | GET | `/api/position-themes?studyType=...` | Catalogo temi Mediogioco filtrato per tipologia |
 
 **Errore di validazione strutturato (400):** `{ field, ply, branchPath, message }`.
+
+**Due contratti di aggiornamento di una variante/posizione.** `PUT /api/variants/{id}` è
+*full-replace*: va usato solo da chi possiede l'intera risorsa (l'editor di setup della
+posizione, che invia FEN e metadati). L'editor delle mosse possiede solo nome, colore (Aperture)
+e albero e usa `PUT /api/variants/{id}/tree`, che valida l'albero dalla FEN già persistita e non
+tocca tema, descrizioni, difficoltà, fonte e ordine — con il solo full-replace ogni salvataggio
+delle mosse li azzerava, facendo uscire la posizione dallo studio guidato.
 
 Nota: lo spostamento di varianti tra studi (`PUT /api/variants/{id}/study`) è fuori dalla roadmap attuale.
 

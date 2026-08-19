@@ -60,6 +60,20 @@ public class VariantController {
             .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /**
+     * Aggiorna il solo albero (nome, colore per le Aperture, mosse) lasciando
+     * invariati FEN iniziale e metadati Mediogioco: è il contratto dell'editor
+     * delle mosse, che non possiede quei campi e con il full-replace di
+     * {@link #update} li azzerava a ogni salvataggio.
+     */
+    @PutMapping("/{id}/tree")
+    public ResponseEntity<VariantDto> updateTree(
+        @PathVariable Long id, @RequestBody UpdateVariantTreeRequest request) {
+        return service.updateTree(id, request)
+            .map(ResponseEntity::ok)
+            .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         return service.delete(id)

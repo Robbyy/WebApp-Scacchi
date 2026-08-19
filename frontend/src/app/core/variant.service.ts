@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { CreateVariantRequest, Variant } from './variant.model';
+import { CreateVariantRequest, UpdateVariantTreeRequest, Variant } from './variant.model';
 import { PositionAttempt, RecordAttemptRequest } from './attempt.model';
 
 /** Accesso alle API delle varianti (/api/variants). */
@@ -22,8 +22,18 @@ export class VariantService {
     return this.http.post<Variant>(this.baseUrl, request);
   }
 
+  /**
+   * Aggiornamento completo: sostituisce anche FEN iniziale e metadati
+   * Mediogioco. Usarlo solo da chi possiede quei campi (l'editor di setup);
+   * per le sole mosse esiste {@link updateVariantTree}.
+   */
   updateVariant(id: number, request: CreateVariantRequest): Observable<Variant> {
     return this.http.put<Variant>(`${this.baseUrl}/${id}`, request);
+  }
+
+  /** Aggiorna il solo albero, lasciando intatti FEN iniziale e metadati. */
+  updateVariantTree(id: number, request: UpdateVariantTreeRequest): Observable<Variant> {
+    return this.http.put<Variant>(`${this.baseUrl}/${id}/tree`, request);
   }
 
   deleteVariant(id: number): Observable<void> {

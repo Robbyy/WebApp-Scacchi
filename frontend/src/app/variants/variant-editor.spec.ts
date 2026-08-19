@@ -7,7 +7,7 @@ import { VariantService } from '../core/variant.service';
 import { StockfishService } from '../core/stockfish.service';
 import { StudyService } from '../core/study.service';
 import { UciScore } from '../core/uci';
-import { CreateVariantRequest, Variant } from '../core/variant.model';
+import { CreateVariantRequest, UpdateVariantTreeRequest, Variant } from '../core/variant.model';
 import { Study } from '../core/study.model';
 import { MoveMade } from '../chessboard/chessboard';
 import { ConfirmService } from '../core/confirm.service';
@@ -275,7 +275,7 @@ describe('VariantEditor', () => {
     const { cmp } = setup(
       {
         getVariant: () => of(existing),
-        updateVariant: (id: number) => {
+        updateVariantTree: (id: number) => {
           updateId = id;
           return of({ ...existing, name: 'Italiana mod' });
         },
@@ -293,7 +293,7 @@ describe('VariantEditor', () => {
     expect(updateId).toBe(5);
   });
 
-  it('loads a custom position and saves new moves while preserving its FEN', () => {
+  it('loads a custom position and saves new moves leaving its FEN to the backend', () => {
     const startingFen = '4k3/8/8/8/8/8/8/4K3 w - - 0 1';
     const position: Variant = {
       id: 31,
@@ -304,11 +304,11 @@ describe('VariantEditor', () => {
       startingFen,
       studyId: 7,
     };
-    let captured: CreateVariantRequest | null = null;
+    let captured: UpdateVariantTreeRequest | null = null;
     const { cmp, fixture } = setup(
       {
         getVariant: () => of(position),
-        updateVariant: (_id: number, request: CreateVariantRequest) => {
+        updateVariantTree: (_id: number, request: UpdateVariantTreeRequest) => {
           captured = request;
           return of({ ...position, moves: ['Ke2'], tree: [{ san: 'Ke2', children: [] }] });
         },
@@ -329,7 +329,9 @@ describe('VariantEditor', () => {
     cmp.save();
 
     expect(captured).not.toBeNull();
-    expect(captured!.startingFen).toBe(startingFen);
+    // La FEN non viaggia più nel payload: la conserva il contratto dedicato
+    // lato backend, insieme ai metadati che questo editor non possiede.
+    expect(Object.keys(captured!)).not.toContain('startingFen');
     expect(captured!.color).toBeUndefined();
     expect(captured!.moves).toEqual(['Ke2']);
     expect(captured!.tree?.[0].san).toBe('Ke2');
@@ -604,11 +606,11 @@ describe('VariantEditor — menu azioni e annotazioni', () => {
       ],
       startingFen: START,
     };
-    let captured: CreateVariantRequest | null = null;
+    let captured: UpdateVariantTreeRequest | null = null;
     const s = setup(
       {
         getVariant: () => of(annotated),
-        updateVariant: (_id: number, req: CreateVariantRequest) => {
+        updateVariantTree: (_id: number, req: UpdateVariantTreeRequest) => {
           captured = req;
           return of(annotated);
         },
@@ -1061,7 +1063,7 @@ describe('VariantEditor (Mediogioco, ISSUE-016)', () => {
     const { cmp, el, fixture } = middlegame(
       {
         getVariant: () => of(position),
-        updateVariant: () => {
+        updateVariantTree: () => {
           updated = true;
           return of(position);
         },
@@ -1096,7 +1098,7 @@ describe('VariantEditor (Mediogioco, ISSUE-016)', () => {
     const { cmp, el, fixture } = middlegame(
       {
         getVariant: () => of(position),
-        updateVariant: () => {
+        updateVariantTree: () => {
           updated = true;
           return of(position);
         },
@@ -1115,13 +1117,24 @@ describe('VariantEditor (Mediogioco, ISSUE-016)', () => {
     expect(updated).toBe(false);
   });
 
-  it('saves the tree preserving the starting FEN and opens the canonical detail', () => {
-    let captured: CreateVariantRequest | null = null;
+  /**
+   * L'editor delle mosse possiede solo nome e albero: usa il contratto
+   * dedicato, che lascia al backend FEN iniziale e metadati Mediogioco. Con il
+   * full-replace precedente ogni salvataggio delle mosse azzerava tema,
+   * descrizioni, difficoltà e fonte della posizione.
+   */
+  it('saves only the tree through the dedicated contract and opens the canonical detail', () => {
+    let captured: UpdateVariantTreeRequest | null = null;
+    let fullReplaceCalls = 0;
     const { cmp, navigated } = middlegame({
       getVariant: () => of(position),
-      updateVariant: (_id: number, request: CreateVariantRequest) => {
+      updateVariantTree: (_id: number, request: UpdateVariantTreeRequest) => {
         captured = request;
         return of({ ...position, id: 41 });
+      },
+      updateVariant: () => {
+        fullReplaceCalls++;
+        return of(position);
       },
     });
 
@@ -1135,8 +1148,10 @@ describe('VariantEditor (Mediogioco, ISSUE-016)', () => {
         { san: 'Ke2', comment: 'Il re va al centro', nag: '!', children: [] },
         { san: 'Kd2', children: [] },
       ],
-      startingFen: CUSTOM_FEN,
     });
+    // Né la FEN né i metadati vengono rispediti: non appartengono a questo editor.
+    expect(Object.keys(captured!)).not.toContain('startingFen');
+    expect(fullReplaceCalls).toBe(0);
     expect(navigated()).toBe('/middlegame/positions/41');
   });
 
@@ -1171,7 +1186,7 @@ describe('VariantEditor (Mediogioco, ISSUE-016)', () => {
     const { cmp } = middlegame(
       {
         getVariant: () => of(position),
-        updateVariant: () => {
+        updateVariantTree: () => {
           updated = true;
           return of(position);
         },

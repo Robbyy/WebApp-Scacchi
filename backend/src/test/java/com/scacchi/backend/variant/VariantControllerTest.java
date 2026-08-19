@@ -152,6 +152,54 @@ class VariantControllerTest {
     }
 
     @Test
+    void updateTreeChangesNameColorAndMovesOfAnOpeningVariant() throws Exception {
+        String create = """
+            {"name":"Da modificare","color":"WHITE","moves":["e4","e5"]}""";
+        MvcResult result = mockMvc.perform(
+                post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(create))
+            .andExpect(status().isCreated())
+            .andReturn();
+        int id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+
+        String update = """
+            {"name":"Modificata","color":"BLACK","moves":["d4","d5","c4"]}""";
+        mockMvc.perform(put("/api/variants/" + id + "/tree")
+                .contentType(MediaType.APPLICATION_JSON).content(update))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Modificata"))
+            .andExpect(jsonPath("$.color").value("BLACK"))
+            .andExpect(jsonPath("$.moves.length()").value(3))
+            // Le Aperture restano sulla posizione standard: il contratto non la tocca.
+            .andExpect(jsonPath("$.startingFen")
+                .value("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+    }
+
+    @Test
+    void updateTreeRejectsAnOpeningVariantWithoutColor() throws Exception {
+        String create = """
+            {"name":"Senza colore","color":"WHITE","moves":["e4"]}""";
+        MvcResult result = mockMvc.perform(
+                post("/api/variants").contentType(MediaType.APPLICATION_JSON).content(create))
+            .andExpect(status().isCreated())
+            .andReturn();
+        int id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(put("/api/variants/" + id + "/tree")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Senza colore\",\"moves\":[\"e4\"]}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.field").value("color"));
+    }
+
+    @Test
+    void updateTreeReturns404WhenMissing() throws Exception {
+        mockMvc.perform(put("/api/variants/999999/tree")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Assente\",\"color\":\"WHITE\",\"moves\":[\"e4\"]}"))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
     void createFromTreeDerivesTheMainlineAndReturnsTheTree() throws Exception {
         String body = """
             {"name":"Con varianti","color":"WHITE","tree":[
